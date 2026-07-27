@@ -11,6 +11,7 @@ import java.io.FileInputStream
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 val releaseKeystoreFile = rootProject.file("app/upload-keystore.jks")
+val releaseKeystoreFile = rootProject.file("app/upload-keystore.jks")
 
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
@@ -26,11 +27,13 @@ val hasReleaseSigning =
 android {
     namespace = "com.example.staff_mate"
     compileSdk = 36
-    ndkVersion = "28.2.13676358"
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Enable core library desugaring for older API levels
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -39,10 +42,13 @@ android {
 
     defaultConfig {
         applicationId = "com.pranam.smartmate"
-        minSdk = 24
+        minSdk = flutter.minSdkVersion                                    // Android 6.0 (API 23) — broad compatibility
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
+        
+        // Enable multi-DEX for apps with many dependencies
+        multiDexEnabled = true
     }
 
   signingConfigs {
@@ -76,4 +82,8 @@ flutter {
 
 dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
+    // Core library desugaring for Java 8+ APIs on older Android versions
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+    // Multi-DEX support
+    implementation("androidx.multidex:multidex:2.0.1")
 }

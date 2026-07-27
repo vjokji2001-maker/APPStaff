@@ -6,6 +6,10 @@ class ApiEndpoints {
   static String get refresh => '${ApiHost.securityBaseUrl}/auth/refresh';
   static String get sendOtp => '${ApiHost.securityBaseUrl}/auth/send-otp';
   static String get verifyOtp => '${ApiHost.securityBaseUrl}/auth/verify-otp';
+  static String get login => '${ApiHost.securityBaseUrl}/auth/login';
+  static String get refresh => '${ApiHost.securityBaseUrl}/auth/refresh';
+  static String get sendOtp => '${ApiHost.securityBaseUrl}/auth/send-otp';
+  static String get verifyOtp => '${ApiHost.securityBaseUrl}/auth/verify-otp';
   
   // ============ FROM IpdService ============
   static String get ipdPatients => '${ApiHost.ipdBaseUrl}/patient/all';
@@ -114,6 +118,27 @@ class ApiEndpoints {
   static String get verifyEmailBase => '${ApiHost.smartcareMainBaseUrl}/verifyemail';
   static String get passwordUpdateBase => '${ApiHost.smartcareMainBaseUrl}/passwordupdate';
 
+// class ApiEndpoints {
+  static String get userSendMobileOtp =>
+      '${ApiHost.masterBaseUrl}/ipd/notes/sendMobOTP';
+
+  static String get userVerifyMobOtp =>
+      '${ApiHost.masterBaseUrl}/ipd/notes/verifyMobOTP';
+
+  static String get userSendEmailOtp =>
+      '${ApiHost.masterBaseUrl}/ipd/notes/sendEmailOTP';
+
+  static String get userVerifyEmailOtp =>
+      '${ApiHost.masterBaseUrl}/ipd/notes/verifyEmailOTP';
+// }
+
+
+// export const USERSENDMOBILEOTP = generateApiUrl(apiHost, `${masterBase}ipd/notes/sendMobOTP`);
+// export const USERVERIFYMOBOTP = generateApiUrl(apiHost, `${masterBase}ipd/notes/verifyMobOTP`);
+ 
+// export const USERSENDEMAILOTP = generateApiUrl(apiHost, `${masterBase}ipd/notes/sendEmailOTP`);
+// export const USERVERIFYEMAILOTP = generateApiUrl(apiHost, `${masterBase}ipd/notes/verifyEmailOTP`);
+ 
   //  http://192.168.1.194/smartcaremain/passwordupdate/sendMobOTP
 
 

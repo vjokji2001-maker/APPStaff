@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:staff_mate/pages/attendance_page.dart';
 import 'package:staff_mate/pages/ipd_dashboard_page.dart';
 import 'package:staff_mate/pages/mytasks.dart';
-import 'package:staff_mate/pages/nurse_page.dart';
 import 'package:staff_mate/pages/smartcarehomescreen.dart';
-import 'package:staff_mate/pages/approval_queue.dart';
-import 'package:staff_mate/pages/day_to_day_notes.dart';
 import 'package:staff_mate/api/api_service.dart';
 import 'package:staff_mate/services/session_manger.dart';
+import 'package:staff_mate/my_hr/screens/hr_dashboard_screen.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -33,7 +30,7 @@ class _DashboardPageState extends State<DashboardPage> {
   final List<Widget> _pages = [
     const SmartCareHomeScreen(key: PageStorageKey('Page1')),
     const IpdDashboardPage(key: PageStorageKey('Page4')),
-    const SizedBox.shrink(), // Empty widget for MY HR
+    const HRDashboardScreen(key: PageStorageKey('PageHR')),
     const MyTasksPage(key: PageStorageKey('Page6')),
   ];
 
@@ -51,11 +48,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
   // Public method to change tab from child pages
   void changeTab(int index) {
-    if (index == 2) { // MY HR tab
-      _showComingSoonMessage();
-      return;
-    }
-    
     if (mounted) {
       setState(() {
         _currentTab = index;
@@ -166,12 +158,7 @@ class _DashboardPageState extends State<DashboardPage> {
     // Update user activity on tab tap
     SessionManager.updateUserActivity();
     ApiService.updateUserActivity();
-    
-    if (index == 2) { // MY HR tab
-      _showComingSoonMessage();
-      return;
-    }
-    
+
     if (_currentTab == index) {
       _navigatorKeys[index].currentState?.popUntil((route) => route.isFirst);
     } else {
@@ -179,19 +166,6 @@ class _DashboardPageState extends State<DashboardPage> {
         _currentTab = index;
       });
     }
-  }
-
-  void _showComingSoonMessage() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('HR features are coming soon! Stay tuned.'),
-        backgroundColor: const Color(0xFF1A237E),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 
   Widget _buildNavigator(int index) {
@@ -269,68 +243,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 label: 'IPD',
               ),
               BottomNavigationBarItem(
-                icon: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    const Icon(Icons.business_center_outlined),
-                    Positioned(
-                      top: -8,
-                      right: -8,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 16,
-                        ),
-                        child: const Text(
-                          'SOON',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                activeIcon: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    const Icon(Icons.business_center),
-                    Positioned(
-                      top: -8,
-                      right: -8,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 32,
-                          minHeight: 16,
-                        ),
-                        child: const Text(
-                          'SOON',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                icon: const Icon(Icons.business_center_outlined),
+                activeIcon: const Icon(Icons.business_center),
                 label: 'MY HR',
-                backgroundColor: Colors.white,
               ),
               const BottomNavigationBarItem(
                 icon: Icon(Icons.checklist_outlined),

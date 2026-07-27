@@ -22,7 +22,7 @@ class NotificationDetailsPage extends StatefulWidget {
 }
 
 class _NotificationDetailsPageState extends State<NotificationDetailsPage> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  late TabController _tabController;
+  TabController? _tabController;
   final String _todayDate = DateFormat('dd-MMM-yyyy').format(DateTime.now());
   final IpdService _ipdService = IpdService();
 
@@ -58,7 +58,7 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> with 
     WidgetsBinding.instance.addObserver(this);
     
     _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(_handleTabChange);
+    _tabController!.addListener(_handleTabChange);
     _loadPrescriptionData();
     
     // Check for recent saves after a short delay
@@ -159,14 +159,14 @@ Future<void> _checkForRecentSaves() async {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _tabController.removeListener(_handleTabChange);
-    _tabController.dispose();
+    _tabController?.removeListener(_handleTabChange);
+    _tabController?.dispose();
     super.dispose();
   }
 
   void _handleTabChange() {
-    if (!_tabController.indexIsChanging) {
-      final currentIndex = _tabController.index;
+    if (!_tabController!.indexIsChanging) {
+      final currentIndex = _tabController!.index;
       if (_showRefreshBadge) {
         setState(() {
           _showRefreshBadge = false;
@@ -386,14 +386,14 @@ Future<void> _checkForRecentSaves() async {
   void _forceRefreshCurrentTab() {
   NotificationRefreshService().clearRefreshFlags();
   
-  if (_tabController.index == 0) {
+  if ((_tabController?.index ?? 0) == 0) {
     setState(() {
       _prescriptionLoaded = false;
       _isLoading = true;
       _showRefreshBadge = false;
     });
     _loadPrescriptionData();
-  } else if (_tabController.index == 2) {
+  } else if ((_tabController?.index ?? 0) == 2) {
     setState(() {
       _investigationLoaded = false;
       _isInvestigationLoading = true;
@@ -430,7 +430,7 @@ Future<void> _checkForRecentSaves() async {
           ],
         ),
         actions: [
-          if (_isLoading && _tabController.index == 0)
+          if (_isLoading && (_tabController?.index ?? 0) == 0)
             Padding(
               padding: const EdgeInsets.only(right: 8.0),
               child: SizedBox(
@@ -479,7 +479,7 @@ Future<void> _checkForRecentSaves() async {
               borderRadius: BorderRadius.circular(8),
             ),
             child: TabBar(
-              controller: _tabController,
+              controller: _tabController!,
               indicatorSize: TabBarIndicatorSize.tab,
               indicator: BoxDecoration(
                 color: Colors.white,
@@ -498,7 +498,7 @@ Future<void> _checkForRecentSaves() async {
         ),
       ),
       body: TabBarView(
-        controller: _tabController,
+        controller: _tabController!,
         children: [
           _buildPrescriptionTab(),
           _buildNursingTab(),

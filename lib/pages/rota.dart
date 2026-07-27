@@ -28,7 +28,7 @@ class RotaPage extends StatefulWidget {
 }
 
 class _RotaPageState extends State<RotaPage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  TabController? _tabController;
   DateTime _selectedDate = DateTime.now();
   String _selectedFilter = 'All';
 
@@ -131,7 +131,7 @@ class _RotaPageState extends State<RotaPage> with SingleTickerProviderStateMixin
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -147,7 +147,7 @@ class _RotaPageState extends State<RotaPage> with SingleTickerProviderStateMixin
             _buildTabBar(),
             Expanded(
               child: TabBarView(
-                controller: _tabController,
+                controller: _tabController!,
                 children: [
                   _buildShiftsList(),
                   _buildStatusOverview(),
@@ -338,7 +338,7 @@ class _RotaPageState extends State<RotaPage> with SingleTickerProviderStateMixin
         border: Border.all(color: AppColors.divider),
       ),
       child: TabBar(
-        controller: _tabController,
+        controller: _tabController!,
         indicator: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           color: AppColors.primary,

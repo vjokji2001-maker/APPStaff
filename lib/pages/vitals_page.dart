@@ -17,20 +17,20 @@ class VitalsPage extends StatefulWidget {
 }
 
 class _VitalsPageState extends State<VitalsPage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  TabController? _tabController;
   
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
+    _tabController!.addListener(() {
       setState(() {});
     });
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -84,7 +84,7 @@ class _VitalsPageState extends State<VitalsPage> with SingleTickerProviderStateM
                 borderRadius: BorderRadius.circular(22),
               ),
               child: TabBar(
-                controller: _tabController,
+                controller: _tabController!,
                 indicator: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(22),
@@ -119,7 +119,7 @@ class _VitalsPageState extends State<VitalsPage> with SingleTickerProviderStateM
         ),
       ),
       body: TabBarView(
-        controller: _tabController,
+        controller: _tabController!,
         children: [
           VitalsTab(patient: widget.patient),
           IntakeAssessmentTab(patient: widget.patient),

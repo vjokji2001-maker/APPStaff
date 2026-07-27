@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
@@ -45,7 +45,7 @@ class BiometricAuthService {
         return true;
       }
       
-      if (Platform.isAndroid) {
+      if ((!kIsWeb && defaultTargetPlatform == TargetPlatform.android)) {
         final androidInfo = await _deviceInfo.androidInfo;
         if (androidInfo.version.sdkInt >= 29) {
           final manufacturer = androidInfo.manufacturer.toLowerCase();
@@ -113,7 +113,7 @@ class BiometricAuthService {
     try {
       final biometrics = await _auth.getAvailableBiometrics();
       
-      if (Platform.isIOS) {
+      if ((!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)) {
         if (biometrics.contains(BiometricType.face)) return 'Face ID';
         if (biometrics.contains(BiometricType.fingerprint)) return 'Touch ID';
       }
@@ -139,7 +139,7 @@ class BiometricAuthService {
     try {
       final biometrics = await _auth.getAvailableBiometrics();
       
-      if (Platform.isIOS) {
+      if ((!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)) {
         if (biometrics.contains(BiometricType.face)) return Icons.face_retouching_natural;
         if (biometrics.contains(BiometricType.fingerprint)) return Icons.fingerprint;
       }

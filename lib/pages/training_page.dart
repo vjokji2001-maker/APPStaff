@@ -33,7 +33,7 @@ class TrainingModuleScreen extends StatefulWidget {
 
 class _TrainingModuleScreenState extends State<TrainingModuleScreen> with SingleTickerProviderStateMixin {
   int selectedTab = 0;
-  late TabController _tabController;
+  TabController? _tabController;
   
   // Filters with modern chip selection
   String selectedRole = 'All Roles';
@@ -201,16 +201,16 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen> with Single
     super.initState();
     selectedTab = widget.initialTab;
     _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(() {
+    _tabController!.addListener(() {
       setState(() {
-        selectedTab = _tabController.index;
+        selectedTab = _tabController!.index;
       });
     });
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController?.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -670,7 +670,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen> with Single
     return Container(
       color: Colors.white,
       child: TabBar(
-        controller: _tabController,
+        controller: _tabController!,
         indicatorColor: AppColors.accentBlue,
         indicatorWeight: 3,
         labelColor: AppColors.accentBlue,

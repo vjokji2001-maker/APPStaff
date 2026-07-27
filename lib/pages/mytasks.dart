@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:staff_mate/APIs/api_endpoints.dart';
 import 'package:staff_mate/services/my_tasks_service.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:staff_mate/services/speech_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -107,8 +108,10 @@ Future<void> _loadAssignedToMeTasks() async {
     _processAssignedTasksResponse(response);
   } catch (e) {
     debugPrint('Error loading assigned tasks: $e');
-    if (mounted) {
-      _showSnackBar('Failed to load assigned tasks: $e', _AppColors.danger);
+    // Only show the raw error in debug builds — in release the section
+    // simply stays empty, which is the correct UX for a non-critical widget.
+    if (mounted && kDebugMode) {
+      debugPrint('Assigned tasks load failed (debug only): $e');
     }
   } finally {
     if (mounted) setState(() => _isLoadingAssignedTasks = false);
@@ -2400,6 +2403,7 @@ void _showAssignedToMeTasks() {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: _AppColors.accent,
+              foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
@@ -2863,7 +2867,6 @@ void _showAssignedToMeTasks() {
     String? assignedTo = existingTask?.assignedTo;
     String assignedBy = existingTask?.assignedBy ?? currentUserName;
     
-    stt.SpeechToText? speech;
     bool isListening = false;
     final pageCtx = context;
     
@@ -2874,24 +2877,28 @@ void _showAssignedToMeTasks() {
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, ss) {
-          speech ??= stt.SpeechToText();
-
+          // ── voice helper (uses SpeechService singleton) ──────────────────
           void listen() async {
             if (!isListening) {
-              final available = await speech!.initialize();
-              if (available) {
-                ss(() => isListening = true);
-                speech!.listen(onResult: (val) {
-                  ss(() {
-                    descCtrl.text = val.recognizedWords;
-                    descCtrl.selection = TextSelection.fromPosition(
-                        TextPosition(offset: descCtrl.text.length));
-                  });
-                });
-              }
+              final ok = await SpeechService.instance.init();
+              if (!ok) return;
+              ss(() => isListening = true);
+              SpeechService.instance.startListening(
+                onPartial: (text) => ss(() {
+                  descCtrl.text = text;
+                  descCtrl.selection = TextSelection.fromPosition(
+                      TextPosition(offset: descCtrl.text.length));
+                }),
+                onFinal: (text) => ss(() {
+                  descCtrl.text = text;
+                  descCtrl.selection = TextSelection.fromPosition(
+                      TextPosition(offset: descCtrl.text.length));
+                  isListening = false;
+                }),
+              );
             } else {
+              await SpeechService.instance.stop();
               ss(() => isListening = false);
-              speech!.stop();
             }
           }
 
@@ -2946,8 +2953,11 @@ void _showAssignedToMeTasks() {
                               ]),
                         ),
                         IconButton(
-                          onPressed: () {
-                            if (isListening) speech?.stop();
+                          onPressed: () async {
+                            if (isListening) {
+                              await SpeechService.instance.stop();
+                              ss(() => isListening = false);
+                            }
                             Navigator.pop(ctx);
                           },
                           icon: const Icon(Icons.close_rounded,
@@ -2977,29 +2987,26 @@ void _showAssignedToMeTasks() {
     ),
     onPressed: () async {
       if (!isListening) {
-        final available = await speech!.initialize(
-          onStatus: (status) => debugPrint('Speech status: $status'),
-          onError: (error) => debugPrint('Speech error: $error'),
-        );
-        if (available) {
+        final ok = await SpeechService.instance.init();
+        if (ok) {
           ss(() => isListening = true);
-          speech!.listen(
-            onResult: (val) {
-              ss(() {
-                if (descCtrl.text.isEmpty) {
-                  descCtrl.text = val.recognizedWords;
-                } else {
-                  descCtrl.text = '${descCtrl.text} ${val.recognizedWords}';
-                }
-                descCtrl.selection = TextSelection.fromPosition(
-                    TextPosition(offset: descCtrl.text.length));
-              });
-            },
+          SpeechService.instance.startListening(
+            onPartial: (text) => ss(() {
+              descCtrl.text = text;
+              descCtrl.selection = TextSelection.fromPosition(
+                  TextPosition(offset: descCtrl.text.length));
+            }),
+            onFinal: (text) => ss(() {
+              descCtrl.text = text;
+              descCtrl.selection = TextSelection.fromPosition(
+                  TextPosition(offset: descCtrl.text.length));
+              isListening = false;
+            }),
           );
         }
       } else {
+        await SpeechService.instance.stop();
         ss(() => isListening = false);
-        speech!.stop();
       }
     },
     padding: const EdgeInsets.all(8),
@@ -3204,7 +3211,10 @@ void _showAssignedToMeTasks() {
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () {
-                            if (isListening) speech?.stop();
+                            if (isListening) {
+                              SpeechService.instance.stop();
+                              isListening = false;
+                            }
                             Navigator.pop(ctx);
                           },
                           style: OutlinedButton.styleFrom(
@@ -3224,7 +3234,10 @@ void _showAssignedToMeTasks() {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () async {
-                            if (isListening) speech?.stop();
+                            if (isListening) {
+                              await SpeechService.instance.stop();
+                              isListening = false;
+                            }
                             if (titleCtrl.text.trim().isEmpty) {
                               _showSnackBar('Please enter task title',
                                   _AppColors.danger);
@@ -4173,7 +4186,6 @@ Widget _detailRow({
   // ─── COMMENT SECTION ──────────────────────────────────────────────────────
 Widget _buildAddCommentSection(Task task) {
   final commentCtrl = TextEditingController();
-  stt.SpeechToText? speech;
   bool isListening = false;
   bool isGettingLocation = false;
   String? currentLocation;
@@ -4199,33 +4211,28 @@ Widget _buildAddCommentSection(Task task) {
 
   return StatefulBuilder(
     builder: (ctx, ss) {
-      speech ??= stt.SpeechToText();
-
       void listen() async {
         if (!isListening) {
-          final available = await speech!.initialize(
-            onStatus: (status) => debugPrint('Speech status: $status'),
-            onError: (error) => debugPrint('Speech error: $error'),
-          );
-          if (available) {
+          final ok = await SpeechService.instance.init();
+          if (ok) {
             ss(() => isListening = true);
-            speech!.listen(
-              onResult: (val) {
-                ss(() {
-                  if (commentCtrl.text.isEmpty) {
-                    commentCtrl.text = val.recognizedWords;
-                  } else {
-                    commentCtrl.text = '${commentCtrl.text} ${val.recognizedWords}';
-                  }
-                  commentCtrl.selection = TextSelection.fromPosition(
-                      TextPosition(offset: commentCtrl.text.length));
-                });
-              },
+            SpeechService.instance.startListening(
+              onPartial: (text) => ss(() {
+                commentCtrl.text = text;
+                commentCtrl.selection = TextSelection.fromPosition(
+                    TextPosition(offset: commentCtrl.text.length));
+              }),
+              onFinal: (text) => ss(() {
+                commentCtrl.text = text;
+                commentCtrl.selection = TextSelection.fromPosition(
+                    TextPosition(offset: commentCtrl.text.length));
+                isListening = false;
+              }),
             );
           }
         } else {
+          await SpeechService.instance.stop();
           ss(() => isListening = false);
-          speech!.stop();
         }
       }
 

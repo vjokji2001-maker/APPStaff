@@ -8,6 +8,7 @@ import 'dart:async'; // Add this for Timer
 
 class SessionManager {
   static const String authScheme = 'SmartCare';
+  static const String authScheme = 'SmartCare';
   static final Map<String, dynamic> _dynamicData = {};
   
   // Timer for session monitoring
@@ -192,7 +193,8 @@ class SessionManager {
     } else if (data['expiresIn'] != null) {
       tokenExpiry = DateTime.now().add(Duration(seconds: data['expiresIn']));
     } else {
-      tokenExpiry = DateTime.now().add(const Duration(minutes: sessionTimeoutMinutes));
+      // No expiry provided — set far future so persistent-login check always passes.
+      tokenExpiry = DateTime.now().add(const Duration(days: 3650));
     }
     
     await saveSession(
@@ -211,52 +213,41 @@ class SessionManager {
     );
   }
 
-  // ─── Session monitoring (new) ───────────────────────────────────────────────
-  
+  // ─── Session monitoring ──────────────────────────────────────────────────────
+  //
+  // Inactivity-based auto-logout is DISABLED.
+  // The session stays alive until the user explicitly calls clearSession() or
+  // fullLogout(). All method signatures are kept intact so that existing call
+  // sites (ActivityTracker, biometric lock screen, etc.) continue to compile.
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /// No-op — persistent login means we never start an expiry timer.
   static void startSessionMonitoring() {
-    _resetInactivityTimer();
-  }
-  
-  static void _resetInactivityTimer() {
+    // Intentionally empty: auto-logout on inactivity is disabled.
+    // Session persists until the user explicitly logs out.
     _lastActivityTime = DateTime.now();
-    _sessionMonitorTimer?.cancel();
-    
-    // Start new timer to check for inactivity
-    _sessionMonitorTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_lastActivityTime != null) {
-        final timeSinceLastActivity = DateTime.now().difference(_lastActivityTime!);
-        final timeUntilExpiry = sessionTimeoutMinutes * 60 - timeSinceLastActivity.inSeconds;
-        
-        // Show warning 10 seconds before session expires
-        if (timeUntilExpiry <= warningSeconds && timeUntilExpiry > 0 && !_isDialogShowing) {
-          _isDialogShowing = true;
-          if (_onSessionExpiring != null) {
-            _onSessionExpiring!(true);
-          }
-        } else if (timeUntilExpiry <= 0) {
-          stopSessionMonitoring();
-        }
-      }
-    });
   }
-  
+
+  /// No-op — kept for API compatibility.
+  /// Does nothing meaningful since there is no inactivity timer running.
   static void updateUserActivity() {
     _lastActivityTime = DateTime.now();
     _isDialogShowing = false;
-    if (_onSessionExpiring != null) {
-      _onSessionExpiring!(false);
-    }
+    // Callback is intentionally not fired — no expiry dialog needed.
   }
-  
+
+  /// Kept for API compatibility. Callback will never be invoked automatically.
   static void setSessionExpiryCallback(Function(bool showDialog) callback) {
     _onSessionExpiring = callback;
   }
-  
+
+  /// Cancels any lingering timer (e.g. leftover from a previous build).
+  /// Safe to call; does NOT clear the session.
   static void stopSessionMonitoring() {
     _sessionMonitorTimer?.cancel();
     _sessionMonitorTimer = null;
-    _lastActivityTime = null;
     _isDialogShowing = false;
+    // _lastActivityTime intentionally left so other code can still read it.
   }
 
   // ─── Session validation (updated) ───────────────────────────────────────────
@@ -288,22 +279,18 @@ class SessionManager {
     };
   }
 
+  /// Returns true as long as an auth token (or refresh token) is stored on
+  /// disk, regardless of expiry timestamps.  Token expiry is handled silently
+  /// at the API layer via token refresh — it should never kick the user back
+  /// to the login screen automatically.
   static Future<bool> hasValidSession() async {
-    final session = await getSession();
-    final authToken = session['auth_token']?.toString() ?? '';
-    final refreshToken = session['refresh_token']?.toString() ?? '';
-
-    if (authToken.isEmpty && refreshToken.isEmpty) {
-      return false;
-    }
-
-    final tokenExpiry = await getTokenExpiry();
-    if (tokenExpiry != null && DateTime.now().isAfter(tokenExpiry)) {
-      debugPrint('Access token expired, but checking refresh session...');
-      return refreshToken.isNotEmpty;
-    }
-
-    return true;
+    final prefs = await SharedPreferences.getInstance();
+    final authToken    = prefs.getString('auth_token')    ?? '';
+    final accessToken  = prefs.getString('access_token')  ?? '';
+    final refreshToken = prefs.getString('refresh_token') ?? '';
+    final hasToken = authToken.isNotEmpty || accessToken.isNotEmpty || refreshToken.isNotEmpty;
+    debugPrint('hasValidSession → $hasToken');
+    return hasToken;
   }
 
   // ─── Clear methods (updated) ────────────────────────────────────────────────

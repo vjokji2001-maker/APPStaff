@@ -1,12 +1,18 @@
-import 'dart:io';
+// dart:io removed — _platformName is not supported on Flutter Web.
+// Use the _platformName helper below instead.
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:staff_mate/APIs/api_debug_http.dart';
+import 'package:staff_mate/APIs/api_debug_http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:staff_mate/APIs/api_host.dart';
 
+// Web-safe platform description — never calls dart:io Platform
+String get _platformName => kIsWeb ? 'web' : 'native';
+
 class MyTasksService {
+  static String get _physicalDeviceUrl => ApiHost.appBaseUrl;
   static String get _physicalDeviceUrl => ApiHost.appBaseUrl;
   
   static const String _masterCategoryEndpoint = '/master/category/master/getAll';
@@ -50,7 +56,7 @@ class MyTasksService {
       
       debugPrint('=== MASTER CATEGORY API REQUEST DEBUG ===');
       debugPrint('URL: $url');
-      debugPrint('Platform: ${Platform.operatingSystem}');
+      debugPrint('Platform: ${_platformName}');
       debugPrint('Headers: ${_sanitizeHeaders(headers)}');
 
       final client = ApiDebugHttp.client();
@@ -146,7 +152,7 @@ class MyTasksService {
     
     debugPrint('=== GET MASTER CATEGORIES API REQUEST ===');
     debugPrint('URL: $url');
-    debugPrint('Platform: ${Platform.operatingSystem}');
+    debugPrint('Platform: ${_platformName}');
 
     final response = await http
         .get(
@@ -269,7 +275,7 @@ class MyTasksService {
       
       debugPrint('=== GET ALL SUBCATEGORIES API REQUEST DEBUG ===');
       debugPrint('URL: $url');
-      debugPrint('Platform: ${Platform.operatingSystem}');
+      debugPrint('Platform: ${_platformName}');
       debugPrint('Headers: ${_sanitizeHeaders(headers)}');
 
       final client = ApiDebugHttp.client();
@@ -633,7 +639,7 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
 
       debugPrint('=== SAVE MASTER CATEGORY API REQUEST DEBUG ===');
       debugPrint('URL: $url');
-      debugPrint('Platform: ${Platform.operatingSystem}');
+      debugPrint('Platform: ${_platformName}');
       debugPrint('Headers: ${_sanitizeHeaders(headers)}');
       debugPrint('Request Body: ${jsonEncode(requestBody)}');
 
@@ -829,7 +835,7 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
 
       debugPrint('=== SAVE TASK API REQUEST DEBUG ===');
       debugPrint('URL: $url');
-      debugPrint('Platform: ${Platform.operatingSystem}');
+      debugPrint('Platform: ${_platformName}');
       debugPrint('Headers: ${_sanitizeHeaders(headers)}');
       debugPrint('Request Body: ${jsonEncode(requestBody)}');
 
@@ -989,7 +995,7 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
       
       debugPrint('=== GET TASK HISTORY API REQUEST DEBUG ===');
       debugPrint('URL: $url');
-      debugPrint('Platform: ${Platform.operatingSystem}');
+      debugPrint('Platform: ${_platformName}');
       debugPrint('Task ID: $taskId');
       debugPrint('Date: $date');
       debugPrint('Headers: ${_sanitizeHeaders(headers)}');
@@ -1156,7 +1162,7 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
 
       debugPrint('=== ADD TASK COMMENT API REQUEST DEBUG ===');
       debugPrint('URL: $url');
-      debugPrint('Platform: ${Platform.operatingSystem}');
+      debugPrint('Platform: ${_platformName}');
       debugPrint('Headers: ${_sanitizeHeaders(headers)}');
       debugPrint('Request Body: ${jsonEncode(requestBody)}');
       debugPrint('User ID being used: $userId');
@@ -1280,7 +1286,7 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
 
       debugPrint('=== UPDATE TASK STATUS API REQUEST DEBUG ===');
       debugPrint('URL: $url');
-      debugPrint('Platform: ${Platform.operatingSystem}');
+      debugPrint('Platform: ${_platformName}');
       debugPrint('Headers: ${_sanitizeHeaders(headers)}');
       debugPrint('Request Body: ${jsonEncode(requestBody)}');
       debugPrint('IMPORTANT: "id" field is the TASK ID (from fetch API), not category ID');
@@ -1462,7 +1468,7 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
 
       debugPrint('=== UPDATE TASK API REQUEST DEBUG ===');
       debugPrint('URL: $url');
-      debugPrint('Platform: ${Platform.operatingSystem}');
+      debugPrint('Platform: ${_platformName}');
       debugPrint('Headers: ${_sanitizeHeaders(headers)}');
       debugPrint('Request Body: ${jsonEncode(requestBody)}');
 
@@ -1648,7 +1654,7 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
       
       debugPrint('=== FETCH TASKS BY STATUS API REQUEST DEBUG ===');
       debugPrint('URL: $url');
-      debugPrint('Platform: ${Platform.operatingSystem}');
+      debugPrint('Platform: ${_platformName}');
       debugPrint('Status: ${status.toUpperCase()}');
       debugPrint('Headers: ${_sanitizeHeaders(headers)}');
       debugPrint('IMPORTANT: Response MUST contain task IDs in "id" or "taskId" field');
@@ -1793,7 +1799,7 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
       
       debugPrint('=== GET MY TASKS API REQUEST DEBUG ===');
       debugPrint('URL: $url');
-      debugPrint('Platform: ${Platform.operatingSystem}');
+      debugPrint('Platform: ${_platformName}');
       debugPrint('Headers: ${_sanitizeHeaders(headers)}');
 
       final client = ApiDebugHttp.client();
@@ -1903,7 +1909,7 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
       
       debugPrint('=== GET CLINIC USER LIST API REQUEST DEBUG ===');
       debugPrint('URL: $url');
-      debugPrint('Platform: ${Platform.operatingSystem}');
+      debugPrint('Platform: ${_platformName}');
       debugPrint('Headers: ${_sanitizeHeaders(headers)}');
 
       final client = ApiDebugHttp.client();
@@ -2178,4 +2184,5 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
     return sanitized;
   }
 }
+
 

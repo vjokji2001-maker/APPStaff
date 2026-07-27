@@ -9,12 +9,14 @@ import 'package:staff_mate/pages/req_inve.dart';
 import 'package:staff_mate/pages/shift_patient.dart';
 import 'package:staff_mate/services/clinic_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:webview_flutter/webview_flutter.dart'; 
+import 'package:flutter/foundation.dart';
+import 'package:staff_mate/pages/treatment_record.dart'; 
 import 'package:staff_mate/pages/notification_details.dart';
 import 'package:staff_mate/services/user_information_service.dart'; 
 import 'package:staff_mate/pages/vitals_page.dart';
 import 'package:staff_mate/pages/day_to_day_notes.dart';
 import 'package:staff_mate/pages/upload_doc.dart';
+import 'package:staff_mate/APIs/api_endpoints.dart';
 import 'package:staff_mate/APIs/api_endpoints.dart';
 
 class IpdDashboardPage extends StatefulWidget {
@@ -606,7 +608,7 @@ void _showPatientQuickActionSheet(Patient patient) {
     }},
     {'icon': Icons.assignment_outlined, 'label': 'Records', 'color': Colors.teal, 'onTap': () {
       Navigator.pop(context);
-      Navigator.push(context, MaterialPageRoute(builder: (_) => TreatmentRecordWebViewPage(patient: patient))).then((_) => _refreshDashboardData());
+      Navigator.push(context, MaterialPageRoute(builder: (_) => TreatmentRecordPage(patient: patient))).then((_) => _refreshDashboardData());
     }},
     {'icon': Icons.favorite, 'label': 'Vitals', 'color': Colors.redAccent, 'onTap': () {
       Navigator.pop(context);
@@ -1498,164 +1500,5 @@ class PatientGridCardCompact extends StatelessWidget {
 //   }
 // }
 
-class TreatmentRecordWebViewPage extends StatefulWidget {
-  final Patient patient;
-  const TreatmentRecordWebViewPage({super.key, required this.patient});
-
-  @override
-  State<TreatmentRecordWebViewPage> createState() => _TreatmentRecordWebViewPageState();
-}
-
-class _TreatmentRecordWebViewPageState extends State<TreatmentRecordWebViewPage> {
-  late WebViewController _webViewController;
-  bool _isLoading = true;
-  double _progress = 0;
-
-  String get _webViewUrl {
-    final baseUrl = ApiEndpoints.treatmentRecords;
-    
-    final admissionId = widget.patient.admissionId?.toString() ?? '';
-    final patientId = widget.patient.patientId?.toString() ?? widget.patient.id?.toString() ?? '';
-    final ipdNo = widget.patient.ipdNo;
-    
-    final params = {
-      'admissionId': admissionId,
-      'patientId': patientId,
-      'ipdNo': ipdNo,
-      'patientName': widget.patient.patientname,
-      'ward': widget.patient.ward,
-      'bed': widget.patient.bedname,
-    };
-    
-    final queryString = params.entries
-        .where((entry) => entry.value.isNotEmpty)
-        .map((entry) => '${entry.key}=${Uri.encodeComponent(entry.value)}')
-        .join('&');
-    
-    return queryString.isNotEmpty ? '$baseUrl?$queryString' : baseUrl;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0x00000000))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (int progress) {
-            setState(() {
-              _progress = progress / 100;
-              _isLoading = progress < 100;
-            });
-          },
-          onPageStarted: (String url) {
-            setState(() {
-              _isLoading = true;
-            });
-          },
-          onPageFinished: (String url) {
-            setState(() {
-              _isLoading = false;
-            });
-          },
-          onWebResourceError: (WebResourceError error) {
-            debugPrint('WebView error: ${error.description}');
-            setState(() {
-              _isLoading = false;
-            });
-          },
-          onNavigationRequest: (NavigationRequest request) {
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(_webViewUrl));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    debugPrint('Loading WebView URL: $_webViewUrl');
-    
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          "Treatment Record - ${widget.patient.patientname}",
-          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        backgroundColor: const Color(0xFF1A237E),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          if (_isLoading)
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  value: _progress,
-                  strokeWidth: 2,
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                  backgroundColor: Colors.white.withOpacity(0.3),
-                ),
-              ),
-            ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              _webViewController.reload();
-            },
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          WebViewWidget(
-            controller: _webViewController,
-          ),
-          if (_isLoading && _progress < 1.0)
-            Positioned.fill(
-              child: Container(
-                color: Colors.white,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      value: _progress,
-                      backgroundColor: Colors.grey[200],
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1A237E)),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Loading Treatment Records...',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Patient: ${widget.patient.patientname}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
+// TreatmentRecordWebViewPage removed - use TreatmentRecordPage instead
+// WebView is not supported on Flutter Web

@@ -77,20 +77,24 @@ class ApiHost {
     // ignore: avoid_print
     print('''
     ════════════════════════════════════
-        API HOST CONFIGURATION
+        🌐 API HOST CONFIGURATION
     ════════════════════════════════════
     Current Key : $CURRENT_KEY
     Active Host : $activeHost
     Remote Addr : $remoteAddr
     Protocol    : $PROTOCOL  
     App Base    : $appBaseUrl
+    Security Base : $securityBaseUrl
+    Login URL   : $loginBaseUrl
     Main Base   : $smartcareMainBaseUrl
     IPD Base URL: $ipdBaseUrl
-    Login URL   : $loginBaseUrl
     Billing URL : $billingBaseUrl
     Master URL  : $masterBaseUrl
     Sclyte URL  : $sclyteBaseUrl
     SmartCare   : $smartcarePortalUrl
+    ════════════════════════════════════
+    ⚠️ CORS NOTE: If running in Chrome Web, use
+       "Flutter Web (Disable CORS)" launch config
     ════════════════════════════════════
     ''');
   }
