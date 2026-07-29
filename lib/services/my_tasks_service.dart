@@ -13,7 +13,6 @@ String get _platformName => kIsWeb ? 'web' : 'native';
 
 class MyTasksService {
   static String get _physicalDeviceUrl => ApiHost.appBaseUrl;
-  static String get _physicalDeviceUrl => ApiHost.appBaseUrl;
   
   static const String _masterCategoryEndpoint = '/master/category/master/getAll';
   static const String _saveMasterCategoryEndpoint = '/master/category/master/save';

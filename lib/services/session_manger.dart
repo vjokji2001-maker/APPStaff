@@ -8,7 +8,6 @@ import 'dart:async'; // Add this for Timer
 
 class SessionManager {
   static const String authScheme = 'SmartCare';
-  static const String authScheme = 'SmartCare';
   static final Map<String, dynamic> _dynamicData = {};
   
   // Timer for session monitoring

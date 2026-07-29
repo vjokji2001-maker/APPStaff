@@ -11,7 +11,6 @@ import java.io.FileInputStream
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 val releaseKeystoreFile = rootProject.file("app/upload-keystore.jks")
-val releaseKeystoreFile = rootProject.file("app/upload-keystore.jks")
 
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))

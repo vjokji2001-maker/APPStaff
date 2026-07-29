@@ -44,4 +44,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 *.hprof
-
+# Android build folders
+/android/build/
+/android/app/build/
+/android/.gradle/

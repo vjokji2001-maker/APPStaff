@@ -6,10 +6,6 @@ class ApiEndpoints {
   static String get refresh => '${ApiHost.securityBaseUrl}/auth/refresh';
   static String get sendOtp => '${ApiHost.securityBaseUrl}/auth/send-otp';
   static String get verifyOtp => '${ApiHost.securityBaseUrl}/auth/verify-otp';
-  static String get login => '${ApiHost.securityBaseUrl}/auth/login';
-  static String get refresh => '${ApiHost.securityBaseUrl}/auth/refresh';
-  static String get sendOtp => '${ApiHost.securityBaseUrl}/auth/send-otp';
-  static String get verifyOtp => '${ApiHost.securityBaseUrl}/auth/verify-otp';
   
   // ============ FROM IpdService ============
   static String get ipdPatients => '${ApiHost.ipdBaseUrl}/patient/all';
