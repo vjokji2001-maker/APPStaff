@@ -275,7 +275,9 @@ String _formatDateForAPI(DateTime date) {
       String last = data['lastName']?.toString() ?? '';
       String init = data['initial']?.toString() ?? '';
       
-      fullName = '$init $first $last'.trim();
+      // Use pre-saved fullName, else build from parts
+      fullName = data['fullName']?.toString() ?? '';
+      if (fullName.isEmpty) fullName = '$init $first $last'.trim();
       if (fullName.isEmpty) fullName = userId;
       
       clinicName = data['clinicName']?.toString() ?? 'Smart Care Hospital';
@@ -300,7 +302,9 @@ String _formatDateForAPI(DateTime date) {
       String last = userInfo['lastName']?.toString() ?? '';
       String init = userInfo['initial']?.toString() ?? '';
 
-      fullName = '$init $first $last'.trim();
+      // Use pre-saved fullName, else build from parts
+      fullName = userInfo['fullName']?.toString() ?? '';
+      if (fullName.isEmpty) fullName = '$init $first $last'.trim();
       if (fullName.isEmpty) fullName = userId;
 
       clinicName = userInfo['clinicName']?.toString() ?? 'Smart Care Hospital';

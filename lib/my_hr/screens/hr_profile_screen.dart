@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/hr_theme.dart';
 import '../data/hr_mock_data.dart';
+import '../data/hr_api_service.dart';
+import '../models/hr_models.dart';
 import '../widgets/hr_widgets.dart';
 
 class HRProfileScreen extends StatefulWidget {
@@ -13,11 +15,46 @@ class HRProfileScreen extends StatefulWidget {
 class _HRProfileScreenState extends State<HRProfileScreen> {
   int _tabIndex = 0;
   final List<String> _tabs = ['Personal', 'Official', 'Family', 'Edu & Exp', 'Skills'];
+  HREmployee? _emp;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    try {
+      final data = await HRApiService.getProfile();
+      // The API returns a Map, we parse it using HREmployee.fromJson
+      // Assuming the API response wrapper is { "data": {...} } or just {...}
+      final empData = data['data'] ?? data;
+      setState(() {
+        _emp = HREmployee.fromJson(empData);
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading profile: $e');
+      setState(() {
+        _emp = HREmployee.empty();
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final emp = HRMockData.employee;
+    final emp = _emp ?? HREmployee.empty();
+    
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: isDark ? HRTheme.bgDark : HRTheme.bgLight,
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: isDark ? HRTheme.bgDark : HRTheme.bgLight,
       body: Column(children: [
@@ -78,7 +115,7 @@ class _HRProfileScreenState extends State<HRProfileScreen> {
   }
 
   Widget _buildPersonalTab() {
-    final emp = HRMockData.employee;
+    final emp = _emp ?? HREmployee.empty();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(children: [
@@ -140,7 +177,7 @@ class _HRProfileScreenState extends State<HRProfileScreen> {
   }
 
   Widget _buildOfficialTab() {
-    final emp = HRMockData.employee;
+    final emp = _emp ?? HREmployee.empty();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(children: [
@@ -234,7 +271,7 @@ class _HRProfileScreenState extends State<HRProfileScreen> {
   }
 
   Widget _buildSkillsTab() {
-    final emp = HRMockData.employee;
+    final emp = _emp ?? HREmployee.empty();
     final skills = ['Critical Care', 'Patient Assessment', 'IV Therapy', 'Cardiac Monitoring', 'Wound Care', 'EMR Systems', 'Team Leadership', 'Patient Education'];
     final allergies = ['Penicillin', 'Latex'];
     final vaccinations = ['COVID-19 (Covishield x2)', 'Hepatitis B (3 doses)', 'Influenza (Annual)'];

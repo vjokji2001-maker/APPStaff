@@ -822,14 +822,13 @@ class PatientGridCardCompact extends StatelessWidget {
             Positioned(left: 0, top: 0, bottom: 0, width: 5, child: Container(color: statusColor)),
 
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 8, 8, 8), 
+              padding: const EdgeInsets.fromLTRB(10, 4, 6, 4), 
               child: isAvailable 
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.bed, color: statusColor, size: 24),
-                      const SizedBox(height: 2),
                       Text(patient.bedname, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
                       Text("Avail", style: GoogleFonts.poppins(fontSize: 10, color: statusColor, fontWeight: FontWeight.w600)),
                     ],
@@ -846,7 +845,7 @@ class PatientGridCardCompact extends StatelessWidget {
                         Expanded(child: Text(patient.bedname, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13))),
                       ],
                     ),
-                    const SizedBox(height: 6), 
+                    const SizedBox(height: 4), 
                     Text(patient.patientname, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 11)),
                     Text(patient.ward, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 9, color: Colors.grey[700])),
                     Text("IPD: ${patient.ipdNo}", style: TextStyle(fontSize: 9, color: Colors.grey[600])),

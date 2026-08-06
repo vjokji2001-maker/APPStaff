@@ -1,8 +1,7 @@
 // ignore_for_file: non_constant_identifier_names
-library hr_models;
 
-/// All data models for the MY HR module
-/// Pure Dart classes – no database, no serialization dependencies
+// All data models for the MY HR module
+// Pure Dart classes – no database, no serialization dependencies
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Employee / Profile
@@ -66,6 +65,50 @@ class HREmployee {
     required this.emergencyPhone,
     required this.avatarInitials,
   });
+
+  factory HREmployee.fromJson(Map<String, dynamic> json) {
+    return HREmployee(
+      id: json['id']?.toString() ?? '',
+      name: json['firstName'] != null ? '${json['firstName']} ${json['lastName'] ?? ''}'.trim() : (json['name'] ?? ''),
+      designation: json['designation'] ?? '',
+      department: json['department'] ?? '',
+      employeeCode: json['employeeCode'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? json['mobileNo'] ?? '',
+      dob: json['dob'] ?? '',
+      gender: json['gender'] ?? '',
+      bloodGroup: json['bloodGroup'] ?? '',
+      maritalStatus: json['maritalStatus'] ?? '',
+      joiningDate: json['joiningDate'] ?? '',
+      employmentType: json['employmentType'] ?? '',
+      workLocation: json['workLocation'] ?? '',
+      reportingManager: json['reportingManager'] ?? '',
+      shift: json['shift'] ?? '',
+      grade: json['grade'] ?? '',
+      pfNumber: json['pfNumber'] ?? '',
+      uanNumber: json['uanNumber'] ?? '',
+      esiNumber: json['esiNumber'] ?? '',
+      panNumber: json['panNumber'] ?? '',
+      aadhaarLast4: json['aadhaarLast4'] ?? '',
+      address: json['address'] ?? '',
+      emergencyContact: json['emergencyContact'] ?? '',
+      emergencyRelation: json['emergencyRelation'] ?? '',
+      emergencyPhone: json['emergencyPhone'] ?? '',
+      avatarInitials: json['firstName'] != null && json['firstName'].isNotEmpty ? json['firstName'][0] : 'U',
+    );
+  }
+
+  factory HREmployee.empty() {
+    return const HREmployee(
+      id: '', name: 'Loading...', designation: '', department: '',
+      employeeCode: '', email: '', phone: '', dob: '', gender: '',
+      bloodGroup: '', maritalStatus: '', joiningDate: '', employmentType: '',
+      workLocation: '', reportingManager: '', shift: '', grade: '',
+      pfNumber: '', uanNumber: '', esiNumber: '', panNumber: '',
+      aadhaarLast4: '', address: '', emergencyContact: '',
+      emergencyRelation: '', emergencyPhone: '', avatarInitials: '',
+    );
+  }
 }
 
 class FamilyMember {
@@ -124,24 +167,55 @@ class WorkExperience {
 
 class AttendanceRecord {
   final String date;
+  final String shiftCode;
+  final String shiftInTime;
+  final String shiftOutTime;
   final String punchIn;
   final String punchOut;
-  final String status;   // Present, Absent, Late, Half Day, Holiday, Leave
+  final String status;
+  final String dayType;
   final String workHours;
   final bool isLate;
   final bool isEarlyExit;
-  final String? overtimeHours;
+  final String extraHours;
 
   const AttendanceRecord({
     required this.date,
-    required this.punchIn,
-    required this.punchOut,
-    required this.status,
-    required this.workHours,
-    required this.isLate,
-    required this.isEarlyExit,
-    this.overtimeHours,
+    this.shiftCode = '',
+    this.shiftInTime = '',
+    this.shiftOutTime = '',
+    this.punchIn = '–',
+    this.punchOut = '–',
+    this.status = 'Unknown',
+    this.dayType = '',
+    this.workHours = '–',
+    this.isLate = false,
+    this.isEarlyExit = false,
+    this.extraHours = '00:00:00',
   });
+
+  factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
+    final empIn = json['empInTime']?.toString() ?? '';
+    final empOut = json['empOutTime']?.toString() ?? '';
+    final shiftIn = json['shiftInTime']?.toString() ?? '';
+    final shiftOut = json['shiftOutTime']?.toString() ?? '';
+    final lateMark = (json['lateInMark'] ?? 0).toString();
+    final earlyMark = (json['earlyOutMark'] ?? 0).toString();
+    return AttendanceRecord(
+      date: json['date'] ?? '',
+      shiftCode: json['shiftCode'] ?? '',
+      shiftInTime: shiftIn,
+      shiftOutTime: shiftOut,
+      punchIn: empIn.isNotEmpty ? empIn : '–',
+      punchOut: empOut.isNotEmpty ? empOut : '–',
+      status: json['status'] ?? json['dayType'] ?? 'Unknown',
+      dayType: json['dayType1'] ?? json['dayType'] ?? '',
+      workHours: json['totalHours'] ?? '–',
+      isLate: double.tryParse(lateMark) != null && double.parse(lateMark) > 0,
+      isEarlyExit: double.tryParse(earlyMark) != null && double.parse(earlyMark) > 0,
+      extraHours: json['extraHours']?.toString() ?? '00:00:00',
+    );
+  }
 }
 
 class AttendanceSummary {
@@ -166,6 +240,67 @@ class AttendanceSummary {
     required this.leavesTaken,
     required this.attendancePercentage,
   });
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  static double _parseDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
+  }
+
+  factory AttendanceSummary.fromJson(Map<String, dynamic> json) {
+    return AttendanceSummary(
+      totalWorkingDays: _parseInt(json['totalWorkingDays']),
+      present: _parseInt(json['present']),
+      absent: _parseInt(json['absent']),
+      late: _parseInt(json['late']),
+      earlyExit: _parseInt(json['earlyExit']),
+      halfDay: _parseInt(json['halfDay']),
+      holidays: _parseInt(json['holidays']),
+      leavesTaken: _parseInt(json['leavesTaken']),
+      attendancePercentage: _parseDouble(json['attendancePercentage']),
+    );
+  }
+
+  factory AttendanceSummary.fromRecords(List<AttendanceRecord> records) {
+    final total = records.length;
+    final present = records.where((r) => r.status.toLowerCase() == 'present').length;
+    final absent = records.where((r) => r.status.toLowerCase() == 'absent').length;
+    final late = records.where((r) => r.isLate).length;
+    final earlyExit = records.where((r) => r.isEarlyExit).length;
+    final halfDay = records.where((r) => r.status.toLowerCase().contains('half')).length;
+    final holidays = records.where((r) => r.status.toLowerCase() == 'holiday').length;
+    final leaves = records.where((r) => r.status.toLowerCase() == 'leave').length;
+    final attendancePercentage = total == 0 ? 0.0 : (present / total) * 100;
+
+    return AttendanceSummary(
+      totalWorkingDays: total,
+      present: present,
+      absent: absent,
+      late: late,
+      earlyExit: earlyExit,
+      halfDay: halfDay,
+      holidays: holidays,
+      leavesTaken: leaves,
+      attendancePercentage: attendancePercentage,
+    );
+  }
+
+  factory AttendanceSummary.empty() {
+    return const AttendanceSummary(
+      totalWorkingDays: 0, present: 0, absent: 0, late: 0, earlyExit: 0,
+      halfDay: 0, holidays: 0, leavesTaken: 0, attendancePercentage: 0.0,
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -188,6 +323,17 @@ class LeaveBalance {
     required this.available,
     required this.colorHex,
   });
+
+  factory LeaveBalance.fromJson(Map<String, dynamic> json) {
+    return LeaveBalance(
+      leaveType: json['leaveType'] ?? json['leaveName'] ?? 'Unknown',
+      total: (json['total'] ?? 0).toInt(),
+      used: (json['used'] ?? 0).toInt(),
+      pending: (json['pending'] ?? 0).toInt(),
+      available: (json['available'] ?? json['balance'] ?? 0).toInt(),
+      colorHex: json['colorHex'] ?? '#1565C0',
+    );
+  }
 }
 
 class LeaveApplication {
@@ -214,6 +360,21 @@ class LeaveApplication {
     this.approvedBy,
     this.remarks,
   });
+
+  factory LeaveApplication.fromJson(Map<String, dynamic> json) {
+    return LeaveApplication(
+      id: json['id']?.toString() ?? '',
+      leaveType: json['leaveType'] ?? json['leaveName'] ?? 'Leave',
+      fromDate: json['fromDate'] ?? '',
+      toDate: json['toDate'] ?? '',
+      days: (json['days'] ?? json['noOfDays'] ?? 0).toInt(),
+      reason: json['reason'] ?? '',
+      status: json['status'] ?? 'Pending',
+      appliedOn: json['appliedOn'] ?? json['createdDate'] ?? '',
+      approvedBy: json['approvedBy'],
+      remarks: json['remarks'],
+    );
+  }
 }
 
 class HRHoliday {
@@ -230,6 +391,16 @@ class HRHoliday {
     required this.type,
     required this.isOptional,
   });
+
+  factory HRHoliday.fromJson(Map<String, dynamic> json) {
+    return HRHoliday(
+      name: json['name'] ?? json['holidayName'] ?? 'Holiday',
+      date: json['date'] ?? json['holidayDate'] ?? '',
+      day: json['day'] ?? json['dayName'] ?? '',
+      type: json['type'] ?? json['holidayType'] ?? 'National',
+      isOptional: json['isOptional'] ?? (json['type'] == 'Optional'),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -286,11 +457,180 @@ class SalarySlip {
     required this.workingDays,
     required this.presentDays,
   });
+
+  factory SalarySlip.fromJson(Map<String, dynamic> json) {
+    return SalarySlip(
+      month: json['month'] ?? '',
+      year: json['year']?.toString() ?? '',
+      payPeriod: json['payPeriod'] ?? '',
+      basicSalary: (json['basicSalary'] ?? 0).toDouble(),
+      hra: (json['hra'] ?? 0).toDouble(),
+      conveyanceAllowance: (json['conveyanceAllowance'] ?? 0).toDouble(),
+      medicalAllowance: (json['medicalAllowance'] ?? 0).toDouble(),
+      specialAllowance: (json['specialAllowance'] ?? 0).toDouble(),
+      nightAllowance: (json['nightAllowance'] ?? 0).toDouble(),
+      doctorIncentive: (json['doctorIncentive'] ?? 0).toDouble(),
+      bonus: (json['bonus'] ?? 0).toDouble(),
+      grossEarnings: (json['grossEarnings'] ?? 0).toDouble(),
+      pfDeduction: (json['pfDeduction'] ?? json['pf'] ?? 0).toDouble(),
+      esicDeduction: (json['esicDeduction'] ?? json['esic'] ?? 0).toDouble(),
+      professionalTax: (json['professionalTax'] ?? json['pt'] ?? 0).toDouble(),
+      tds: (json['tds'] ?? 0).toDouble(),
+      loanDeduction: (json['loanDeduction'] ?? 0).toDouble(),
+      totalDeductions: (json['totalDeductions'] ?? 0).toDouble(),
+      netSalary: (json['netSalary'] ?? 0).toDouble(),
+      status: json['status'] ?? 'Pending',
+      creditDate: json['creditDate'] ?? '',
+      workingDays: (json['workingDays'] ?? 0).toInt(),
+      presentDays: (json['presentDays'] ?? 0).toInt(),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shift
 // ─────────────────────────────────────────────────────────────────────────────
+
+class ShiftRosterColumn {
+  final String label;
+  final String field;
+
+  const ShiftRosterColumn({
+    required this.label,
+    required this.field,
+  });
+
+  factory ShiftRosterColumn.fromJson(Map<String, dynamic> json) {
+    return ShiftRosterColumn(
+      label: json['label']?.toString() ?? json['labelName']?.toString() ?? '',
+      field: json['field']?.toString() ?? json['columnName']?.toString() ?? '',
+    );
+  }
+}
+
+class ShiftRosterRow {
+  final Map<String, dynamic> values;
+
+  const ShiftRosterRow({required this.values});
+
+  factory ShiftRosterRow.fromJson(Map<String, dynamic> json) {
+    return ShiftRosterRow(values: json.map((key, value) => MapEntry(key.toString(), value)));
+  }
+}
+
+class ShiftRosterPagination {
+  final int currentPage;
+  final int pageSize;
+  final int totalRecords;
+  final int totalPages;
+
+  const ShiftRosterPagination({
+    required this.currentPage,
+    required this.pageSize,
+    required this.totalRecords,
+    required this.totalPages,
+  });
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  factory ShiftRosterPagination.fromJson(Map<String, dynamic> json) {
+    final currentPage = _parseInt(json['currentPage'] ?? json['current_page'] ?? json['page'] ?? 1);
+    final pageSize = _parseInt(json['pageSize'] ?? json['page_size'] ?? json['size'] ?? 10);
+    final totalRecords = _parseInt(
+      json['totalRecords'] ?? json['total_records'] ?? json['totalItems'] ?? json['total'] ?? 0,
+    );
+    final totalPages = _parseInt(json['totalPages'] ?? json['total_pages'] ?? json['totalPage'] ?? (pageSize > 0 ? ((totalRecords + pageSize - 1) ~/ pageSize) : 1));
+    return ShiftRosterPagination(
+      currentPage: currentPage,
+      pageSize: pageSize,
+      totalRecords: totalRecords,
+      totalPages: totalPages,
+    );
+  }
+}
+
+class ShiftTemplate {
+  final String id;
+  final String name;
+  final String code;
+  final String inTime;
+  final String outTime;
+  final String totalHours;
+  final bool nightShift;
+  final bool halfDay;
+  final bool hourBased;
+  final int? bufferTime;
+  final int? cutOffTime;
+  final double? fullRate;
+  final double? halfRate;
+  final List<Map<String, dynamic>> lateMarkRuleDTOList;
+
+  const ShiftTemplate({
+    required this.id,
+    required this.name,
+    required this.code,
+    required this.inTime,
+    required this.outTime,
+    required this.totalHours,
+    required this.nightShift,
+    required this.halfDay,
+    required this.hourBased,
+    this.bufferTime,
+    this.cutOffTime,
+    this.fullRate,
+    this.halfRate,
+    this.lateMarkRuleDTOList = const [],
+  });
+
+  static bool _parseBool(dynamic value) {
+    if (value == null) return false;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return false;
+  }
+
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
+  factory ShiftTemplate.fromJson(Map<String, dynamic> json) {
+    final rules = <Map<String, dynamic>>[];
+    if (json['lateMarkRuleDTOList'] is List) {
+      rules.addAll((json['lateMarkRuleDTOList'] as List).cast<Map<String, dynamic>>());
+    }
+    return ShiftTemplate(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? json['shiftName']?.toString() ?? '',
+      code: json['code']?.toString() ?? json['shiftCode']?.toString() ?? '',
+      inTime: json['inTime']?.toString() ?? '',
+      outTime: json['outTime']?.toString() ?? '',
+      totalHours: json['totalWorkingHours']?.toString() ?? json['totalHours']?.toString() ?? '',
+      nightShift: _parseBool(json['nightShift']),
+      halfDay: _parseBool(json['halfDayApplicable'] ?? json['halfDay']),
+      hourBased: _parseBool(json['hourBased']),
+      bufferTime: json['bufferTime'] is int
+          ? json['bufferTime'] as int
+          : int.tryParse(json['bufferTime']?.toString() ?? ''),
+      cutOffTime: json['cutOffTime'] is int
+          ? json['cutOffTime'] as int
+          : int.tryParse(json['cutOffTime']?.toString() ?? ''),
+      fullRate: _parseDouble(json['fullRate'] ?? json['full_rate']),
+      halfRate: _parseDouble(json['halfRate'] ?? json['half_rate']),
+      lateMarkRuleDTOList: rules,
+    );
+  }
+}
 
 class ShiftSchedule {
   final String date;
@@ -593,6 +933,19 @@ class HRRequest {
     this.remarks,
     this.resolvedOn,
   });
+
+  factory HRRequest.fromJson(Map<String, dynamic> json) {
+    return HRRequest(
+      id: json['id']?.toString() ?? '',
+      type: json['type'] ?? json['requestType'] ?? 'General Request',
+      subject: json['subject'] ?? json['title'] ?? 'Request',
+      description: json['description'] ?? json['reason'] ?? '',
+      status: json['status'] ?? 'Pending',
+      submittedOn: json['submittedOn'] ?? json['createdDate'] ?? '',
+      resolvedOn: json['resolvedOn'] ?? json['updatedDate'],
+      remarks: json['remarks'],
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

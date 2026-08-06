@@ -102,6 +102,14 @@ class UserInformationService {
     await prefs.setString('jobtitle', data['jobtitle']?.toString() ?? '');
     await prefs.setString('clinicName', data['clinicName']?.toString() ?? '');
     await prefs.setString('userType', data['userType']?.toString() ?? '');
+
+    // Save fullName directly for easy retrieval
+    final String init = data['initial']?.toString() ?? '';
+    final String first = data['firstName']?.toString() ?? '';
+    final String last = data['lastName']?.toString() ?? '';
+    final String computedFullName = '$init $first $last'.trim();
+    await prefs.setString('fullName', computedFullName);
+    debugPrint('✅ Saved fullName: $computedFullName');
     
     // Clinic/Branch Information
     await prefs.setString('clinicUserid', data['clinicUserid']?.toString() ?? '');
@@ -161,6 +169,7 @@ class UserInformationService {
       'jobtitle': prefs.getString('jobtitle') ?? '',
       'clinicName': prefs.getString('clinicName') ?? '',
       'userType': prefs.getString('userType') ?? '',
+      'fullName': prefs.getString('fullName') ?? '',
       
       // Clinic/Branch Information
       'clinicUserid': prefs.getString('clinicUserid') ?? '',

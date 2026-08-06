@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:staff_mate/pages/login_page.dart';
 import 'package:staff_mate/pages/dashboard_page.dart';
+import 'package:staff_mate/presentation/face_attendance/face_attendance_page.dart';
 import 'package:staff_mate/pages/nurse_page.dart';
 import 'package:staff_mate/api/api_service.dart';
 import 'package:staff_mate/services/session_manger.dart';
@@ -10,17 +11,19 @@ import 'package:staff_mate/services/biometric_auth_service.dart';
 import 'package:staff_mate/pages/biometric_setup_page.dart';
 import 'package:staff_mate/pages/session_gate.dart';
 import 'package:staff_mate/pages/settings.dart';
+import 'package:staff_mate/presentation/language/language_selector_page.dart';
+import 'package:staff_mate/di/providers.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-
+  setupProviders();
   runApp(const MyApp());
 }
+
 Future<String> determineStartRoute() async {
   try {
     final hasValidSession = await SessionManager.hasValidSession();
@@ -180,14 +183,15 @@ return ThemeData(
                 '/dashboard': (context) =>
                     ActivityTracker(child: const DashboardPage()),
                 '/nurse': (context) => const NursePage(),
-                '/biometric-setup': (context) => BiometricSetupPage(
+                  '/face_attendance': (context) => FaceAttendancePage(),
+                  '/biometric-setup': (context) => BiometricSetupPage(
                       onContinue: () {
                         Navigator.of(context).pushNamedAndRemoveUntil(
                             '/dashboard', (r) => false);
                       },
                       isFromSettings: false,
                     ),
-                '/biometric-lock': (context) => BiometricLockScreen(
+                    '/biometric-lock': (context) => BiometricLockScreen(
                       onContinue: () {
                         Navigator.of(context).pushNamedAndRemoveUntil(
                             '/dashboard', (r) => false);

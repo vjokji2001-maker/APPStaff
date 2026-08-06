@@ -12,6 +12,10 @@ import 'package:staff_mate/services/frequency_service.dart';
 import 'package:staff_mate/services/add_service.dart';
 import 'package:staff_mate/api/ipd_service.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:permission_handler/permission_handler.dart';
+
+import 'barcode_scanner_screen.dart';
+import 'ocr_scanner_screen.dart';
 
 // ── Simple model for prescription location ──────────────────────────────────
 class PrescriptionLocation {
@@ -531,17 +535,31 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       }
     }
 
-    final durationPattern = RegExp(r'(\d+)\s*(day|days|d)', caseSensitive: false);
+    // Hinglish + English duration parsing
+    final durationPattern = RegExp(r'(\d+)\s*(day|days|d|din|mahina|month|mahine)', caseSensitive: false);
     final durationMatch = durationPattern.firstMatch(cleanText);
     if (durationMatch != null) {
-      result['duration'] = durationMatch.group(1)!;
+      int durValue = int.tryParse(durationMatch.group(1)!) ?? 1;
+      String durUnit = durationMatch.group(2)!.toLowerCase();
+      if (durUnit.contains('mahina') || durUnit.contains('month') || durUnit.contains('mahine')) {
+        durValue = durValue * 30; // convert to days
+      }
+      result['duration'] = durValue.toString();
     }
 
-    bool hasMorning = cleanText.contains('morning') || cleanText.contains('morn');
-    bool hasAfternoon = cleanText.contains('afternoon') || cleanText.contains('noon');
-    bool hasNight = cleanText.contains('night') || cleanText.contains('evening');
-
-    if (hasMorning && hasNight && hasAfternoon) {
+    // Hinglish frequency parsing
+    bool hasMorning = cleanText.contains('morning') || cleanText.contains('morn') || cleanText.contains('subah');
+    bool hasAfternoon = cleanText.contains('afternoon') || cleanText.contains('noon') || cleanText.contains('dopahar');
+    bool hasNight = cleanText.contains('night') || cleanText.contains('evening') || cleanText.contains('raat') || cleanText.contains('sham') || cleanText.contains('shyam');
+    
+    // Check for "din me do baar", "din me teen baar"
+    if (cleanText.contains('din me do baar') || cleanText.contains('din mein do baar') || cleanText.contains('twice') || cleanText.contains('two times')) {
+      result['frequency'] = '1-0-1';
+    } else if (cleanText.contains('din me teen baar') || cleanText.contains('din mein teen baar') || cleanText.contains('thrice') || cleanText.contains('three times')) {
+      result['frequency'] = '1-1-1';
+    } else if (cleanText.contains('din me ek baar') || cleanText.contains('din mein ek baar') || cleanText.contains('once') || cleanText.contains('one time')) {
+      result['frequency'] = '1-0-0';
+    } else if (hasMorning && hasNight && hasAfternoon) {
       result['frequency'] = '1-1-1';
     } else if (hasMorning && hasNight) {
       result['frequency'] = '1-0-1';
@@ -553,9 +571,10 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       result['frequency'] = '0-1-0';
     }
 
-    if (cleanText.contains('before food') || cleanText.contains('before meal')) {
+    // Hinglish instruction parsing
+    if (cleanText.contains('khali pet') || cleanText.contains('khane se pehle') || cleanText.contains('before food') || cleanText.contains('before meal')) {
       result['instruction'] = 'Before Food';
-    } else if (cleanText.contains('after food') || cleanText.contains('after meal')) {
+    } else if (cleanText.contains('khane ke baad') || cleanText.contains('after food') || cleanText.contains('after meal')) {
       result['instruction'] = 'After Food';
     }
 
@@ -667,6 +686,41 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
           }
         });
         Future.microtask(() => _calculateQuantity());
+      }
+    }
+  }
+
+  Future<void> _scanBarcode() async {
+    final barcode = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
+    );
+    if (barcode != null && barcode is String) {
+      medicineController.text = barcode;
+      _typeAheadController.text = barcode;
+      await _fetchMedicineDetails(barcode);
+    }
+  }
+
+  Future<void> _scanPrescriptionOcr() async {
+    final extractedText = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const OcrScannerScreen()),
+    );
+    if (extractedText != null && extractedText is String) {
+      final lines = extractedText.split('\n').where((l) => l.trim().isNotEmpty).toList();
+      if (lines.isNotEmpty) {
+        String firstMed = lines.first;
+        medicineController.text = firstMed;
+        _typeAheadController.text = firstMed;
+        await _fetchMedicineDetails(firstMed);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("OCR found: $firstMed\nCheck search results."),
+            duration: const Duration(seconds: 3),
+          ));
+        }
       }
     }
   }
@@ -849,6 +903,87 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     }
   }
 
+  // ── Smart Drug Safety AI ──────────────────────────────────────────────────
+  Future<bool> _checkDrugSafety(Map<String, dynamic> newMedicineBody) async {
+    final newGeneric = (newMedicineBody['genericname'] ?? '').toString().toLowerCase().trim();
+    final newMedName = (newMedicineBody['medicine_name'] ?? '').toString().toLowerCase().trim();
+
+    if (newGeneric.isEmpty && newMedName.isEmpty) return true;
+
+    List<String> warnings = [];
+
+    // 1. Duplicate Generic Check
+    if (newGeneric.isNotEmpty && newGeneric != 'null') {
+      for (var item in _prescriptionItems) {
+        final existingBody = item['medicineBody'] as Map<String, dynamic>? ?? {};
+        final existingGeneric = (existingBody['genericname'] ?? '').toString().toLowerCase().trim();
+        
+        if (existingGeneric.isNotEmpty && existingGeneric == newGeneric) {
+          warnings.add("Duplicate Generic: '${item['medicine']}' already contains '$newGeneric'.");
+          break; // One warning is enough
+        }
+      }
+    }
+
+    // 2. Simple Interaction Mock (Example: NSAIDs + Blood thinners)
+    final List<String> currentMedNames = _prescriptionItems.map((e) => (e['medicine'] ?? '').toString().toLowerCase()).toList();
+    
+    bool hasNsaid(String name) => name.contains('ibuprofen') || name.contains('diclofenac') || name.contains('naproxen') || name.contains('aspirin');
+    bool hasBloodThinner(String name) => name.contains('warfarin') || name.contains('clopidogrel') || name.contains('heparin');
+
+    if (hasNsaid(newMedName)) {
+      if (currentMedNames.any(hasBloodThinner)) {
+        warnings.add("Severe Interaction: NSAID with Blood Thinner increases bleeding risk.");
+      }
+    } else if (hasBloodThinner(newMedName)) {
+      if (currentMedNames.any(hasNsaid)) {
+         warnings.add("Severe Interaction: Blood Thinner with NSAID increases bleeding risk.");
+      }
+    }
+
+    if (warnings.isNotEmpty) {
+      bool proceed = false;
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+              const SizedBox(width: 10),
+              Text("Drug Safety Alert", style: GoogleFonts.poppins(color: Colors.red[800], fontWeight: FontWeight.bold, fontSize: 16)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: warnings.map((w) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text("• $w", style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87)),
+            )).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey[700])),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+              onPressed: () {
+                proceed = true;
+                Navigator.pop(ctx);
+              },
+              child: Text("Ignore & Add", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500)),
+            ),
+          ],
+        )
+      );
+      return proceed;
+    }
+
+    return true; // Safe
+  }
+
   // ── Add medicine – shows inline, does NOT save yet ────────────────────────
   void _addPrescriptionItem() async {
     if (_prescriptionItems.length >= _maxMedicineLimit) {
@@ -874,12 +1009,6 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     FocusScope.of(context).unfocus();
     await Future.delayed(const Duration(milliseconds: 200));
     if (!mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
 
     try {
       int safeParseInt(dynamic value) {
@@ -915,6 +1044,16 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
         "route": selectedRoute ?? "ORAL",
         "strength": safeParseDouble(strengthController.text),
       };
+
+      bool isSafe = await _checkDrugSafety(medicineBody);
+      if (!isSafe) return;
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
 
       final response = await AddMedicineService.postMedicineDetails(medicineBody);
 
@@ -1268,6 +1407,97 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     }
   }
 
+  void _showMedicineDetailsDialog(Map<String, dynamic> item) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A237E).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.info_outline, color: Color(0xFF1A237E), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Prescription Details',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item['medicine'] ?? 'Unknown Medicine', 
+                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1A237E))),
+              const SizedBox(height: 12),
+              _buildDetailRow("Dosage", "${item['dosage']} ${item['unit'] ?? ''}"),
+              _buildDetailRow("Strength", "${item['strength'] ?? 'N/A'}"),
+              _buildDetailRow("Frequency", "${item['frequency'] ?? 'N/A'}"),
+              _buildDetailRow("Dose", "${item['dose'] ?? 'N/A'}"),
+              _buildDetailRow("Route", "${item['route'] ?? 'N/A'}"),
+              _buildDetailRow("Instruction", "${item['instruction'] ?? 'N/A'}"),
+              _buildDetailRow("Duration", "${item['duration']} Days"),
+              _buildDetailRow("Total Qty", "${item['quantity'] ?? 'N/A'}"),
+              if (item['remark'] != null && item['remark'].toString().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text("Remarks:", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey[700])),
+                const SizedBox(height: 4),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text("${item['remark']}", style: GoogleFonts.poppins(fontSize: 13)),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1A237E),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text('Close', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(label, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(value.trim().isEmpty ? 'N/A' : value, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Prescription list bottom-sheet (with delete confirmation) ─────────────
   void _showPrescriptionPopup() {
     showModalBottomSheet(
@@ -1309,13 +1539,18 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (_, index) {
                     final item = _prescriptionItems[index];
-                    return Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
+                    return Material(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        onTap: () => _showMedicineDetailsDialog(item),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[200]!),
-                      ),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
                       child: Row(
                         children: [
                           CircleAvatar(
@@ -1357,8 +1592,10 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                           ),
                         ],
                       ),
-                    );
-                  },
+                    ),
+                  ),
+                );
+              },
                 ),
               ),
             ],
@@ -2448,70 +2685,94 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
 
                   if (medicineController.text.isEmpty &&
                       !_showVoiceInput) ...[
+                    // A sleek banner for Voice Command instead of giant card
                     GestureDetector(
                       onTap: _showVoiceTutorial,
                       child: Container(
-                        margin: const EdgeInsets.only(top: 50),
-                        padding: const EdgeInsets.all(20),
+                        margin: const EdgeInsets.only(top: 10, bottom: 20),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.blue.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
+                          color: Colors.blue.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(color: Colors.blue.withOpacity(0.1), blurRadius: 4)
+                                ],
+                              ),
+                              child: const Icon(Icons.mic, color: Colors.blue, size: 20),
                             ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Try Voice Command", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: darkBlue)),
+                                  Text("Tap mic or say 'Dolo 650, 5 days...'", style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.blue),
                           ],
                         ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.mic,
-                                size: 60, color: Colors.blue[300]),
-                            const SizedBox(height: 15),
-                            Text("Try Voice Command",
-                                style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: darkBlue)),
-                            const SizedBox(height: 8),
-                            Text(
-                              "Tap microphone icon or say:\n\"Dolo 650, 5 days, morning and night\"",
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.poppins(
-                                  color: Colors.grey[600], fontSize: 13),
-                            ),
-                            const SizedBox(height: 15),
-                            ElevatedButton(
-                              onPressed: _startListening,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: darkBlue,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(10)),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 10),
-                                child: Text('Start Voice Input',
-                                    style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w500)),
-                              ),
-                            ),
-                            if (!_speechAvailable)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 16),
-                                child: Text(
-                                  'Voice recognition may not be available on this device',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      color: Colors.orange),
-                                  textAlign: TextAlign.center,
+                      ),
+                    ),
+                    // An elegant placeholder guiding the user
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(top: 10, bottom: 20),
+                      padding: const EdgeInsets.all(30),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.manage_search, size: 64, color: Colors.grey[300]),
+                          const SizedBox(height: 16),
+                          Text("No Medicine Selected", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[800])),
+                          const SizedBox(height: 8),
+                          Text("Please search for a medicine above or use voice input to automatically fill prescription details.", textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500])),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _scanBarcode,
+                                  icon: const Icon(Icons.qr_code_scanner, size: 18),
+                                  label: Text("Barcode", style: GoogleFonts.poppins(fontSize: 12)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue[50],
+                                    foregroundColor: Colors.blue[800],
+                                    elevation: 0,
+                                  ),
                                 ),
                               ),
-                          ],
-                        ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _scanPrescriptionOcr,
+                                  icon: const Icon(Icons.document_scanner, size: 18),
+                                  label: Text("OCR", style: GoogleFonts.poppins(fontSize: 12)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green[50],
+                                    foregroundColor: Colors.green[800],
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ),
+                            ]
+                          )
+                        ],
                       ),
                     ),
                   ],
@@ -2769,11 +3030,11 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               Expanded(
                 flex: 4,
                 child: ElevatedButton(
-                  onPressed: _addPrescriptionItem,
+                  onPressed: medicineController.text.isNotEmpty ? _addPrescriptionItem : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: darkBlue,
-                    side: const BorderSide(color: darkBlue),
+                    backgroundColor: medicineController.text.isNotEmpty ? Colors.white : Colors.grey[100],
+                    foregroundColor: medicineController.text.isNotEmpty ? darkBlue : Colors.grey[400],
+                    side: BorderSide(color: medicineController.text.isNotEmpty ? darkBlue : Colors.transparent),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/hr_theme.dart';
 import '../data/hr_mock_data.dart';
+import '../data/hr_api_service.dart';
+import '../models/hr_models.dart';
 import '../widgets/hr_widgets.dart';
 
 class HRCalendarScreen extends StatefulWidget {
@@ -13,6 +15,32 @@ class HRCalendarScreen extends StatefulWidget {
 class _HRCalendarScreenState extends State<HRCalendarScreen> {
   int _tabIndex = 0;
   final List<String> _tabs = ['Holidays', 'Leave Calendar', 'Shift Calendar', 'Birthdays'];
+
+  bool _isLoadingHolidays = true;
+  List<HRHoliday> _holidays = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHolidays();
+  }
+
+  Future<void> _fetchHolidays() async {
+    try {
+      final dynamic res = await HRApiService.getHolidays();
+      final dataList = (res is Map && res['data'] != null) ? res['data'] as List : res as List<dynamic>;
+      setState(() {
+        _holidays = dataList.map((e) => HRHoliday.fromJson(e)).toList();
+        _isLoadingHolidays = false;
+      });
+    } catch (e) {
+      print('Error fetching holidays: $e');
+      setState(() {
+        _holidays = [];
+        _isLoadingHolidays = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,8 +100,11 @@ class _HRCalendarScreenState extends State<HRCalendarScreen> {
   }
 
   Widget _buildHolidaysTab() {
+    if (_isLoadingHolidays) {
+      return const Center(child: CircularProgressIndicator());
+    }
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final holidays = HRMockData.holidays;
+    final holidays = _holidays;
     // Holiday dates in Aug (offset 5 for Sat start)
     final augHolidays = <int>{15, 25};
     return SingleChildScrollView(

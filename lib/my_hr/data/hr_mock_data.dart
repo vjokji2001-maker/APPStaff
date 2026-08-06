@@ -58,18 +58,18 @@ class HRMockData {
 
   // ── Attendance Records ────────────────────────────────────────────────────
   static final List<AttendanceRecord> attendanceRecords = [
-    const AttendanceRecord(date: '24 Jul 2026', punchIn: '08:02 AM', punchOut: '04:15 PM', status: 'Present', workHours: '8h 13m', isLate: false, isEarlyExit: false),
-    const AttendanceRecord(date: '23 Jul 2026', punchIn: '08:18 AM', punchOut: '04:00 PM', status: 'Late', workHours: '7h 42m', isLate: true, isEarlyExit: false),
-    const AttendanceRecord(date: '22 Jul 2026', punchIn: '07:55 AM', punchOut: '04:10 PM', status: 'Present', workHours: '8h 15m', isLate: false, isEarlyExit: false),
-    const AttendanceRecord(date: '21 Jul 2026', punchIn: '08:00 AM', punchOut: '12:30 PM', status: 'Half Day', workHours: '4h 30m', isLate: false, isEarlyExit: true),
-    const AttendanceRecord(date: '20 Jul 2026', punchIn: '–', punchOut: '–', status: 'Sunday', workHours: '–', isLate: false, isEarlyExit: false),
-    const AttendanceRecord(date: '19 Jul 2026', punchIn: '–', punchOut: '–', status: 'Saturday', workHours: '–', isLate: false, isEarlyExit: false),
-    const AttendanceRecord(date: '18 Jul 2026', punchIn: '08:05 AM', punchOut: '04:30 PM', status: 'Present', workHours: '8h 25m', isLate: false, isEarlyExit: false, overtimeHours: '0h 30m'),
-    const AttendanceRecord(date: '17 Jul 2026', punchIn: '08:00 AM', punchOut: '04:00 PM', status: 'Present', workHours: '8h 00m', isLate: false, isEarlyExit: false),
-    const AttendanceRecord(date: '16 Jul 2026', punchIn: '–', punchOut: '–', status: 'Leave', workHours: '–', isLate: false, isEarlyExit: false),
-    const AttendanceRecord(date: '15 Jul 2026', punchIn: '–', punchOut: '–', status: 'Holiday', workHours: '–', isLate: false, isEarlyExit: false),
-    const AttendanceRecord(date: '14 Jul 2026', punchIn: '08:00 AM', punchOut: '04:05 PM', status: 'Present', workHours: '8h 05m', isLate: false, isEarlyExit: false),
-    const AttendanceRecord(date: '13 Jul 2026', punchIn: '08:25 AM', punchOut: '04:00 PM', status: 'Late', workHours: '7h 35m', isLate: true, isEarlyExit: false),
+    const AttendanceRecord(date: '24 Jul 2026', shiftCode: 'GS01', shiftInTime: '09:00', shiftOutTime: '17:00', punchIn: '08:02 AM', punchOut: '04:15 PM', status: 'Present', dayType: 'DP', workHours: '8h 13m', isLate: false, isEarlyExit: false),
+    const AttendanceRecord(date: '23 Jul 2026', shiftCode: 'GS01', shiftInTime: '09:00', shiftOutTime: '17:00', punchIn: '08:18 AM', punchOut: '04:00 PM', status: 'Late', dayType: 'DP', workHours: '7h 42m', isLate: true, isEarlyExit: false),
+    const AttendanceRecord(date: '22 Jul 2026', shiftCode: 'GS01', shiftInTime: '09:00', shiftOutTime: '17:00', punchIn: '07:55 AM', punchOut: '04:10 PM', status: 'Present', dayType: 'DP', workHours: '8h 15m', isLate: false, isEarlyExit: false),
+    const AttendanceRecord(date: '21 Jul 2026', shiftCode: 'GS01', shiftInTime: '09:00', shiftOutTime: '17:00', punchIn: '08:00 AM', punchOut: '12:30 PM', status: 'Half Day', dayType: 'DP', workHours: '4h 30m', isLate: false, isEarlyExit: true),
+    const AttendanceRecord(date: '20 Jul 2026', shiftCode: 'GS01', shiftInTime: '09:00', shiftOutTime: '17:00', punchIn: '–', punchOut: '–', status: 'Sunday', dayType: 'DP', workHours: '–', isLate: false, isEarlyExit: false),
+    const AttendanceRecord(date: '19 Jul 2026', shiftCode: 'GS01', shiftInTime: '09:00', shiftOutTime: '17:00', punchIn: '–', punchOut: '–', status: 'Saturday', dayType: 'DP', workHours: '–', isLate: false, isEarlyExit: false),
+    const AttendanceRecord(date: '18 Jul 2026', shiftCode: 'GS01', shiftInTime: '09:00', shiftOutTime: '17:00', punchIn: '08:05 AM', punchOut: '04:30 PM', status: 'Present', dayType: 'DP', workHours: '8h 25m', isLate: false, isEarlyExit: false, extraHours: '0h 30m'),
+    const AttendanceRecord(date: '17 Jul 2026', shiftCode: 'GS01', shiftInTime: '09:00', shiftOutTime: '17:00', punchIn: '08:00 AM', punchOut: '04:00 PM', status: 'Present', dayType: 'DP', workHours: '8h 00m', isLate: false, isEarlyExit: false),
+    const AttendanceRecord(date: '16 Jul 2026', shiftCode: 'GS01', shiftInTime: '09:00', shiftOutTime: '17:00', punchIn: '–', punchOut: '–', status: 'Leave', dayType: 'DP', workHours: '–', isLate: false, isEarlyExit: false),
+    const AttendanceRecord(date: '15 Jul 2026', shiftCode: 'GS01', shiftInTime: '09:00', shiftOutTime: '17:00', punchIn: '–', punchOut: '–', status: 'Holiday', dayType: 'DP', workHours: '–', isLate: false, isEarlyExit: false),
+    const AttendanceRecord(date: '14 Jul 2026', shiftCode: 'GS01', shiftInTime: '09:00', shiftOutTime: '17:00', punchIn: '08:00 AM', punchOut: '04:05 PM', status: 'Present', dayType: 'DP', workHours: '8h 05m', isLate: false, isEarlyExit: false),
+    const AttendanceRecord(date: '13 Jul 2026', shiftCode: 'GS01', shiftInTime: '09:00', shiftOutTime: '17:00', punchIn: '08:25 AM', punchOut: '04:00 PM', status: 'Late', dayType: 'DP', workHours: '7h 35m', isLate: true, isEarlyExit: false),
   ];
 
   static const AttendanceSummary attendanceSummary = AttendanceSummary(

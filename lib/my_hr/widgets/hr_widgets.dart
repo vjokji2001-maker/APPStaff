@@ -41,6 +41,7 @@ class HRGradientHeader extends StatelessWidget {
         children: [
           if (showBack)
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () => Navigator.maybePop(context),
               child: Container(
                 padding: const EdgeInsets.all(8),
@@ -274,6 +275,7 @@ class HRSectionHeader extends StatelessWidget {
           ),
           if (actionLabel != null)
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: onAction,
               child: Text(actionLabel!,
                   style: GoogleFonts.poppins(
@@ -462,33 +464,60 @@ class HRTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final active = activeColor ?? HRTheme.primaryDark;
+    
     return Container(
-      height: 44,
+      height: 52,
+      width: double.infinity,
       color: isDark ? HRTheme.bgCardDark : Colors.white,
-      child: ListView.builder(
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        itemCount: tabs.length,
-        itemBuilder: (_, i) {
-          final sel = i == selectedIndex;
-          return GestureDetector(
-            onTap: () => onTabChanged(i),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: sel ? active : Colors.transparent,
-                borderRadius: BorderRadius.circular(HRTheme.radiusFull),
-                border: sel ? null : Border.all(color: Colors.grey.shade300),
-              ),
-              child: Text(tabs[i],
-                  style: GoogleFonts.poppins(
-                    fontSize: 12, fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                    color: sel ? Colors.white : HRTheme.textSecondary,
-                  )),
-            ),
-          );
-        },
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF0F2F5),
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(tabs.length, (i) {
+              final sel = i == selectedIndex;
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onTabChanged(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: sel ? active : Colors.transparent,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: sel
+                        ? [
+                            BoxShadow(
+                              color: active.withOpacity(0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            )
+                          ]
+                        : [],
+                  ),
+                  child: Center(
+                    child: Text(
+                      tabs[i],
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: sel ? FontWeight.w600 : FontWeight.w500,
+                        color: sel ? Colors.white : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
       ),
     );
   }

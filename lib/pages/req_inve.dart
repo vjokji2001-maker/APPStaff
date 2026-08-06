@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -10,7 +11,303 @@ import 'package:staff_mate/services/notification_service.dart';
 import 'package:staff_mate/api/ipd_service.dart';
 import '../services/investigation_service.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AI HELPER CLASS – All 9 features live here
+// ─────────────────────────────────────────────────────────────────────────────
+class InvestigationAI {
+  // ── 1. Common Test Bundles ────────────────────────────────────────────────
+  static const Map<String, List<String>> bundles = {
+    'cbc': [
+      'hemoglobin',
+      'tlc',
+      'dlc',
+      'platelet count',
+      'pcv',
+      'mcv',
+      'mch',
+      'mchc',
+    ],
+    'complete blood count': ['hemoglobin', 'tlc', 'dlc', 'platelet count'],
+    'kft': ['urea', 'creatinine', 'uric acid', 'sodium', 'potassium'],
+    'kidney function': ['urea', 'creatinine', 'uric acid'],
+    'lft': [
+      'sgot',
+      'sgpt',
+      'bilirubin',
+      'alkaline phosphatase',
+      'albumin',
+      'protein',
+    ],
+    'liver function': ['sgot', 'sgpt', 'bilirubin'],
+    'lipid': ['cholesterol', 'triglyceride', 'hdl', 'ldl'],
+    'lipid profile': ['cholesterol', 'triglyceride', 'hdl', 'ldl'],
+    'tft': ['t3', 't4', 'tsh'],
+    'thyroid': ['t3', 't4', 'tsh'],
+    'urine': ['urine routine', 'urine microscopy'],
+    'blood sugar': ['fbs', 'ppbs', 'hba1c'],
+  };
 
+  // ── 2. Auto-Indication Generator ──────────────────────────────────────────
+  static const Map<String, String> indications = {
+    'cbc': 'Routine blood investigation / fever / anemia evaluation',
+    'complete blood count':
+        'Routine blood investigation / fever / anemia evaluation',
+    'kft': 'Renal function assessment / pre-operative evaluation',
+    'kidney': 'Renal function assessment / pre-operative evaluation',
+    'lft': 'Liver function / jaundice / hepatitis evaluation',
+    'liver': 'Liver function / jaundice / hepatitis evaluation',
+    'lipid': 'Lipid profile / cardiovascular risk assessment',
+    'tft': 'Thyroid function evaluation',
+    'thyroid': 'Thyroid function evaluation',
+    'ecg': 'Cardiac evaluation / chest pain / pre-operative',
+    'x-ray': 'Radiological evaluation',
+    'xray': 'Radiological evaluation',
+    'urine': 'Urinary tract infection / routine check',
+    'blood sugar': 'Diabetes screening / monitoring',
+    'hba1c': 'Diabetes control assessment',
+    'mri': 'Detailed imaging for soft tissue / neurological evaluation',
+    'ct': 'Cross-sectional imaging evaluation',
+  };
+
+  // ── 3. Common Abbreviations (Fuzzy Matching Engine) ───────────────────────
+  static const Map<String, List<String>> abbreviations = {
+    'cbc': ['complete blood count', 'blood count', 'hemogram'],
+    'kft': ['kidney function test', 'renal function', 'rft'],
+    'lft': ['liver function test', 'hepatic function'],
+    'rft': ['renal function test', 'kidney function'],
+    'tft': ['thyroid function test'],
+    'ecg': ['electrocardiogram', 'ekg'],
+    'ekg': ['electrocardiogram', 'ecg'],
+    'xray': ['x-ray', 'radiograph', 'chest x ray'],
+    'x ray': ['x-ray', 'radiograph'],
+    'ct': ['computed tomography', 'cat scan'],
+    'ct scan': ['computed tomography'],
+    'mri': ['magnetic resonance imaging'],
+    'urine': ['urinalysis', 'urine analysis', 'urine r/e', 'urine routine'],
+    'ua': ['urinalysis', 'urine analysis'],
+    'stool': ['stool analysis', 'stool r/e'],
+    'blood': ['blood test'],
+    'sugar': ['blood sugar', 'glucose', 'fbs', 'ppbs'],
+    'lipid': ['lipid profile'],
+    'hba1c': ['glycated hemoglobin', 'hb a1c'],
+    'pt': ['prothrombin time'],
+    'inr': ['international normalized ratio'],
+    'esr': ['erythrocyte sedimentation rate'],
+    'crp': ['c-reactive protein'],
+  };
+
+  // ── 4. Fuzzy Matching Engine (Dice + contains + abbreviation) ─────────────
+  static double similarity(String a, String b) {
+    a = _normalize(a);
+    b = _normalize(b);
+    if (a.isEmpty || b.isEmpty) return 0.0;
+    if (a == b) return 1.0;
+    if (a.contains(b) || b.contains(a)) return 0.88;
+
+    // Dice coefficient on character bigrams
+    final bigramsA = _bigrams(a);
+    final bigramsB = _bigrams(b);
+    if (bigramsA.isEmpty || bigramsB.isEmpty) return 0.0;
+    final intersection = bigramsA.intersection(bigramsB).length;
+    return (2.0 * intersection) / (bigramsA.length + bigramsB.length);
+  }
+
+  static String _normalize(String s) {
+    return s
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9\s]'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  static Set<String> _bigrams(String s) {
+    final set = <String>{};
+    for (int i = 0; i < s.length - 1; i++) {
+      set.add(s.substring(i, i + 2));
+    }
+    return set;
+  }
+
+  static bool isAbbreviationMatch(String spoken, String fullName) {
+    final normSpoken = _normalize(spoken).replaceAll(' ', '');
+    final normFull = _normalize(fullName).replaceAll(' ', '');
+    if (normFull.contains(normSpoken) && normSpoken.length > 2) return true;
+
+    for (final entry in abbreviations.entries) {
+      if (normSpoken.contains(entry.key) || entry.key.contains(normSpoken)) {
+        for (final form in entry.value) {
+          if (normFull.contains(form.replaceAll(' ', ''))) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // ── 5. Smart Search Ranking ───────────────────────────────────────────────
+  static List<Map<String, dynamic>> rankTests({
+    required List<Map<String, dynamic>> tests,
+    String? department,
+    String? gender,
+    int? age,
+  }) {
+    final scored = tests.map((t) {
+      double score = 0.0;
+      final name = (t['name'] ?? '').toString().toLowerCase();
+
+      if (department != null) {
+        final dept = department.toLowerCase();
+        if (dept.contains('cardio') &&
+            (name.contains('ecg') ||
+                name.contains('echo') ||
+                name.contains('troponin')))
+          score += 3.0;
+        if (dept.contains('gynae') || dept.contains('obg')) {
+          if (name.contains('pap') ||
+              name.contains('pregnancy') ||
+              name.contains('beta hcg') ||
+              name.contains('ultrasound'))
+            score += 3.0;
+        }
+        if (dept.contains('neuro') &&
+            (name.contains('mri') ||
+                name.contains('eeg') ||
+                name.contains('ct brain')))
+          score += 3.0;
+        if (dept.contains('ortho') &&
+            (name.contains('x-ray') ||
+                name.contains('xray') ||
+                name.contains('bone')))
+          score += 2.5;
+        if (dept.contains('path') || dept.contains('lab')) {
+          if (name.contains('cbc') ||
+              name.contains('kft') ||
+              name.contains('lft'))
+            score += 1.5;
+        }
+      }
+
+      if (gender != null) {
+        final g = gender.toLowerCase();
+        if (g == 'female' || g == 'f') {
+          if (name.contains('pap') ||
+              name.contains('pregnancy') ||
+              name.contains('beta') ||
+              name.contains('thyroid'))
+            score += 1.2;
+        }
+        if (g == 'male' || g == 'm') {
+          if (name.contains('psa') || name.contains('prostate')) score += 1.5;
+        }
+      }
+
+      if (age != null) {
+        if (age > 50 &&
+            (name.contains('lipid') ||
+                name.contains('ecg') ||
+                name.contains('sugar') ||
+                name.contains('hba1c')))
+          score += 1.5;
+        if (age < 12 && (name.contains('cbc') || name.contains('blood')))
+          score += 1.0;
+      }
+
+      // Popular tests get a small boost
+      if (name.contains('cbc') ||
+          name.contains('kft') ||
+          name.contains('lft') ||
+          name.contains('urine'))
+        score += 0.5;
+
+      return MapEntry(t, score);
+    }).toList();
+
+    scored.sort((a, b) => b.value.compareTo(a.value));
+    return scored.map((e) => e.key).toList();
+  }
+
+  // ── 6. Smart Test Suggestion (based on age/gender/dept) ───────────────────
+  static List<String> suggestTests({
+    String? department,
+    String? gender,
+    int? age,
+  }) {
+    final suggestions = <String>[];
+
+    // Always useful
+    suggestions.addAll(['CBC', 'KFT', 'LFT', 'Urine Routine']);
+
+    if (age != null && age > 40) {
+      suggestions.addAll(['Lipid Profile', 'Blood Sugar', 'ECG']);
+    }
+    if (age != null && age > 50) {
+      suggestions.add('HbA1c');
+    }
+
+    if (gender != null &&
+        (gender.toLowerCase() == 'female' || gender.toLowerCase() == 'f')) {
+      suggestions.addAll(['TFT', 'Beta HCG']);
+    }
+
+    if (department != null) {
+      final d = department.toLowerCase();
+      if (d.contains('cardio')) suggestions.addAll(['ECG', 'Echo', 'Troponin']);
+      if (d.contains('neuro')) suggestions.addAll(['MRI Brain', 'CT Brain']);
+      if (d.contains('ortho')) suggestions.add('X-Ray');
+      if (d.contains('gynae'))
+        suggestions.addAll(['Pap Smear', 'Ultrasound Pelvis']);
+    }
+
+    return suggestions.toSet().toList();
+  }
+
+  // ── 7. Contraindication rules (simple) ────────────────────────────────────
+  static String? checkContraindication(
+    String testName, {
+    String? notes,
+    String? gender,
+    int? age,
+  }) {
+    final name = testName.toLowerCase();
+    if (notes != null) {
+      final n = notes.toLowerCase();
+      if ((name.contains('mri') || name.contains('magnetic')) &&
+          (n.contains('pacemaker') ||
+              n.contains('metal implant') ||
+              n.contains('cochlear'))) {
+        return 'MRI is contraindicated in patients with metal implants / pacemaker.';
+      }
+      if ((name.contains('contrast') || name.contains('ct with')) &&
+          (n.contains('creatinine high') ||
+              n.contains('kidney failure') ||
+              n.contains('ckd'))) {
+        return 'Contrast study risky in patients with impaired renal function.';
+      }
+    }
+    return null;
+  }
+
+  // ── 8. Get indication for a test ──────────────────────────────────────────
+  static String? getIndication(String testName) {
+    final name = testName.toLowerCase();
+    for (final entry in indications.entries) {
+      if (name.contains(entry.key)) return entry.value;
+    }
+    return null;
+  }
+
+  // ── 9. Get related bundle tests ───────────────────────────────────────────
+  static List<String> getBundle(String testName) {
+    final name = testName.toLowerCase();
+    for (final entry in bundles.entries) {
+      if (name.contains(entry.key)) return entry.value;
+    }
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOCATION MODEL
+// ─────────────────────────────────────────────────────────────────────────────
 class InvestigationLocation {
   final int id;
   final String name;
@@ -25,6 +322,9 @@ class InvestigationLocation {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────────────────────────
 class ReqInvestigationPage extends StatefulWidget {
   final String patientName;
   final Patient patient;
@@ -45,8 +345,11 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _parameterController = TextEditingController();
   final TextEditingController _indicationsController = TextEditingController();
-  final TextEditingController _totalController = TextEditingController(text: "0");
-  final TextEditingController _consultantNameController = TextEditingController();
+  final TextEditingController _totalController = TextEditingController(
+    text: "0",
+  );
+  final TextEditingController _consultantNameController =
+      TextEditingController();
   final TextEditingController _templateController = TextEditingController();
 
   String? _selectedLocation;
@@ -57,7 +360,12 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
 
   final List<Map<String, dynamic>> _investigationItems = [];
   final List<String> locations = ["AH (Nagpur)", "Other Location"];
-  final List<String> jobTitles = ["Pathlab", "Radiology", "Cardiology", "Other"];
+  final List<String> jobTitles = [
+    "Pathlab",
+    "Radiology",
+    "Cardiology",
+    "Other",
+  ];
   List<String> templateList = [];
   List<Map<String, dynamic>> investigationTypes = [];
   List<dynamic> parameterList = [];
@@ -89,6 +397,12 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
   bool _isProcessingMultipleTests = false;
   bool _isSpeechInitialized = false;
 
+  // AI state
+  List<String> _smartSuggestions = [];
+  List<String> _bundleSuggestions = [];
+  String? _patientDepartment;
+  int? _patientAge;
+
   final Map<String, int> _jobTitleToTypeId = {
     'Pathlab': 5,
     'Radiology': 7,
@@ -106,7 +420,25 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
     _loadInitialData();
     _loadTemplates();
     _initSpeech();
-    _loadDispLocations(); 
+    _loadDispLocations();
+    _prepareSmartSuggestions();
+  }
+
+  // ── Smart Suggestions on load ─────────────────────────────────────────────
+  void _prepareSmartSuggestions() {
+    // Try to extract age if available on patient model
+    try {
+      final ageField = (widget.patient as dynamic).age;
+      if (ageField != null) {
+        _patientAge = int.tryParse(ageField.toString());
+      }
+    } catch (_) {}
+
+    _smartSuggestions = InvestigationAI.suggestTests(
+      department: _patientDepartment,
+      gender: widget.patient.gender,
+      age: _patientAge,
+    );
   }
 
   Future<void> _loadDispLocations() async {
@@ -117,7 +449,10 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         final List<dynamic> raw = result['data'] ?? [];
         setState(() {
           _dispLocations = raw
-              .map((e) => InvestigationLocation.fromJson(e as Map<String, dynamic>))
+              .map(
+                (e) =>
+                    InvestigationLocation.fromJson(e as Map<String, dynamic>),
+              )
               .toList();
           _dispLocationsLoading = false;
           if (_dispLocations.isNotEmpty) {
@@ -158,7 +493,11 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
               _isListeningForPackage = false;
               _isListeningForInvestigationType = false;
             });
-            _showSnackBar('Speech recognition error: $error', Colors.orange, duration: 1);
+            _showSnackBar(
+              'Speech recognition error: $error',
+              Colors.orange,
+              duration: 1,
+            );
           }
         },
       );
@@ -171,7 +510,11 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
     }
   }
 
-  void _showSnackBar(String message, Color backgroundColor, {int duration = 1}) {
+  void _showSnackBar(
+    String message,
+    Color backgroundColor, {
+    int duration = 1,
+  }) {
     if (_activeSnackBar != null) {
       _activeSnackBar!.close();
     }
@@ -195,25 +538,40 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // VOICE METHODS
+  // ─────────────────────────────────────────────────────────────────────────
   Future<void> _startVoiceSearchForPackage() async {
     if (_isListeningForPackage) {
       await _stopListening();
       return;
     }
-    if (!_isSpeechInitialized) {
+    if (!_isSpeechInitialized || !_speechAvailable) {
       await _initSpeech();
-      if (!_speechAvailable) {
-        _showSnackBar('Speech recognition is not available on this device', Colors.orange, duration: 1);
-        return;
-      }
     }
-    bool hasPermission = await _speech.hasPermission;
-    if (!hasPermission) {
-      bool permissionGranted = await _speech.initialize();
-      if (!permissionGranted) {
-        _showSnackBar('Microphone permission is required for voice input', Colors.orange, duration: 1);
-        return;
+    if (!_speechAvailable) {
+      _showSnackBar(
+        'Speech recognition is not available on this device',
+        Colors.orange,
+        duration: 1,
+      );
+      return;
+    }
+    try {
+      bool hasPermission = await _speech.hasPermission;
+      if (!hasPermission) {
+        bool permissionGranted = await _speech.initialize();
+        if (!permissionGranted) {
+          _showSnackBar(
+            'Microphone permission is required for voice input',
+            Colors.orange,
+            duration: 1,
+          );
+          return;
+        }
       }
+    } catch (e) {
+      debugPrint('Permission check error: $e');
     }
     setState(() {
       _isListeningForPackage = true;
@@ -245,7 +603,11 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         localeId: 'en_IN',
         listenOptions: options,
       );
-      _showSnackBar('Listening for package name... Speak now', Colors.blue, duration: 1);
+      _showSnackBar(
+        'Listening for package name... Speak now',
+        Colors.blue,
+        duration: 1,
+      );
     } catch (e) {
       debugPrint('Error starting speech listening: $e');
       if (mounted) {
@@ -260,28 +622,48 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
       await _stopListening();
       return;
     }
-    if (!_isSpeechInitialized) {
+    if (!_isSpeechInitialized || !_speechAvailable) {
       await _initSpeech();
-      if (!_speechAvailable) {
-        _showSnackBar('Speech recognition is not available on this device', Colors.orange, duration: 1);
-        return;
-      }
+    }
+    if (!_speechAvailable) {
+      _showSnackBar(
+        'Speech recognition is not available on this device',
+        Colors.orange,
+        duration: 1,
+      );
+      return;
     }
     if (_selectedJobTitle == null) {
-      _showSnackBar('Please select a job title first', Colors.orange, duration: 1);
+      _showSnackBar(
+        'Please select a job title first',
+        Colors.orange,
+        duration: 1,
+      );
       return;
     }
     if (investigationTypes.isEmpty) {
-      _showSnackBar('No investigation types loaded. Please wait or select job title again.', Colors.orange, duration: 1);
+      _showSnackBar(
+        'No investigation types loaded. Please wait or select job title again.',
+        Colors.orange,
+        duration: 1,
+      );
       return;
     }
-    bool hasPermission = await _speech.hasPermission;
-    if (!hasPermission) {
-      bool permissionGranted = await _speech.initialize();
-      if (!permissionGranted) {
-        _showSnackBar('Microphone permission is required for voice input', Colors.orange, duration: 1);
-        return;
+    try {
+      bool hasPermission = await _speech.hasPermission;
+      if (!hasPermission) {
+        bool permissionGranted = await _speech.initialize();
+        if (!permissionGranted) {
+          _showSnackBar(
+            'Microphone permission is required for voice input',
+            Colors.orange,
+            duration: 1,
+          );
+          return;
+        }
       }
+    } catch (e) {
+      debugPrint('Permission check error: $e');
     }
     setState(() {
       _isListeningForInvestigationType = true;
@@ -300,7 +682,8 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
           setState(() => _recognizedText = result.recognizedWords);
           _speechTimeoutTimer?.cancel();
           _speechTimeoutTimer = Timer(const Duration(milliseconds: 1500), () {
-            if (_isListeningForInvestigationType && _recognizedText.isNotEmpty) {
+            if (_isListeningForInvestigationType &&
+                _recognizedText.isNotEmpty) {
               _processMultipleInvestigationTypesVoiceCommand(_recognizedText);
             }
           });
@@ -314,7 +697,11 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         localeId: 'en_IN',
         listenOptions: options,
       );
-      _showSnackBar('Listening for multiple tests... Say test names like "CBC, KFT, Urine"', Colors.blue, duration: 1);
+      _showSnackBar(
+        'Listening for multiple tests... Say test names like "CBC, KFT, Urine"',
+        Colors.blue,
+        duration: 1,
+      );
     } catch (e) {
       debugPrint('Error starting speech listening: $e');
       if (mounted) {
@@ -341,11 +728,16 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
 
   void _processPackageVoiceCommand(String text) {
     if (text.isEmpty) {
-      _showSnackBar('No speech detected. Please try again.', Colors.orange, duration: 1);
+      _showSnackBar(
+        'No speech detected. Please try again.',
+        Colors.orange,
+        duration: 1,
+      );
       return;
     }
     _stopListening();
-    String cleanText = text.toLowerCase()
+    String cleanText = text
+        .toLowerCase()
         .replaceAll('search for', '')
         .replaceAll('find', '')
         .replaceAll('package', '')
@@ -354,7 +746,11 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         .replaceAll('investigation', '')
         .trim();
     if (cleanText.isEmpty) {
-      _showSnackBar('Could not recognize package name. Please try again.', Colors.orange, duration: 1);
+      _showSnackBar(
+        'Could not recognize package name. Please try again.',
+        Colors.orange,
+        duration: 1,
+      );
       return;
     }
     setState(() {
@@ -364,19 +760,42 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
     _showSnackBar('Package set to: $cleanText', Colors.green, duration: 1);
   }
 
-  Future<void> _processMultipleInvestigationTypesVoiceCommand(String text) async {
+  // ── Intelligent Voice NLP + Fuzzy Matching ────────────────────────────────
+  Future<void> _processMultipleInvestigationTypesVoiceCommand(
+    String text,
+  ) async {
     if (text.isEmpty) {
-      _showSnackBar('No speech detected. Please try again.', Colors.orange, duration: 1);
+      _showSnackBar(
+        'No speech detected. Please try again.',
+        Colors.orange,
+        duration: 1,
+      );
       return;
     }
     await _stopListening();
     if (!mounted) return;
     setState(() => _isProcessingMultipleTests = true);
     debugPrint('Original recognized text: "$text"');
-    String cleanText = text.trim()
-        .replaceAll(RegExp(r'^(select|choose|add|please)\s+', caseSensitive: false), '')
-        .replaceAll(RegExp(r"\s+(that'?s it|done|thank you|thanks)$", caseSensitive: false), '')
+
+    // NLP cleaning – supports Hindi + English mixed phrases
+    String cleanText = text
+        .trim()
+        .replaceAll(
+          RegExp(
+            r'^(select|choose|add|please|karo|kar do|add karo|please add)\s+',
+            caseSensitive: false,
+          ),
+          '',
+        )
+        .replaceAll(
+          RegExp(
+            r"\s+(that'?s it|done|thank you|thanks|bas|ho gaya)$",
+            caseSensitive: false,
+          ),
+          '',
+        )
         .replaceAll(RegExp(r'\s+and\s+', caseSensitive: false), ', ')
+        .replaceAll(RegExp(r'\s+aur\s+', caseSensitive: false), ', ')
         .replaceAll(RegExp(r'\s+plus\s+', caseSensitive: false), ', ')
         .replaceAll(RegExp(r'\s+with\s+', caseSensitive: false), ', ')
         .replaceAll(RegExp(r'\s+&\s+', caseSensitive: false), ', ')
@@ -384,11 +803,19 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
     debugPrint('Cleaned text: "$cleanText"');
+
     List<String> spokenTests = [];
     if (cleanText.contains(',')) {
-      spokenTests = cleanText.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty && e.length > 1).toList();
+      spokenTests = cleanText
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty && e.length > 1)
+          .toList();
     } else {
-      List<String> words = cleanText.split(' ').where((w) => w.length > 1).toList();
+      List<String> words = cleanText
+          .split(' ')
+          .where((w) => w.length > 1)
+          .toList();
       if (words.length >= 2) {
         List<String> combinedTests = [];
         int i = 0;
@@ -397,7 +824,9 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
             String twoWord = '${words[i]} ${words[i + 1]}';
             bool foundTwoWord = investigationTypes.any((type) {
               final typeName = (type['name'] ?? '').toString().toLowerCase();
-              return typeName.contains(twoWord) || twoWord.contains(typeName.replaceAll(' ', ''));
+              return typeName.contains(twoWord) ||
+                  twoWord.contains(typeName.replaceAll(' ', '')) ||
+                  InvestigationAI.similarity(twoWord, typeName) > 0.7;
             });
             if (foundTwoWord) {
               combinedTests.add(twoWord);
@@ -414,19 +843,30 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
       }
     }
     spokenTests = spokenTests.toSet().where((test) => test.isNotEmpty).toList();
+
     if (spokenTests.isEmpty) {
       setState(() => _isProcessingMultipleTests = false);
-      _showSnackBar('Could not recognize test names. Please try again or type manually.', Colors.orange, duration: 1);
+      _showSnackBar(
+        'Could not recognize test names. Please try again or type manually.',
+        Colors.orange,
+        duration: 1,
+      );
       return;
     }
+
     List<Map<String, dynamic>> matchedTests = [];
     List<String> unmatchedTests = [];
+
     for (String spokenTest in spokenTests) {
       String normalizedSpoken = spokenTest.toLowerCase().trim();
       bool found = false;
+
+      // Exact / contains match
       for (var type in investigationTypes) {
         final typeName = (type['name'] ?? '').toString().toLowerCase().trim();
-        if (typeName == normalizedSpoken || typeName.contains(normalizedSpoken) || normalizedSpoken.contains(typeName)) {
+        if (typeName == normalizedSpoken ||
+            typeName.contains(normalizedSpoken) ||
+            normalizedSpoken.contains(typeName)) {
           if (!matchedTests.any((t) => t['id'] == type['id'])) {
             matchedTests.add(type);
             found = true;
@@ -434,65 +874,52 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
           }
         }
       }
+
+      // Fuzzy + abbreviation match
       if (!found) {
-        bool foundInSecondPass = false;
+        double bestScore = 0.0;
+        Map<String, dynamic>? bestMatch;
         for (var type in investigationTypes) {
           final typeName = (type['name'] ?? '').toString().toLowerCase();
-          if (_isCommonAbbreviation(normalizedSpoken, typeName)) {
-            if (!matchedTests.any((t) => t['id'] == type['id'])) {
-              matchedTests.add(type);
-              foundInSecondPass = true;
-              break;
-            }
+          final score = InvestigationAI.similarity(normalizedSpoken, typeName);
+          final abbr = InvestigationAI.isAbbreviationMatch(
+            normalizedSpoken,
+            typeName,
+          );
+          final finalScore = abbr ? max(score, 0.92) : score;
+          if (finalScore > bestScore && finalScore >= 0.65) {
+            bestScore = finalScore;
+            bestMatch = type;
           }
         }
-        if (!foundInSecondPass) unmatchedTests.add(spokenTest);
+        if (bestMatch != null) {
+          if (!matchedTests.any((t) => t['id'] == bestMatch!['id'])) {
+            matchedTests.add(bestMatch);
+            found = true;
+          }
+        }
       }
+
+      if (!found) unmatchedTests.add(spokenTest);
     }
+
     if (!mounted) return;
     setState(() => _isProcessingMultipleTests = false);
+
     if (matchedTests.isEmpty) {
-      _showSnackBar('No matching tests found for: ${spokenTests.join(", ")}', Colors.orange, duration: 2);
+      _showSnackBar(
+        'No matching tests found for: ${spokenTests.join(", ")}',
+        Colors.orange,
+        duration: 2,
+      );
       return;
     }
+
+    // Voice Confirmation Bot – show confirmation with count
     _showMultiTestConfirmationDialog(matchedTests, unmatchedTests);
   }
 
-  bool _isCommonAbbreviation(String spoken, String fullName) {
-    Map<String, List<String>> commonAbbreviations = {
-      'cbc': ['complete blood count', 'blood count'],
-      'kft': ['kidney function test', 'renal function'],
-      'lft': ['liver function test', 'hepatic function'],
-      'rft': ['renal function test'],
-      'tft': ['thyroid function test'],
-      'ecg': ['electrocardiogram', 'ekg'],
-      'ekg': ['electrocardiogram', 'ecg'],
-      'xray': ['x-ray', 'radiograph'],
-      'x ray': ['x-ray', 'radiograph'],
-      'ct': ['computed tomography', 'cat scan'],
-      'ct scan': ['computed tomography'],
-      'mri': ['magnetic resonance imaging'],
-      'urine': ['urinalysis', 'urine analysis', 'urine r/e'],
-      'ua': ['urinalysis', 'urine analysis'],
-      'stool': ['stool analysis', 'stool r/e'],
-      'blood': ['blood test'],
-      'sugar': ['blood sugar', 'glucose'],
-      'lipid': ['lipid profile'],
-    };
-    String normalizedSpoken = spoken.replaceAll(' ', '').toLowerCase();
-    String normalizedFull = fullName.replaceAll(' ', '').toLowerCase();
-    if (normalizedFull.contains(normalizedSpoken) && normalizedSpoken.length > 2) return true;
-    for (var entry in commonAbbreviations.entries) {
-      if (normalizedSpoken.contains(entry.key) || entry.key.contains(normalizedSpoken)) {
-        for (var fullForm in entry.value) {
-          String normalizedForm = fullForm.replaceAll(' ', '').toLowerCase();
-          if (normalizedFull.contains(normalizedForm)) return true;
-        }
-      }
-    }
-    return false;
-  }
-
+  // ── Multi-test confirmation (with Voice Confirmation style) ───────────────
   void _showMultiTestConfirmationDialog(
     List<Map<String, dynamic>> matchedTests,
     List<String> unmatchedTests,
@@ -515,16 +942,31 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                 };
               }
             }
-            _loadTestDetailsForDialog(matchedTests, testDetails, setDialogState);
+            _loadTestDetailsForDialog(
+              matchedTests,
+              testDetails,
+              setDialogState,
+            );
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: Row(
                 children: [
-                  const Icon(Icons.check_circle_outline, color: Colors.green, size: 28),
+                  const Icon(
+                    Icons.record_voice_over,
+                    color: Colors.green,
+                    size: 28,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text('Confirm Multiple Tests',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18)),
+                    child: Text(
+                      'AI Voice: ${matchedTests.length} test(s) mil gaye',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -533,8 +975,41 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Found ${matchedTests.length} test(s):',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.grey[700])),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.smart_toy,
+                            size: 20,
+                            color: Colors.indigo.shade700,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Confirm karke "Add All" dabayein. Duplicate tests auto-detect honge.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.indigo.shade800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      'Found ${matchedTests.length} test(s):',
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     ...matchedTests.asMap().entries.map((entry) {
                       int index = entry.key;
@@ -545,18 +1020,35 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: isLoading ? Colors.grey[100] : Colors.green.shade50,
+                          color: isLoading
+                              ? Colors.grey[100]
+                              : Colors.green.shade50,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: isLoading ? Colors.grey[300]! : Colors.green.shade200),
+                          border: Border.all(
+                            color: isLoading
+                                ? Colors.grey[300]!
+                                : Colors.green.shade200,
+                          ),
                         ),
                         child: isLoading
                             ? Row(
                                 children: [
-                                  const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                                  const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
                                   const SizedBox(width: 10),
                                   Expanded(
-                                    child: Text('Loading ${test['name'] ?? 'test'} details...',
-                                        style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 13)),
+                                    child: Text(
+                                      'Loading ${test['name'] ?? 'test'} details...',
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 13,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               )
@@ -565,27 +1057,57 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                                   CircleAvatar(
                                     backgroundColor: Colors.green.shade100,
                                     radius: 16,
-                                    child: Text('${index + 1}',
-                                        style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold, fontSize: 12)),
+                                    child: Text(
+                                      '${index + 1}',
+                                      style: TextStyle(
+                                        color: Colors.green.shade700,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                   ),
                                   const SizedBox(width: 10),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text(test['name'] ?? '',
-                                            style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-                                        if (details['charge'] != null && details['charge'] != '0')
-                                          Text('₹${details['charge']}',
-                                              style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                                        if (details['code'] != null && details['code'].toString().isNotEmpty)
-                                          Text('Code: ${details['code']}',
-                                              style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                                        Text(
+                                          test['name'] ?? '',
+                                          style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        if (details['charge'] != null &&
+                                            details['charge'] != '0')
+                                          Text(
+                                            '₹${details['charge']}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        if (details['code'] != null &&
+                                            details['code']
+                                                .toString()
+                                                .isNotEmpty)
+                                          Text(
+                                            'Code: ${details['code']}',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.grey[500],
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                                    icon: const Icon(
+                                      Icons.close,
+                                      size: 18,
+                                      color: Colors.red,
+                                    ),
                                     onPressed: () {
                                       setDialogState(() {
                                         matchedTests.removeAt(index);
@@ -593,7 +1115,11 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                                       });
                                       if (matchedTests.isEmpty) {
                                         Navigator.pop(context);
-                                        _showSnackBar('All tests removed', Colors.orange, duration: 1);
+                                        _showSnackBar(
+                                          'All tests removed',
+                                          Colors.orange,
+                                          duration: 1,
+                                        );
                                       }
                                     },
                                   ),
@@ -603,52 +1129,64 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                     }).toList(),
                     if (unmatchedTests.isNotEmpty) ...[
                       const SizedBox(height: 10),
-                      Text('Could not find:',
-                          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.orange)),
-                      const SizedBox(height: 5),
-                      ...unmatchedTests.map((test) => Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.warning_amber, size: 16, color: Colors.orange),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                    child: Text(test,
-                                        style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[700]))),
-                              ],
-                            ),
-                          )),
-                    ],
-                    const SizedBox(height: 15),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline, size: 18, color: Colors.blue.shade700),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text('Tap "Add All" to add these tests to your request',
-                                style: GoogleFonts.poppins(fontSize: 11, color: Colors.blue.shade700)),
-                          ),
-                        ],
+                      Text(
+                        'Could not find:',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          color: Colors.orange,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 5),
+                      ...unmatchedTests.map(
+                        (test) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.warning_amber,
+                                size: 16,
+                                color: Colors.orange,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  test,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey[600])),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.poppins(color: Colors.grey[600]),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: matchedTests.isEmpty
                       ? null
                       : () async {
-                          bool allLoaded = testDetails.values.every((detail) => detail['isLoading'] == false);
+                          bool allLoaded = testDetails.values.every(
+                            (detail) => detail['isLoading'] == false,
+                          );
                           if (!allLoaded) {
-                            _showSnackBar('Please wait while we load all test details...', Colors.blue, duration: 1);
+                            _showSnackBar(
+                              'Please wait while we load all test details...',
+                              Colors.blue,
+                              duration: 1,
+                            );
                             return;
                           }
                           Navigator.pop(context);
@@ -656,10 +1194,17 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1A237E),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  child: Text('Add All (${matchedTests.length})',
-                      style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    'Add All (${matchedTests.length})',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             );
@@ -682,7 +1227,8 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
             testDetails[test['id']] = {
               'name': test['name'],
               'charge': details['charge'] ?? test['charge'] ?? '0',
-              'code': details['code'] ?? test['code'] ?? test['searchCode'] ?? '',
+              'code':
+                  details['code'] ?? test['code'] ?? test['searchCode'] ?? '',
               'parameters': details['parameters'] ?? '',
               'isLoading': false,
             };
@@ -706,7 +1252,9 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
     }
   }
 
-  Future<Map<String, dynamic>> _getTestDetails(Map<String, dynamic> test) async {
+  Future<Map<String, dynamic>> _getTestDetails(
+    Map<String, dynamic> test,
+  ) async {
     try {
       final int testTypeId = test['id'] ?? 0;
       final String testTypeName = test['name'] ?? '';
@@ -718,7 +1266,11 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
           wardId: _wardId!,
           name: testTypeName,
         );
-        dynamic amount = chargeResponse['data'] ?? chargeResponse['charge'] ?? chargeResponse['amount'] ?? chargeResponse['rate'];
+        dynamic amount =
+            chargeResponse['data'] ??
+            chargeResponse['charge'] ??
+            chargeResponse['amount'] ??
+            chargeResponse['rate'];
         if (amount == null || amount.toString() == '0') amount = fallbackCharge;
         return {
           'name': test['name'],
@@ -751,12 +1303,14 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
       return {
         'name': test['name'],
         'charge': test['charge']?.toString() ?? '0',
-        'code': test['code'] ?? test['searchCode'] ?? test['id']?.toString() ?? '',
+        'code':
+            test['code'] ?? test['searchCode'] ?? test['id']?.toString() ?? '',
         'parameters': '',
       };
     }
   }
 
+  // ── Duplicate Detection + Bundle Recommendation ───────────────────────────
   Future<void> _addMultipleTests(
     List<Map<String, dynamic>> tests,
     Map<int, Map<String, dynamic>> testDetails,
@@ -765,11 +1319,38 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
     setState(() => _isProcessingMultipleTests = true);
     int addedCount = 0;
     int failedCount = 0;
+    int duplicateCount = 0;
+
     for (var test in tests) {
       try {
         final details = testDetails[test['id']] ?? {};
         String packageName = _packageController.text.trim();
-        if (packageName.isEmpty && _selectedPackage != null) packageName = _selectedPackage!;
+        if (packageName.isEmpty && _selectedPackage != null)
+          packageName = _selectedPackage!;
+
+        // Duplicate Detection AI
+        final alreadyExists = _investigationItems.any(
+          (item) =>
+              item['typeId'] == test['id'] ||
+              (item['type'] as String).toLowerCase() ==
+                  (test['name'] ?? '').toString().toLowerCase(),
+        );
+
+        if (alreadyExists) {
+          duplicateCount++;
+          continue;
+        }
+
+        // Contraindication check
+        final contra = InvestigationAI.checkContraindication(
+          test['name']?.toString() ?? '',
+          gender: widget.patient.gender,
+          age: _patientAge,
+        );
+        if (contra != null) {
+          _showSnackBar('⚠ $contra', Colors.orange, duration: 3);
+        }
+
         String parameterString = '';
         try {
           final int testTypeId = test['id'] ?? 0;
@@ -787,16 +1368,29 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         } catch (e) {
           parameterString = details['parameters']?.toString() ?? '';
         }
+
+        // Auto-Indication
+        final autoInd = InvestigationAI.getIndication(
+          test['name']?.toString() ?? '',
+        );
+        final indicationText = _indicationsController.text.trim().isNotEmpty
+            ? _indicationsController.text.trim()
+            : (autoInd ?? '');
+
         setState(() {
           _investigationItems.add({
             'package': packageName,
             'type': test['name'] ?? '',
             'typeId': test['id'] ?? 0,
             'gender': test['gender'] ?? widget.patient.gender,
-            'searchCode': details['code']?.toString() ?? test['code']?.toString() ?? test['searchCode']?.toString() ?? '',
+            'searchCode':
+                details['code']?.toString() ??
+                test['code']?.toString() ??
+                test['searchCode']?.toString() ??
+                '',
             'amount': details['charge']?.toString() ?? '0',
             'parameter': parameterString,
-            'indications': _indicationsController.text.trim(),
+            'indications': indicationText,
             'urgent': _isUrgent,
           });
         });
@@ -807,21 +1401,37 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
       }
       await Future.delayed(const Duration(milliseconds: 50));
     }
+
     if (mounted) setState(() => _isProcessingMultipleTests = false);
     _updateTotal();
     _clearForm();
+
     String message = '';
     Color backgroundColor = Colors.green;
-    if (addedCount > 0 && failedCount == 0) {
+    if (addedCount > 0 && failedCount == 0 && duplicateCount == 0) {
       message = '$addedCount test(s) added successfully!';
-    } else if (addedCount > 0 && failedCount > 0) {
-      message = '$addedCount test(s) added, $failedCount failed';
+    } else if (addedCount > 0) {
+      message = '$addedCount added';
+      if (duplicateCount > 0) message += ', $duplicateCount duplicate skipped';
+      if (failedCount > 0) message += ', $failedCount failed';
+      backgroundColor = Colors.orange;
+    } else if (duplicateCount > 0) {
+      message = 'All selected tests were already added (duplicates skipped)';
       backgroundColor = Colors.orange;
     } else {
       message = 'Failed to add tests';
       backgroundColor = Colors.red;
     }
-    _showSnackBar(message, backgroundColor, duration: 1);
+    _showSnackBar(message, backgroundColor, duration: 2);
+
+    // After adding, show bundle recommendation if any
+    if (addedCount > 0 && tests.isNotEmpty) {
+      final firstName = tests.first['name']?.toString() ?? '';
+      final related = InvestigationAI.getBundle(firstName);
+      if (related.isNotEmpty) {
+        setState(() => _bundleSuggestions = related);
+      }
+    }
   }
 
   Future<void> _loadInitialData() async {
@@ -832,20 +1442,30 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         patientId: widget.patient.patientid,
       );
       if (ipdData != null && ipdData.isNotEmpty) {
-        String? extractedTpId = ipdData['tpId']?.toString() ??
+        String? extractedTpId =
+            ipdData['tpId']?.toString() ??
             ipdData['treatmentPlanId']?.toString() ??
             ipdData['tpid']?.toString();
-        String? extractedWardId = ipdData['wardId']?.toString() ??
+        String? extractedWardId =
+            ipdData['wardId']?.toString() ??
             ipdData['wardid']?.toString() ??
             ipdData['ward_id']?.toString();
         if (extractedTpId == 'null') extractedTpId = null;
         if (extractedWardId == 'null') extractedWardId = null;
+
+        // Try to extract department for smart ranking
+        _patientDepartment =
+            ipdData['department']?.toString() ??
+            ipdData['dept']?.toString() ??
+            ipdData['speciality']?.toString();
+
         if (mounted) {
           setState(() {
             _tpId = extractedTpId;
             _wardId = extractedWardId;
             _isLoadingPatientIpdData = false;
           });
+          _prepareSmartSuggestions();
         }
       } else {
         if (mounted) setState(() => _isLoadingPatientIpdData = false);
@@ -860,7 +1480,8 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
     if (!mounted) return;
     setState(() => _isLoadingTemplates = true);
     try {
-      final templates = await InvestigationService.fetchInvestigationTemplates();
+      final templates =
+          await InvestigationService.fetchInvestigationTemplates();
       if (mounted) {
         setState(() {
           templateList = templates;
@@ -878,10 +1499,21 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
     setState(() => _isLoadingInvestigationTypes = true);
     try {
       int typeId = _jobTitleToTypeId[jobTitle] ?? 1;
-      final types = await InvestigationService.fetchInvestigationTypes(typeId: typeId);
+      final types = await InvestigationService.fetchInvestigationTypes(
+        typeId: typeId,
+      );
+
+      // Smart Search Ranking
+      final ranked = InvestigationAI.rankTests(
+        tests: types,
+        department: _patientDepartment,
+        gender: widget.patient.gender,
+        age: _patientAge,
+      );
+
       if (mounted) {
         setState(() {
-          investigationTypes = types;
+          investigationTypes = ranked;
           _isLoadingInvestigationTypes = false;
           _selectedInvestigationType = null;
           _amountController.clear();
@@ -900,14 +1532,49 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
           _isLoadingInvestigationTypes = false;
           _selectedInvestigationType = null;
         });
-        _showSnackBar('Failed to load investigations for $jobTitle', Colors.red, duration: 1);
+        _showSnackBar(
+          'Failed to load investigations for $jobTitle',
+          Colors.red,
+          duration: 1,
+        );
       }
     }
   }
 
-  Future<void> _onInvestigationTypeSelected(Map<String, dynamic> investigationType) async {
+  Future<void> _onInvestigationTypeSelected(
+    Map<String, dynamic> investigationType,
+  ) async {
     if (!mounted) return;
     setState(() => _selectedInvestigationType = investigationType);
+
+    // Auto-Indication Generator
+    final autoInd = InvestigationAI.getIndication(
+      investigationType['name']?.toString() ?? '',
+    );
+    if (autoInd != null && _indicationsController.text.trim().isEmpty) {
+      _indicationsController.text = autoInd;
+    }
+
+    // Bundle Recommendation
+    final related = InvestigationAI.getBundle(
+      investigationType['name']?.toString() ?? '',
+    );
+    setState(() => _bundleSuggestions = related);
+
+    // Contraindication Alert
+    final contra = InvestigationAI.checkContraindication(
+      investigationType['name']?.toString() ?? '',
+      gender: widget.patient.gender,
+      age: _patientAge,
+    );
+    if (contra != null) {
+      _showSnackBar(
+        '⚠ Contraindication: $contra',
+        Colors.deepOrange,
+        duration: 3,
+      );
+    }
+
     try {
       await Future.wait([
         _fetchChargeForInvestigation(investigationType['name']),
@@ -932,7 +1599,8 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         setState(() {
           parameterList = params;
           selectedParameters = {
-            for (var param in params) (param['parameterName'] ?? param['name'] ?? '').toString(): true
+            for (var param in params)
+              (param['parameterName'] ?? param['name'] ?? '').toString(): true,
           };
           _parameterController.text = _getSelectedParametersString();
           _isLoadingParameters = false;
@@ -951,7 +1619,8 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
   }
 
   Future<void> _fetchChargeForInvestigation(String investigationType) async {
-    if (_isLoadingPatientIpdData) await Future.delayed(const Duration(milliseconds: 500));
+    if (_isLoadingPatientIpdData)
+      await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
     setState(() => _isLoadingAmount = true);
     try {
@@ -959,12 +1628,14 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
       final String testTypeName = investigationType.isNotEmpty
           ? investigationType
           : (_selectedInvestigationType?['name'] ?? '');
-      final String fallbackCharge = _selectedInvestigationType?['charge']?.toString() ?? '0';
+      final String fallbackCharge =
+          _selectedInvestigationType?['charge']?.toString() ?? '0';
       if (_tpId == null || _wardId == null || testTypeId == 0) {
-        if (mounted) setState(() {
-          _amountController.text = fallbackCharge;
-          _isLoadingAmount = false;
-        });
+        if (mounted)
+          setState(() {
+            _amountController.text = fallbackCharge;
+            _isLoadingAmount = false;
+          });
         return;
       }
       final chargeResponse = await InvestigationService.getCharge(
@@ -975,8 +1646,13 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
       );
       if (mounted) {
         setState(() {
-          dynamic amount = chargeResponse['data'] ?? chargeResponse['charge'] ?? chargeResponse['amount'] ?? chargeResponse['rate'];
-          if (amount == null || amount.toString() == '0') amount = fallbackCharge;
+          dynamic amount =
+              chargeResponse['data'] ??
+              chargeResponse['charge'] ??
+              chargeResponse['amount'] ??
+              chargeResponse['rate'];
+          if (amount == null || amount.toString() == '0')
+            amount = fallbackCharge;
           _amountController.text = amount.toString();
           _isLoadingAmount = false;
         });
@@ -985,7 +1661,8 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
       debugPrint('Error fetching charge: $e');
       if (mounted) {
         setState(() {
-          _amountController.text = _selectedInvestigationType?['charge']?.toString() ?? '0';
+          _amountController.text =
+              _selectedInvestigationType?['charge']?.toString() ?? '0';
           _isLoadingAmount = false;
         });
       }
@@ -999,13 +1676,90 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         .join(', ');
   }
 
+  // ── Single Add with Duplicate + Contraindication ──────────────────────────
   void _addItem() {
     if (_selectedInvestigationType == null) {
-      _showSnackBar('Please select an Investigation Type.', Colors.red, duration: 1);
+      _showSnackBar(
+        'Please select an Investigation Type.',
+        Colors.red,
+        duration: 1,
+      );
       return;
     }
+
+    // Duplicate Detection
+    final alreadyExists = _investigationItems.any(
+      (item) =>
+          item['typeId'] == _selectedInvestigationType!['id'] ||
+          (item['type'] as String).toLowerCase() ==
+              (_selectedInvestigationType!['name'] ?? '')
+                  .toString()
+                  .toLowerCase(),
+    );
+
+    if (alreadyExists) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.copy_all, color: Colors.orange[700]),
+              const SizedBox(width: 8),
+              Text(
+                'Duplicate Detected',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          content: Text(
+            '"${_selectedInvestigationType!['name']}" is already in the request list. Add again?',
+            style: GoogleFonts.poppins(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel', style: GoogleFonts.poppins()),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _doAddItem();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1A237E),
+              ),
+              child: Text(
+                'Add Anyway',
+                style: GoogleFonts.poppins(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    _doAddItem();
+  }
+
+  void _doAddItem() {
     String packageName = _packageController.text.trim();
-    if (packageName.isEmpty && _selectedPackage != null) packageName = _selectedPackage!;
+    if (packageName.isEmpty && _selectedPackage != null)
+      packageName = _selectedPackage!;
+
+    // Auto-Indication if empty
+    String indication = _indicationsController.text.trim();
+    if (indication.isEmpty) {
+      indication =
+          InvestigationAI.getIndication(
+            _selectedInvestigationType!['name']?.toString() ?? '',
+          ) ??
+          '';
+    }
+
     setState(() {
       _investigationItems.add({
         'package': packageName,
@@ -1013,9 +1767,11 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         'typeId': _selectedInvestigationType!['id'] ?? 0,
         'gender': _selectedInvestigationType!['gender'] ?? '',
         'searchCode': _searchCodeController.text.trim(),
-        'amount': _amountController.text.trim().isEmpty ? '0' : _amountController.text.trim(),
+        'amount': _amountController.text.trim().isEmpty
+            ? '0'
+            : _amountController.text.trim(),
         'parameter': _getSelectedParametersString(),
-        'indications': _indicationsController.text.trim(),
+        'indications': indication,
         'urgent': _isUrgent,
       });
       _clearForm();
@@ -1036,6 +1792,7 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
     parameterList = [];
     selectedParameters = {};
     _showParameterDropdown = false;
+    // keep bundle suggestions visible for a while
   }
 
   void _updateTotal() {
@@ -1049,23 +1806,39 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
   void _suggestJobTitleFromTemplate(String template) {
     final lowerTemplate = template.toLowerCase();
     String? suggestedJobTitle;
-    if (lowerTemplate.contains('path') || lowerTemplate.contains('lab') || lowerTemplate.contains('blood')) {
+    if (lowerTemplate.contains('path') ||
+        lowerTemplate.contains('lab') ||
+        lowerTemplate.contains('blood')) {
       suggestedJobTitle = "Pathlab";
-    } else if (lowerTemplate.contains('radio') || lowerTemplate.contains('x-ray') || lowerTemplate.contains('scan')) {
+    } else if (lowerTemplate.contains('radio') ||
+        lowerTemplate.contains('x-ray') ||
+        lowerTemplate.contains('scan')) {
       suggestedJobTitle = "Radiology";
-    } else if (lowerTemplate.contains('cardio') || lowerTemplate.contains('heart') || lowerTemplate.contains('ecg')) {
+    } else if (lowerTemplate.contains('cardio') ||
+        lowerTemplate.contains('heart') ||
+        lowerTemplate.contains('ecg')) {
       suggestedJobTitle = "Cardiology";
     }
-    if (suggestedJobTitle != null && jobTitles.contains(suggestedJobTitle) && _selectedJobTitle != suggestedJobTitle) {
+    if (suggestedJobTitle != null &&
+        jobTitles.contains(suggestedJobTitle) &&
+        _selectedJobTitle != suggestedJobTitle) {
       setState(() => _selectedJobTitle = suggestedJobTitle);
       _loadInvestigationTypesForJobTitle(suggestedJobTitle);
-      _showSnackBar('Suggested Job Title: $suggestedJobTitle', Colors.teal, duration: 1);
+      _showSnackBar(
+        'Suggested Job Title: $suggestedJobTitle',
+        Colors.teal,
+        duration: 1,
+      );
     }
   }
 
   Future<void> _submitInvestigationRequest() async {
     if (_investigationItems.isEmpty) {
-      _showSnackBar('Please add at least one investigation item.', Colors.red, duration: 1);
+      _showSnackBar(
+        'Please add at least one investigation item.',
+        Colors.red,
+        duration: 1,
+      );
       return;
     }
     if (_selectedJobTitle == null || _selectedJobTitle!.isEmpty) {
@@ -1089,12 +1862,21 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                 color: const Color(0xFF1A237E).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.science_outlined, color: Color(0xFF1A237E), size: 22),
+              child: const Icon(
+                Icons.science_outlined,
+                color: Color(0xFF1A237E),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text('Submit Investigation?',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
+              child: Text(
+                'Submit Investigation?',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
             ),
           ],
         ),
@@ -1104,11 +1886,18 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('The following investigations will be requested:',
-                  style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
+              Text(
+                'The following investigations will be requested:',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                ),
+              ),
               const SizedBox(height: 12),
               ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.35),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.35,
+                ),
                 child: ListView.separated(
                   shrinkWrap: true,
                   itemCount: _investigationItems.length,
@@ -1126,23 +1915,38 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                         children: [
                           CircleAvatar(
                             radius: 13,
-                            backgroundColor: const Color(0xFF1A237E).withOpacity(0.15),
-                            child: Text('${index + 1}',
-                                style: const TextStyle(
-                                    color: Color(0xFF1A237E), fontSize: 11, fontWeight: FontWeight.bold)),
+                            backgroundColor: const Color(
+                              0xFF1A237E,
+                            ).withOpacity(0.15),
+                            child: Text(
+                              '${index + 1}',
+                              style: const TextStyle(
+                                color: Color(0xFF1A237E),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(item['type'] ?? '',
-                                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                                Text(
+                                  item['type'] ?? '',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
                                 Text(
                                   '₹${item['amount']} · ${item['urgent'] == true ? 'Urgent' : 'Normal'}',
                                   style: GoogleFonts.poppins(
-                                      fontSize: 11,
-                                      color: item['urgent'] == true ? Colors.red : Colors.grey[600]),
+                                    fontSize: 11,
+                                    color: item['urgent'] == true
+                                        ? Colors.red
+                                        : Colors.grey[600],
+                                  ),
                                 ),
                               ],
                             ),
@@ -1156,7 +1960,10 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
               if (_selectedDispLocation != null) ...[
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.green[50],
                     borderRadius: BorderRadius.circular(10),
@@ -1164,11 +1971,20 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.local_pharmacy_outlined, size: 16, color: Colors.green[700]),
+                      Icon(
+                        Icons.local_pharmacy_outlined,
+                        size: 16,
+                        color: Colors.green[700],
+                      ),
                       const SizedBox(width: 8),
-                      Text('Loc: ${_selectedDispLocation!.name}',
-                          style: GoogleFonts.poppins(
-                              fontSize: 12, fontWeight: FontWeight.w500, color: Colors.green[800])),
+                      Text(
+                        'Loc: ${_selectedDispLocation!.name}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.green[800],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1176,15 +1992,23 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(10)),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Row(
                   children: [
                     Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text('Total: ₹${_totalController.text}',
-                          style: GoogleFonts.poppins(
-                              fontSize: 13, fontWeight: FontWeight.w600, color: Colors.blue[800])),
+                      child: Text(
+                        'Total: ₹${_totalController.text}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue[800],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -1195,7 +2019,10 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey[600])),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1205,10 +2032,14 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1A237E),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: Text('Confirm & Submit',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text(
+              'Confirm & Submit',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -1234,11 +2065,20 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
       final String responseMessage = result['message']?.toString() ?? '';
       if (isSuccess) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('last_investigation_save_time', DateTime.now().toIso8601String());
+        await prefs.setString(
+          'last_investigation_save_time',
+          DateTime.now().toIso8601String(),
+        );
         await prefs.setBool('shouldRefreshNotifications', true);
         await NotificationRefreshService().markInvestigationSaved();
-        String successMessage = responseMessage.isNotEmpty ? responseMessage : 'Investigation Request Submitted Successfully!';
-        if (successMessage.endsWith('.')) successMessage = successMessage.substring(0, successMessage.length - 1);
+        String successMessage = responseMessage.isNotEmpty
+            ? responseMessage
+            : 'Investigation Request Submitted Successfully!';
+        if (successMessage.endsWith('.'))
+          successMessage = successMessage.substring(
+            0,
+            successMessage.length - 1,
+          );
         _showSnackBar(successMessage, Colors.green, duration: 1);
         await Future.delayed(const Duration(milliseconds: 800));
         if (mounted) {
@@ -1247,11 +2087,17 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
           Navigator.pop(context, true);
         }
       } else {
-        String errorMessage = responseMessage.isNotEmpty ? responseMessage : 'Failed to submit investigation request';
+        String errorMessage = responseMessage.isNotEmpty
+            ? responseMessage
+            : 'Failed to submit investigation request';
         final lowerMessage = responseMessage.toLowerCase();
-        if (lowerMessage.contains('saved successfully') || lowerMessage.contains('investigation request saved')) {
+        if (lowerMessage.contains('saved successfully') ||
+            lowerMessage.contains('investigation request saved')) {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('last_investigation_save_time', DateTime.now().toIso8601String());
+          await prefs.setString(
+            'last_investigation_save_time',
+            DateTime.now().toIso8601String(),
+          );
           await prefs.setBool('shouldRefreshNotifications', true);
           await NotificationRefreshService().markInvestigationSaved();
           await Future.delayed(const Duration(milliseconds: 800));
@@ -1266,7 +2112,11 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
       }
     } catch (e) {
       debugPrint('Error submitting investigation: $e');
-      _showSnackBar('Network error occurred while submitting', Colors.red, duration: 1);
+      _showSnackBar(
+        'Network error occurred while submitting',
+        Colors.red,
+        duration: 1,
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -1285,8 +2135,14 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
+          ),
+        ),
         const SizedBox(height: 3),
         Container(
           height: 44,
@@ -1299,7 +2155,10 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
             controller: controller,
             readOnly: readOnly,
             onChanged: onChanged,
-            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
             decoration: InputDecoration(
               prefixIcon: Icon(icon, color: Colors.grey[500], size: 16),
               suffixIcon: suffixIcon,
@@ -1307,7 +2166,10 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
               isDense: true,
               hintText: "Enter $label",
               hintStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 11,
+              ),
             ),
           ),
         ),
@@ -1338,8 +2200,14 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
+          ),
+        ),
         const SizedBox(height: 3),
         GestureDetector(
           onTap: () {
@@ -1356,11 +2224,13 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
             ),
             child: Row(
               children: [
-                Icon(icon,
-                    color: (value != null && value.isNotEmpty)
-                        ? const Color(0xFF1A237E)
-                        : Colors.grey[500],
-                    size: 16),
+                Icon(
+                  icon,
+                  color: (value != null && value.isNotEmpty)
+                      ? const Color(0xFF1A237E)
+                      : Colors.grey[500],
+                  size: 16,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -1368,13 +2238,19 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: (value != null && value.isNotEmpty) ? Colors.black87 : Colors.grey[400],
+                      color: (value != null && value.isNotEmpty)
+                          ? Colors.black87
+                          : Colors.grey[400],
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Icon(Icons.keyboard_arrow_down, color: Colors.grey[500], size: 16),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  color: Colors.grey[500],
+                  size: 16,
+                ),
               ],
             ),
           ),
@@ -1387,8 +2263,14 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('DISPENSING LOCATION',
-            style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+        Text(
+          'DISPENSING LOCATION',
+          style: GoogleFonts.poppins(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
+          ),
+        ),
         const SizedBox(height: 3),
         GestureDetector(
           onTap: _dispLocationsLoading ? null : _showDispLocationSheet,
@@ -1402,11 +2284,13 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
             ),
             child: Row(
               children: [
-                Icon(Icons.local_pharmacy_outlined,
-                    color: _selectedDispLocation != null
-                        ? const Color(0xFF1A237E)
-                        : Colors.grey[500],
-                    size: 16),
+                Icon(
+                  Icons.local_pharmacy_outlined,
+                  color: _selectedDispLocation != null
+                      ? const Color(0xFF1A237E)
+                      : Colors.grey[500],
+                  size: 16,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: _dispLocationsLoading
@@ -1415,11 +2299,19 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                             SizedBox(
                               width: 12,
                               height: 12,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey[400]),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.grey[400],
+                              ),
                             ),
                             const SizedBox(width: 8),
-                            Text('Loading...',
-                                style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[400])),
+                            Text(
+                              'Loading...',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.grey[400],
+                              ),
+                            ),
                           ],
                         )
                       : Text(
@@ -1427,13 +2319,19 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: _selectedDispLocation != null ? Colors.black87 : Colors.grey[400],
+                            color: _selectedDispLocation != null
+                                ? Colors.black87
+                                : Colors.grey[400],
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                 ),
-                Icon(Icons.keyboard_arrow_down, color: Colors.grey[500], size: 16),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  color: Colors.grey[500],
+                  size: 16,
+                ),
               ],
             ),
           ),
@@ -1466,13 +2364,20 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                 height: 4,
                 margin: const EdgeInsets.only(top: 12, bottom: 20),
                 decoration: BoxDecoration(
-                    color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text('Select Dispensing Location',
-                  style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+              child: Text(
+                'Select Dispensing Location',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
             const SizedBox(height: 15),
             if (suggestions.isNotEmpty) ...[
@@ -1482,9 +2387,14 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                   children: [
                     Icon(Icons.bolt, size: 16, color: Colors.orange[700]),
                     const SizedBox(width: 6),
-                    Text('Suggested',
-                        style: GoogleFonts.poppins(
-                            fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[600])),
+                    Text(
+                      'Suggested',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[600],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1502,20 +2412,31 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                         Navigator.pop(ctx);
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
-                          color: isSelected ? const Color(0xFF1A237E) : const Color(0xFFE8EAF6),
+                          color: isSelected
+                              ? const Color(0xFF1A237E)
+                              : const Color(0xFFE8EAF6),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                              color: isSelected
-                                  ? const Color(0xFF1A237E)
-                                  : const Color(0xFFC5CAE9)),
+                            color: isSelected
+                                ? const Color(0xFF1A237E)
+                                : const Color(0xFFC5CAE9),
+                          ),
                         ),
-                        child: Text(loc.name,
-                            style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                color: isSelected ? Colors.white : const Color(0xFF1A237E),
-                                fontWeight: FontWeight.w500)),
+                        child: Text(
+                          loc.name,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF1A237E),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
                     );
                   }).toList(),
@@ -1526,15 +2447,23 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
             ],
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 15, 20, 5),
-              child: Text('All Locations',
-                  style: GoogleFonts.poppins(
-                      fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[600])),
+              child: Text(
+                'All Locations',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[600],
+                ),
+              ),
             ),
             Expanded(
               child: _dispLocations.isEmpty
                   ? Center(
-                      child: Text('No locations available',
-                          style: GoogleFonts.poppins(color: Colors.grey)))
+                      child: Text(
+                        'No locations available',
+                        style: GoogleFonts.poppins(color: Colors.grey),
+                      ),
+                    )
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       itemCount: _dispLocations.length,
@@ -1546,25 +2475,37 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                           leading: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                                color: isSelected
-                                    ? const Color(0xFF1A237E).withOpacity(0.1)
-                                    : Colors.grey[100],
-                                borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.local_pharmacy_outlined,
-                                size: 16,
-                                color: isSelected ? const Color(0xFF1A237E) : Colors.grey),
+                              color: isSelected
+                                  ? const Color(0xFF1A237E).withOpacity(0.1)
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.local_pharmacy_outlined,
+                              size: 16,
+                              color: isSelected
+                                  ? const Color(0xFF1A237E)
+                                  : Colors.grey,
+                            ),
                           ),
-                          title: Text(loc.name,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight:
-                                      isSelected ? FontWeight.w600 : FontWeight.normal,
-                                  color: isSelected
-                                      ? const Color(0xFF1A237E)
-                                      : Colors.black87)),
+                          title: Text(
+                            loc.name,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                              color: isSelected
+                                  ? const Color(0xFF1A237E)
+                                  : Colors.black87,
+                            ),
+                          ),
                           trailing: isSelected
-                              ? const Icon(Icons.check_circle,
-                                  color: Color(0xFF1A237E), size: 18)
+                              ? const Icon(
+                                  Icons.check_circle,
+                                  color: Color(0xFF1A237E),
+                                  size: 18,
+                                )
                               : null,
                           onTap: () {
                             setState(() => _selectedDispLocation = loc);
@@ -1616,25 +2557,36 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
             return Container(
               height: MediaQuery.of(context).size.height * 0.85,
               decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
               child: Column(
                 children: [
                   Center(
                     child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(top: 10, bottom: 20),
-                        decoration: BoxDecoration(
-                            color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(top: 10, bottom: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                  Text("Select Investigation Type",
-                      style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+                  Text(
+                    "Select Investigation Type",
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 15),
                   Container(
                     decoration: BoxDecoration(
-                        color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Row(
                       children: [
                         Expanded(
@@ -1647,20 +2599,28 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                                 filteredList = value.isEmpty
                                     ? List.from(types)
                                     : types
-                                        .where((element) => (element['name'] ?? '')
-                                            .toString()
-                                            .toLowerCase()
-                                            .contains(value.toLowerCase()))
-                                        .toList();
+                                          .where(
+                                            (element) => (element['name'] ?? '')
+                                                .toString()
+                                                .toLowerCase()
+                                                .contains(value.toLowerCase()),
+                                          )
+                                          .toList();
                               });
                             },
                             decoration: InputDecoration(
-                              hintText: isListening ? "Listening..." : "Type to search...",
+                              hintText: isListening
+                                  ? "Listening..."
+                                  : "Type to search...",
                               border: InputBorder.none,
                               prefixIcon: Icon(
-                                  isListening ? Icons.mic : Icons.search,
-                                  color: isListening ? Colors.blue : Colors.grey),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                isListening ? Icons.mic : Icons.search,
+                                color: isListening ? Colors.blue : Colors.grey,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
                             ),
                           ),
                         ),
@@ -1677,14 +2637,19 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                                 setSheetState(() => isListening = true);
                                 await _speech.listen(
                                   onResult: (result) {
-                                    String recognizedText = result.recognizedWords;
+                                    String recognizedText =
+                                        result.recognizedWords;
                                     setSheetState(() {
                                       searchController.text = recognizedText;
                                       filteredList = types
-                                          .where((element) => (element['name'] ?? '')
-                                              .toString()
-                                              .toLowerCase()
-                                              .contains(recognizedText.toLowerCase()))
+                                          .where(
+                                            (element) => (element['name'] ?? '')
+                                                .toString()
+                                                .toLowerCase()
+                                                .contains(
+                                                  recognizedText.toLowerCase(),
+                                                ),
+                                          )
                                           .toList();
                                     });
                                   },
@@ -1703,12 +2668,16 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                   Expanded(
                     child: filteredList.isEmpty
                         ? Center(
-                            child: Text("No investigation types found",
-                                style: GoogleFonts.poppins(color: Colors.grey)))
+                            child: Text(
+                              "No investigation types found",
+                              style: GoogleFonts.poppins(color: Colors.grey),
+                            ),
+                          )
                         : ListView.separated(
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             itemCount: filteredList.length,
-                            separatorBuilder: (c, i) => const Divider(height: 1),
+                            separatorBuilder: (c, i) =>
+                                const Divider(height: 1),
                             itemBuilder: (context, index) {
                               final type = filteredList[index];
                               return ListTile(
@@ -1716,18 +2685,36 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                                 leading: Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                      color: Colors.indigo[50],
-                                      borderRadius: BorderRadius.circular(8)),
-                                  child: const Icon(Icons.science, color: Colors.indigo, size: 20),
+                                    color: Colors.indigo[50],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.science,
+                                    color: Colors.indigo,
+                                    size: 20,
+                                  ),
                                 ),
-                                title: Text(type['name'] ?? '',
-                                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
-                                subtitle: type['description']?.toString().isNotEmpty == true
-                                    ? Text(type['description'].toString(),
-                                        style:
-                                            GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                                title: Text(
+                                  type['name'] ?? '',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                subtitle:
+                                    type['description']
+                                            ?.toString()
+                                            .isNotEmpty ==
+                                        true
+                                    ? Text(
+                                        type['description'].toString(),
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
                                         maxLines: 1,
-                                        overflow: TextOverflow.ellipsis)
+                                        overflow: TextOverflow.ellipsis,
+                                      )
                                     : null,
                                 onTap: () async {
                                   Navigator.pop(context);
@@ -1755,8 +2742,9 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         builder: (ctx, setBottomState) => Container(
           height: MediaQuery.of(context).size.height * 0.75,
           decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
@@ -1765,15 +2753,24 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                    color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Request List",
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18)),
-                  Text("${_investigationItems.length} items",
-                      style: GoogleFonts.poppins(color: Colors.grey)),
+                  Text(
+                    "Request List",
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  Text(
+                    "${_investigationItems.length} items",
+                    style: GoogleFonts.poppins(color: Colors.grey),
+                  ),
                 ],
               ),
               if (_selectedJobTitle != null) ...[
@@ -1782,8 +2779,13 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                   children: [
                     Icon(Icons.work, size: 14, color: Colors.grey[600]),
                     const SizedBox(width: 4),
-                    Text('Category: $_selectedJobTitle',
-                        style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
+                    Text(
+                      'Category: $_selectedJobTitle',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -1794,13 +2796,24 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.science_outlined, size: 60, color: Colors.grey[300]),
+                            Icon(
+                              Icons.science_outlined,
+                              size: 60,
+                              color: Colors.grey[300],
+                            ),
                             const SizedBox(height: 10),
-                            Text("No investigations added",
-                                style: GoogleFonts.poppins(color: Colors.grey)),
+                            Text(
+                              "No investigations added",
+                              style: GoogleFonts.poppins(color: Colors.grey),
+                            ),
                             const SizedBox(height: 5),
-                            Text("Add investigations using the form above",
-                                style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[400])),
+                            Text(
+                              "Add investigations using the form above",
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.grey[400],
+                              ),
+                            ),
                           ],
                         ),
                       )
@@ -1819,47 +2832,73 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                             child: Row(
                               children: [
                                 CircleAvatar(
-                                  backgroundColor: Colors.indigo.withOpacity(0.1),
+                                  backgroundColor: Colors.indigo.withOpacity(
+                                    0.1,
+                                  ),
                                   radius: 14,
-                                  child: Text("${index + 1}",
-                                      style: const TextStyle(
-                                          color: Colors.indigo,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12)),
+                                  child: Text(
+                                    "${index + 1}",
+                                    style: const TextStyle(
+                                      color: Colors.indigo,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(item['type'] ?? '',
-                                          style: GoogleFonts.poppins(
-                                              fontWeight: FontWeight.w600, fontSize: 14)),
+                                      Text(
+                                        item['type'] ?? '',
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
                                       const SizedBox(height: 2),
                                       Text(
                                         "₹${item['amount']} | ${item['urgent'] ? 'Urgent' : 'Normal'}",
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: item['urgent'] ? Colors.red : Colors.grey[600],
+                                          color: item['urgent']
+                                              ? Colors.red
+                                              : Colors.grey[600],
                                           fontWeight: item['urgent']
                                               ? FontWeight.bold
                                               : FontWeight.normal,
                                         ),
                                       ),
-                                      if (item['parameter']?.toString().isNotEmpty == true) ...[
+                                      if (item['parameter']
+                                              ?.toString()
+                                              .isNotEmpty ==
+                                          true) ...[
                                         const SizedBox(height: 2),
-                                        Text(item['parameter'].toString(),
-                                            style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis),
+                                        Text(
+                                          item['parameter'].toString(),
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ],
                                     ],
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete_rounded, color: Colors.redAccent),
-                                  onPressed: () =>
-                                      _confirmDeleteInvestigation(index, ctx, setBottomState),
+                                  icon: const Icon(
+                                    Icons.delete_rounded,
+                                    color: Colors.redAccent,
+                                  ),
+                                  onPressed: () => _confirmDeleteInvestigation(
+                                    index,
+                                    ctx,
+                                    setBottomState,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1875,7 +2914,10 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
   }
 
   void _confirmDeleteInvestigation(
-      int index, BuildContext sheetCtx, StateSetter setBottomState) {
+    int index,
+    BuildContext sheetCtx,
+    StateSetter setBottomState,
+  ) {
     final item = _investigationItems[index];
     showDialog(
       context: context,
@@ -1886,16 +2928,21 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
             Icon(Icons.warning_amber_rounded, color: Colors.red[700]),
             const SizedBox(width: 8),
             Expanded(
-                child: Text('Remove Investigation?',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600))),
+              child: Text(
+                'Remove Investigation?',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Are you sure you want to remove:',
-                style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
+            Text(
+              'Are you sure you want to remove:',
+              style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]),
+            ),
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
@@ -1908,11 +2955,20 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item['type'] ?? '',
-                      style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600, color: Colors.red[800])),
-                  Text('₹${item['amount']} · ${item['urgent'] ? 'Urgent' : 'Normal'}',
-                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.red[600])),
+                  Text(
+                    item['type'] ?? '',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red[800],
+                    ),
+                  ),
+                  Text(
+                    '₹${item['amount']} · ${item['urgent'] ? 'Urgent' : 'Normal'}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.red[600],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1921,7 +2977,10 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dCtx),
-            child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey[600])),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1931,25 +2990,166 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                 _updateTotal();
               });
               setBottomState(() {});
-              _showSnackBar('${item['type']} removed', Colors.red[700]!, duration: 2);
+              _showSnackBar(
+                '${item['type']} removed',
+                Colors.red[700]!,
+                duration: 2,
+              );
               if (_investigationItems.isEmpty) Navigator.pop(sheetCtx);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: Text('Remove', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text(
+              'Remove',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
     );
   }
+
+  // ── Smart Suggestion Chips UI ─────────────────────────────────────────────
+  Widget _buildSmartSuggestions() {
+    if (_smartSuggestions.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.auto_awesome, size: 14, color: Colors.deepPurple[400]),
+            const SizedBox(width: 6),
+            Text(
+              'AI Suggested for this patient',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.deepPurple[600],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 34,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _smartSuggestions.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, i) {
+              final s = _smartSuggestions[i];
+              return ActionChip(
+                label: Text(s, style: GoogleFonts.poppins(fontSize: 11)),
+                backgroundColor: Colors.deepPurple.shade50,
+                side: BorderSide(color: Colors.deepPurple.shade100),
+                onPressed: () {
+                  // Try to auto-select matching investigation type if loaded
+                  if (investigationTypes.isNotEmpty) {
+                    final match = investigationTypes.firstWhere(
+                      (t) => (t['name'] ?? '')
+                          .toString()
+                          .toLowerCase()
+                          .contains(s.toLowerCase()),
+                      orElse: () => {},
+                    );
+                    if (match.isNotEmpty) {
+                      _onInvestigationTypeSelected(match);
+                    } else {
+                      _showSnackBar(
+                        'Select category first, then try again',
+                        Colors.orange,
+                        duration: 1,
+                      );
+                    }
+                  } else {
+                    _showSnackBar(
+                      'Select a Job Title (category) first',
+                      Colors.orange,
+                      duration: 1,
+                    );
+                  }
+                },
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  Widget _buildBundleSuggestions() {
+    if (_bundleSuggestions.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.hub_outlined, size: 14, color: Colors.teal[600]),
+            const SizedBox(width: 6),
+            Text(
+              'Recommended related tests',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.teal[700],
+              ),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: () => setState(() => _bundleSuggestions = []),
+              child: Icon(Icons.close, size: 16, color: Colors.grey[500]),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: _bundleSuggestions.map((s) {
+            return ActionChip(
+              label: Text(s, style: GoogleFonts.poppins(fontSize: 11)),
+              backgroundColor: Colors.teal.shade50,
+              side: BorderSide(color: Colors.teal.shade100),
+              onPressed: () {
+                if (investigationTypes.isNotEmpty) {
+                  final match = investigationTypes.firstWhere(
+                    (t) => (t['name'] ?? '').toString().toLowerCase().contains(
+                      s.toLowerCase(),
+                    ),
+                    orElse: () => {},
+                  );
+                  if (match.isNotEmpty) {
+                    _onInvestigationTypeSelected(match);
+                  } else {
+                    _showSnackBar(
+                      '"$s" not found in current category',
+                      Colors.orange,
+                      duration: 1,
+                    );
+                  }
+                }
+              },
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const Color darkBlue = Color(0xFF1A237E);
     const Color bgGrey = Color(0xFFF5F7FA);
-    String formattedDate = DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now());
+    String formattedDate = DateFormat(
+      'dd MMM yyyy, hh:mm a',
+    ).format(DateTime.now());
     final bool canSubmit = _investigationItems.isNotEmpty;
 
     return Scaffold(
@@ -1966,7 +3166,9 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
             decoration: const BoxDecoration(
               color: darkBlue,
               borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1978,9 +3180,14 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.arrow_back, color: Colors.white, size: 18),
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.arrow_back,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1988,25 +3195,48 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Investigation Request",
-                              style: GoogleFonts.poppins(
-                                  color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-                          Text(widget.patientName,
-                              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
+                          Text(
+                            "Investigation Request",
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            widget.patientName,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8)),
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       child: Row(
                         children: [
-                          const Icon(Icons.calendar_today, color: Colors.white70, size: 12),
+                          const Icon(
+                            Icons.calendar_today,
+                            color: Colors.white70,
+                            size: 12,
+                          ),
                           const SizedBox(width: 6),
-                          Text(formattedDate,
-                              style: GoogleFonts.poppins(color: Colors.white, fontSize: 10)),
+                          Text(
+                            formattedDate,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 10,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -2021,9 +3251,17 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("INVESTIGATION CATEGORY",
-                      style: GoogleFonts.poppins(
-                          fontSize: 10, fontWeight: FontWeight.bold, color: darkBlue)),
+                  // ── Smart Suggestions ───────────────────────────────────
+                  _buildSmartSuggestions(),
+
+                  Text(
+                    "INVESTIGATION CATEGORY",
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: darkBlue,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   SizedBox(
                     height: 32,
@@ -2046,14 +3284,22 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                               color: isSelected ? darkBlue : Colors.white,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                  color: isSelected ? darkBlue : Colors.grey[300]!),
+                                color: isSelected
+                                    ? darkBlue
+                                    : Colors.grey[300]!,
+                              ),
                             ),
                             child: Center(
-                              child: Text(jobTitles[index],
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: isSelected ? Colors.white : Colors.grey[700])),
+                              child: Text(
+                                jobTitles[index],
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.grey[700],
+                                ),
+                              ),
                             ),
                           ),
                         );
@@ -2065,9 +3311,14 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("SEARCH PACKAGE",
-                          style: GoogleFonts.poppins(
-                              fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+                      Text(
+                        "SEARCH PACKAGE",
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[600],
+                        ),
+                      ),
                       const SizedBox(height: 3),
                       GestureDetector(
                         onTap: () {
@@ -2076,9 +3327,13 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                             searchCallback: (query) async {
                               if (query.isEmpty) {
                                 return await InvestigationService.getCachedInvestigations() ??
-                                    await InvestigationService.fetchInvestigations(query: '');
+                                    await InvestigationService.fetchInvestigations(
+                                      query: '',
+                                    );
                               }
-                              return await InvestigationService.fetchInvestigations(query: query);
+                              return await InvestigationService.fetchInvestigations(
+                                query: query,
+                              );
                             },
                             onSelected: (val) {
                               setState(() {
@@ -2094,28 +3349,32 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                           height: 44,
                           padding: const EdgeInsets.symmetric(horizontal: 10),
                           decoration: BoxDecoration(
-                              color: Colors.grey[50],
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Colors.grey[200]!)),
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
                           child: Row(
                             children: [
-                              Icon(Icons.search,
-                                  color: _packageController.text.isNotEmpty
-                                      ? darkBlue
-                                      : Colors.grey[500],
-                                  size: 16),
+                              Icon(
+                                Icons.search,
+                                color: _packageController.text.isNotEmpty
+                                    ? darkBlue
+                                    : Colors.grey[500],
+                                size: 16,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   _isListeningForPackage
                                       ? "Listening... $_recognizedText"
                                       : (_packageController.text.isNotEmpty
-                                          ? _packageController.text
-                                          : "Search Package..."),
+                                            ? _packageController.text
+                                            : "Search Package..."),
                                   style: GoogleFonts.poppins(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
-                                    color: (_isListeningForPackage ||
+                                    color:
+                                        (_isListeningForPackage ||
                                             _packageController.text.isNotEmpty)
                                         ? Colors.black87
                                         : Colors.grey[400],
@@ -2126,12 +3385,26 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                               ),
                               _isListeningForPackage
                                   ? IconButton(
-                                      icon: const Icon(Icons.stop, color: Colors.red, size: 18),
-                                      onPressed: _stopListening)
+                                      icon: const Icon(
+                                        Icons.stop,
+                                        color: Colors.red,
+                                        size: 18,
+                                      ),
+                                      onPressed: _stopListening,
+                                    )
                                   : IconButton(
-                                      icon: Icon(Icons.mic, color: Colors.blue[700], size: 18),
-                                      onPressed: _startVoiceSearchForPackage),
-                              Icon(Icons.keyboard_arrow_down, color: Colors.grey[500], size: 16),
+                                      icon: Icon(
+                                        Icons.mic,
+                                        color: Colors.blue[700],
+                                        size: 18,
+                                      ),
+                                      onPressed: _startVoiceSearchForPackage,
+                                    ),
+                              Icon(
+                                Icons.keyboard_arrow_down,
+                                color: Colors.grey[500],
+                                size: 16,
+                              ),
                             ],
                           ),
                         ),
@@ -2142,17 +3415,22 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                           child: Row(
                             children: [
                               Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                      color: Colors.red,
-                                      borderRadius: BorderRadius.circular(4))),
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
                               const SizedBox(width: 6),
-                              Text('Listening... Speak clearly',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 10,
-                                      color: Colors.blue[700],
-                                      fontWeight: FontWeight.w500)),
+                              Text(
+                                'Listening... Speak clearly',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  color: Colors.blue[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -2169,93 +3447,127 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.grey.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5))
+                          color: Colors.grey.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
                       ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Investigation Details",
-                            style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold, fontSize: 12, color: darkBlue)),
+                        Text(
+                          "Investigation Details",
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: darkBlue,
+                          ),
+                        ),
                         const SizedBox(height: 10),
+
+                        // Bundle recommendations
+                        _buildBundleSuggestions(),
+
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
                                 Expanded(
-                                  child: Text("Investigation Type",
-                                      style: GoogleFonts.poppins(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey[600])),
+                                  child: Text(
+                                    "Investigation Type",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
                                 ),
                                 if (_isLoadingInvestigationTypes)
                                   const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2)),
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
                                 if (_isProcessingMultipleTests)
                                   const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2)),
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
                               ],
                             ),
                             const SizedBox(height: 3),
                             GestureDetector(
                               onTap: _selectedJobTitle == null
                                   ? () => _showSnackBar(
-                                      'Please select a Job Title first', Colors.red,
-                                      duration: 1)
+                                      'Please select a Job Title first',
+                                      Colors.red,
+                                      duration: 1,
+                                    )
                                   : () {
                                       if (investigationTypes.isNotEmpty &&
                                           !_isLoadingInvestigationTypes) {
-                                        _showInvestigationTypeSheet(investigationTypes);
+                                        _showInvestigationTypeSheet(
+                                          investigationTypes,
+                                        );
                                       } else if (_isLoadingInvestigationTypes) {
                                         _showSnackBar(
-                                            'Loading investigation types...', Colors.blue,
-                                            duration: 1);
+                                          'Loading investigation types...',
+                                          Colors.blue,
+                                          duration: 1,
+                                        );
                                       } else {
                                         _showSnackBar(
-                                            'No investigation types available for this category',
-                                            Colors.orange,
-                                            duration: 1);
+                                          'No investigation types available for this category',
+                                          Colors.orange,
+                                          duration: 1,
+                                        );
                                       }
                                     },
                               child: Container(
                                 height: 44,
-                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                ),
                                 decoration: BoxDecoration(
-                                    color: Colors.grey[50],
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: Colors.grey[200]!)),
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.grey[200]!),
+                                ),
                                 child: Row(
                                   children: [
-                                    Icon(Icons.science,
-                                        color: _selectedInvestigationType != null
-                                            ? darkBlue
-                                            : Colors.grey[500],
-                                        size: 16),
+                                    Icon(
+                                      Icons.science,
+                                      color: _selectedInvestigationType != null
+                                          ? darkBlue
+                                          : Colors.grey[500],
+                                      size: 16,
+                                    ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
                                         _isListeningForInvestigationType
                                             ? "Listening... $_recognizedText"
                                             : (_selectedInvestigationType?['name'] ??
-                                                (_selectedJobTitle == null
-                                                    ? 'Select Job Title First'
-                                                    : investigationTypes.isEmpty
-                                                        ? 'No investigations available'
-                                                        : 'Select Investigation Type')),
+                                                  (_selectedJobTitle == null
+                                                      ? 'Select Job Title First'
+                                                      : investigationTypes
+                                                            .isEmpty
+                                                      ? 'No investigations available'
+                                                      : 'Select Investigation Type')),
                                         style: GoogleFonts.poppins(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w500,
-                                          color: (_isListeningForInvestigationType ||
-                                                  _selectedInvestigationType != null)
+                                          color:
+                                              (_isListeningForInvestigationType ||
+                                                  _selectedInvestigationType !=
+                                                      null)
                                               ? Colors.black87
                                               : Colors.grey[400],
                                         ),
@@ -2265,15 +3577,27 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                                     ),
                                     _isListeningForInvestigationType
                                         ? IconButton(
-                                            icon: const Icon(Icons.stop,
-                                                color: Colors.red, size: 18),
-                                            onPressed: _stopListening)
+                                            icon: const Icon(
+                                              Icons.stop,
+                                              color: Colors.red,
+                                              size: 18,
+                                            ),
+                                            onPressed: _stopListening,
+                                          )
                                         : IconButton(
-                                            icon: Icon(Icons.mic,
-                                                color: Colors.blue[700], size: 18),
-                                            onPressed: _startVoiceSearchForInvestigationType),
-                                    Icon(Icons.keyboard_arrow_down,
-                                        color: Colors.grey[500], size: 16),
+                                            icon: Icon(
+                                              Icons.mic,
+                                              color: Colors.blue[700],
+                                              size: 18,
+                                            ),
+                                            onPressed:
+                                                _startVoiceSearchForInvestigationType,
+                                          ),
+                                    Icon(
+                                      Icons.keyboard_arrow_down,
+                                      color: Colors.grey[500],
+                                      size: 16,
+                                    ),
                                   ],
                                 ),
                               ),
@@ -2284,28 +3608,37 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                                 child: Row(
                                   children: [
                                     Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                            color: Colors.red,
-                                            borderRadius: BorderRadius.circular(4))),
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: Colors.red,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(
-                                          'Listening... Say test names like "CBC, KFT, Urine"',
-                                          style: GoogleFonts.poppins(
-                                              fontSize: 10,
-                                              color: Colors.blue[700],
-                                              fontWeight: FontWeight.w500)),
+                                        'Listening... Say test names like "CBC, LFT aur KFT karo"',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 10,
+                                          color: Colors.blue[700],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                            if (_selectedJobTitle != null && investigationTypes.isNotEmpty) ...[
+                            if (_selectedJobTitle != null &&
+                                investigationTypes.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(
-                                  '${investigationTypes.length} investigation types available for $_selectedJobTitle',
-                                  style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey[600])),
+                                '${investigationTypes.length} investigation types available for $_selectedJobTitle (AI ranked)',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
                             ],
                           ],
                         ),
@@ -2319,9 +3652,10 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                               child: Stack(
                                 children: [
                                   _buildModernInput(
-                                      controller: _amountController,
-                                      label: "Amount",
-                                      icon: Icons.currency_rupee),
+                                    controller: _amountController,
+                                    label: "Amount",
+                                    icon: Icons.currency_rupee,
+                                  ),
                                   if (_isLoadingAmount)
                                     Positioned(
                                       right: 8,
@@ -2329,10 +3663,13 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                                       bottom: 0,
                                       child: Center(
                                         child: SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                                strokeWidth: 2, color: darkBlue)),
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: darkBlue,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -2341,9 +3678,10 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: _buildModernInput(
-                                  controller: _searchCodeController,
-                                  label: "Search Code",
-                                  icon: Icons.qr_code),
+                                controller: _searchCodeController,
+                                label: "Search Code",
+                                icon: Icons.qr_code,
+                              ),
                             ),
                           ],
                         ),
@@ -2353,47 +3691,71 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                         // Parameters
                         GestureDetector(
                           onTap: () {
-                            if (parameterList.isNotEmpty && !_isLoadingParameters) {
-                              setState(() => _showParameterDropdown = !_showParameterDropdown);
+                            if (parameterList.isNotEmpty &&
+                                !_isLoadingParameters) {
+                              setState(
+                                () => _showParameterDropdown =
+                                    !_showParameterDropdown,
+                              );
                             }
                           },
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("Parameters",
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.grey[600])),
+                              Text(
+                                "Parameters",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
                               const SizedBox(height: 3),
                               _buildFieldContainer(
                                 child: AbsorbPointer(
                                   child: TextField(
                                     controller: _parameterController,
                                     style: GoogleFonts.poppins(
-                                        fontSize: 13, fontWeight: FontWeight.w500),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                     decoration: InputDecoration(
-                                      prefixIcon:
-                                          Icon(Icons.list, color: Colors.grey[500], size: 16),
+                                      prefixIcon: Icon(
+                                        Icons.list,
+                                        color: Colors.grey[500],
+                                        size: 16,
+                                      ),
                                       suffixIcon: _isLoadingParameters
                                           ? const Padding(
                                               padding: EdgeInsets.all(12),
                                               child: SizedBox(
-                                                  width: 10,
-                                                  height: 10,
-                                                  child: CircularProgressIndicator(strokeWidth: 2)))
+                                                width: 10,
+                                                height: 10,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              ),
+                                            )
                                           : Icon(
                                               _showParameterDropdown
                                                   ? Icons.keyboard_arrow_up
                                                   : Icons.keyboard_arrow_down,
                                               color: Colors.grey,
-                                              size: 18),
+                                              size: 18,
+                                            ),
                                       border: InputBorder.none,
                                       isDense: true,
                                       hintText: "Parameters",
-                                      hintStyle: TextStyle(color: Colors.grey[400], fontSize: 12),
-                                      contentPadding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 11),
+                                      hintStyle: TextStyle(
+                                        color: Colors.grey[400],
+                                        fontSize: 12,
+                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 11,
+                                          ),
                                     ),
                                   ),
                                 ),
@@ -2407,49 +3769,68 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                             margin: const EdgeInsets.only(top: 8),
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                                color: Colors.grey[50],
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.grey[200]!)),
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.grey[200]!),
+                            ),
                             child: Column(
                               children: [
                                 CheckboxListTile(
                                   dense: true,
                                   visualDensity: VisualDensity.compact,
-                                  title: Text("Select All",
-                                      style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w600, fontSize: 12)),
-                                  value: selectedParameters.values.every((v) => v),
+                                  title: Text(
+                                    "Select All",
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  value: selectedParameters.values.every(
+                                    (v) => v,
+                                  ),
                                   activeColor: darkBlue,
                                   onChanged: (val) {
                                     setState(() {
                                       selectedParameters = {
                                         for (var p in parameterList)
-                                          (p['parameterName'] ?? p['name']).toString(): val ?? true
+                                          (p['parameterName'] ?? p['name'])
+                                                  .toString():
+                                              val ?? true,
                                       };
-                                      _parameterController.text = _getSelectedParametersString();
+                                      _parameterController.text =
+                                          _getSelectedParametersString();
                                     });
                                   },
                                 ),
                                 const Divider(height: 1),
                                 Container(
-                                  constraints: const BoxConstraints(maxHeight: 120),
+                                  constraints: const BoxConstraints(
+                                    maxHeight: 120,
+                                  ),
                                   child: ListView.builder(
                                     shrinkWrap: true,
                                     itemCount: parameterList.length,
                                     itemBuilder: (context, index) {
-                                      final name = (parameterList[index]['parameterName'] ??
-                                              parameterList[index]['name'])
-                                          .toString();
+                                      final name =
+                                          (parameterList[index]['parameterName'] ??
+                                                  parameterList[index]['name'])
+                                              .toString();
                                       return CheckboxListTile(
                                         dense: true,
                                         visualDensity: VisualDensity.compact,
-                                        title: Text(name,
-                                            style: GoogleFonts.poppins(fontSize: 11)),
-                                        value: selectedParameters[name] ?? false,
+                                        title: Text(
+                                          name,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                        value:
+                                            selectedParameters[name] ?? false,
                                         activeColor: darkBlue,
                                         onChanged: (val) {
                                           setState(() {
-                                            selectedParameters[name] = val ?? false;
+                                            selectedParameters[name] =
+                                                val ?? false;
                                             _parameterController.text =
                                                 _getSelectedParametersString();
                                           });
@@ -2471,35 +3852,51 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                             Expanded(
                               flex: 3,
                               child: _buildModernInput(
-                                  controller: _indicationsController,
-                                  label: "Indications",
-                                  icon: Icons.info_outline),
+                                controller: _indicationsController,
+                                label: "Indications (AI auto-fill)",
+                                icon: Icons.info_outline,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               flex: 2,
                               child: GestureDetector(
-                                onTap: () => setState(() => _isUrgent = !_isUrgent),
+                                onTap: () =>
+                                    setState(() => _isUrgent = !_isUrgent),
                                 child: Container(
                                   height: 44,
                                   decoration: BoxDecoration(
-                                    color: _isUrgent ? Colors.red[50] : Colors.grey[100],
+                                    color: _isUrgent
+                                        ? Colors.red[50]
+                                        : Colors.grey[100],
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                        color: _isUrgent ? Colors.red : Colors.grey[300]!),
+                                      color: _isUrgent
+                                          ? Colors.red
+                                          : Colors.grey[300]!,
+                                    ),
                                   ),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.warning_amber_rounded,
-                                          size: 16,
-                                          color: _isUrgent ? Colors.red : Colors.grey),
+                                      Icon(
+                                        Icons.warning_amber_rounded,
+                                        size: 16,
+                                        color: _isUrgent
+                                            ? Colors.red
+                                            : Colors.grey,
+                                      ),
                                       const SizedBox(width: 4),
-                                      Text("Urgent",
-                                          style: GoogleFonts.poppins(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 12,
-                                              color: _isUrgent ? Colors.red : Colors.grey)),
+                                      Text(
+                                        "Urgent",
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                          color: _isUrgent
+                                              ? Colors.red
+                                              : Colors.grey,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -2521,9 +3918,10 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.grey.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5))
+                          color: Colors.grey.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
                       ],
                     ),
                     child: _buildDispLocationField(),
@@ -2543,16 +3941,27 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                         searchCallback: (query) async {
                           if (query.isEmpty) return [];
                           String branchId =
-                              (_selectedLocation ?? "AH (Nagpur)") == "AH (Nagpur)" ? "1" : "2";
-                          final names = await InvestigationService.fetchPractitionersNames(
-                              branchId: branchId, specializationId: 0, isVisitingConsultant: 0);
+                              (_selectedLocation ?? "AH (Nagpur)") ==
+                                  "AH (Nagpur)"
+                              ? "1"
+                              : "2";
+                          final names =
+                              await InvestigationService.fetchPractitionersNames(
+                                branchId: branchId,
+                                specializationId: 0,
+                                isVisitingConsultant: 0,
+                              );
                           return names
                               .where(
-                                  (n) => n.toLowerCase().contains(query.toLowerCase()))
+                                (n) => n.toLowerCase().contains(
+                                  query.toLowerCase(),
+                                ),
+                              )
                               .toList();
                         },
-                        onSelected: (val) =>
-                            setState(() => _consultantNameController.text = val),
+                        onSelected: (val) => setState(
+                          () => _consultantNameController.text = val,
+                        ),
                       );
                     },
                   ),
@@ -2572,9 +3981,10 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -5))
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
           ],
         ),
         child: SafeArea(
@@ -2590,11 +4000,18 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                     foregroundColor: darkBlue,
                     side: const BorderSide(color: darkBlue),
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     elevation: 0,
                   ),
-                  child: Text("Add +",
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                  child: Text(
+                    "Add +",
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -2603,12 +4020,16 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
               Expanded(
                 flex: 2,
                 child: ElevatedButton(
-                  onPressed: _investigationItems.isNotEmpty ? _showInvestigationListPopup : null,
+                  onPressed: _investigationItems.isNotEmpty
+                      ? _showInvestigationListPopup
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey[100],
                     foregroundColor: Colors.black87,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     elevation: 0,
                   ),
                   child: Row(
@@ -2619,11 +4040,18 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                         const SizedBox(width: 4),
                         Container(
                           padding: const EdgeInsets.all(4),
-                          decoration:
-                              const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                          child: Text("${_investigationItems.length}",
-                              style: const TextStyle(
-                                  fontSize: 10, color: Colors.white, height: 1)),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            "${_investigationItems.length}",
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.white,
+                              height: 1,
+                            ),
+                          ),
                         ),
                       ],
                     ],
@@ -2632,16 +4060,22 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
               ),
               const SizedBox(width: 8),
 
-              // Submit – enabled only when item(s) added
+              // Submit
               Expanded(
                 flex: 4,
                 child: ElevatedButton(
-                  onPressed: (!canSubmit || _isSubmitting) ? null : _submitInvestigationRequest,
+                  onPressed: (!canSubmit || _isSubmitting)
+                      ? null
+                      : _submitInvestigationRequest,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: canSubmit ? darkBlue : Colors.grey[300],
-                    foregroundColor: canSubmit ? Colors.white : Colors.grey[500],
+                    foregroundColor: canSubmit
+                        ? Colors.white
+                        : Colors.grey[500],
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                     elevation: canSubmit ? 5 : 0,
                     shadowColor: darkBlue.withOpacity(0.3),
                   ),
@@ -2649,10 +4083,18 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : Text("Submit",
-                          style:
-                              GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          "Submit",
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -2681,7 +4123,7 @@ class _ReqInvestigationPageState extends State<ReqInvestigationPage> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Searchable sheet widget (unchanged from original)
+// Searchable sheet widget
 // ─────────────────────────────────────────────────────────────────────────────
 class _SearchableSheetContent extends StatefulWidget {
   final String title;
@@ -2701,7 +4143,8 @@ class _SearchableSheetContent extends StatefulWidget {
   });
 
   @override
-  State<_SearchableSheetContent> createState() => _SearchableSheetContentState();
+  State<_SearchableSheetContent> createState() =>
+      _SearchableSheetContentState();
 }
 
 class _SearchableSheetContentState extends State<_SearchableSheetContent> {
@@ -2733,22 +4176,77 @@ class _SearchableSheetContentState extends State<_SearchableSheetContent> {
   }
 
   Future<void> _startVoiceSearchInSheet() async {
-    if (_isListening || widget.onMicTap == null) return;
-    setState(() => _isListening = true);
-    final options = stt.SpeechListenOptions(partialResults: true);
-    await widget.speech.listen(
-      onResult: (result) {
-        setState(() {
-          _recognizedText = result.recognizedWords;
-          _searchController.text = _recognizedText;
-        });
-        _performSearch(_recognizedText);
-      },
-      listenFor: const Duration(seconds: 10),
-      pauseFor: const Duration(seconds: 3),
-      localeId: 'en_US',
-      listenOptions: options,
+    if (_isListening) return;
+    bool available = widget.speech.isAvailable;
+    if (!available) {
+      available = await widget.speech.initialize(
+        onError: (e) => debugPrint('Sheet speech error: $e'),
+      );
+    }
+    if (!available) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Speech recognition not available'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+    try {
+      bool hasPerm = await widget.speech.hasPermission;
+      if (!hasPerm) {
+        hasPerm = await widget.speech.initialize();
+        if (!hasPerm) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Microphone permission required'),
+                backgroundColor: Colors.orange,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('Sheet permission check error: $e');
+    }
+    setState(() {
+      _isListening = true;
+      _recognizedText = '';
+    });
+    final options = stt.SpeechListenOptions(
+      partialResults: true,
+      cancelOnError: false,
+      listenMode: stt.ListenMode.dictation,
     );
+    try {
+      await widget.speech.listen(
+        onResult: (result) {
+          if (!mounted) return;
+          setState(() {
+            _recognizedText = result.recognizedWords;
+            _searchController.text = _recognizedText;
+          });
+          _performSearch(_recognizedText);
+          if (result.finalResult) {
+            setState(() => _isListening = false);
+          }
+        },
+        listenFor: const Duration(seconds: 15),
+        pauseFor: const Duration(seconds: 3),
+        localeId: 'en_IN',
+        listenOptions: options,
+      );
+    } catch (e) {
+      debugPrint('Sheet listen error: $e');
+      if (mounted) setState(() => _isListening = false);
+    }
   }
 
   void _stopListeningInSheet() {
@@ -2768,8 +4266,9 @@ class _SearchableSheetContentState extends State<_SearchableSheetContent> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.75,
       decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
@@ -2778,14 +4277,23 @@ class _SearchableSheetContentState extends State<_SearchableSheetContent> {
             height: 4,
             margin: const EdgeInsets.only(bottom: 20),
             decoration: BoxDecoration(
-                color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-          Text(widget.title,
-              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18)),
+          Text(
+            widget.title,
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
           const SizedBox(height: 15),
           Container(
             decoration: BoxDecoration(
-                color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -2793,12 +4301,18 @@ class _SearchableSheetContentState extends State<_SearchableSheetContent> {
                     controller: _searchController,
                     onChanged: (val) => _performSearch(val),
                     decoration: InputDecoration(
-                      hintText: _isListening ? "Listening..." : "Type to search...",
+                      hintText: _isListening
+                          ? "Listening..."
+                          : "Type to search...",
                       border: InputBorder.none,
-                      prefixIcon: Icon(_isListening ? Icons.mic : Icons.search,
-                          color: _isListening ? Colors.blue : Colors.grey),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      prefixIcon: Icon(
+                        _isListening ? Icons.mic : Icons.search,
+                        color: _isListening ? Colors.blue : Colors.grey,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                     ),
                   ),
                 ),
@@ -2806,10 +4320,12 @@ class _SearchableSheetContentState extends State<_SearchableSheetContent> {
                   _isListening
                       ? IconButton(
                           icon: const Icon(Icons.stop, color: Colors.red),
-                          onPressed: _stopListeningInSheet)
+                          onPressed: _stopListeningInSheet,
+                        )
                       : IconButton(
                           icon: Icon(Icons.mic, color: Colors.blue[700]),
-                          onPressed: _startVoiceSearchInSheet),
+                          onPressed: _startVoiceSearchInSheet,
+                        ),
               ],
             ),
           ),
@@ -2818,23 +4334,28 @@ class _SearchableSheetContentState extends State<_SearchableSheetContent> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _results.isEmpty
-                    ? Center(
-                        child: Text("No results found",
-                            style: GoogleFonts.poppins(color: Colors.grey)))
-                    : ListView.separated(
-                        itemCount: _results.length,
-                        separatorBuilder: (c, i) => const Divider(height: 1),
-                        itemBuilder: (context, index) {
-                          return ListTile(
-                            title: Text(_results[index],
-                                style: GoogleFonts.poppins(fontSize: 14)),
-                            onTap: () {
-                              widget.onSelected(_results[index]);
-                              Navigator.pop(context);
-                            },
-                          );
+                ? Center(
+                    child: Text(
+                      "No results found",
+                      style: GoogleFonts.poppins(color: Colors.grey),
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: _results.length,
+                    separatorBuilder: (c, i) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(
+                          _results[index],
+                          style: GoogleFonts.poppins(fontSize: 14),
+                        ),
+                        onTap: () {
+                          widget.onSelected(_results[index]);
+                          Navigator.pop(context);
                         },
-                      ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

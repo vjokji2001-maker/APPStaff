@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/hr_theme.dart';
 import '../data/hr_mock_data.dart';
+import '../data/hr_api_service.dart';
 import '../models/hr_models.dart';
 import '../widgets/hr_widgets.dart';
 
@@ -13,6 +14,55 @@ class HRLeaveScreen extends StatefulWidget {
 
 class _HRLeaveScreenState extends State<HRLeaveScreen> {
   int _tab = 0;
+  List<LeaveBalance> _balances = [];
+  List<LeaveApplication> _applications = [];
+  bool _isLoadingBalances = true;
+  bool _isLoadingApplications = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchData();
+  }
+
+  Future<void> _fetchData() async {
+    _fetchBalances();
+    _fetchApplications();
+  }
+
+  Future<void> _fetchBalances() async {
+    try {
+      final dynamic res = await HRApiService.getLeaveBalances();
+      final dataList = (res is Map && res['data'] != null) ? res['data'] as List : res as List<dynamic>;
+      setState(() {
+        _balances = dataList.map((e) => LeaveBalance.fromJson(e)).toList();
+        _isLoadingBalances = false;
+      });
+    } catch (e) {
+      print('Error fetching leave balances: $e');
+      setState(() {
+        _balances = [];
+        _isLoadingBalances = false;
+      });
+    }
+  }
+
+  Future<void> _fetchApplications() async {
+    try {
+      final dynamic res = await HRApiService.getLeaveRequests();
+      final dataList = (res is Map && res['data'] != null) ? res['data'] as List : res as List<dynamic>;
+      setState(() {
+        _applications = dataList.map((e) => LeaveApplication.fromJson(e)).toList();
+        _isLoadingApplications = false;
+      });
+    } catch (e) {
+      print('Error fetching leave applications: $e');
+      setState(() {
+        _applications = [];
+        _isLoadingApplications = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,13 +115,27 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
     );
   }
 
-  Widget _buildBalanceTab() => SingleChildScrollView(
-    padding: const EdgeInsets.all(16),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      HRCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const HRSectionHeader(title: 'Leave Balance Overview', icon: Icons.beach_access_rounded),
-        ...HRMockData.leaveBalances.map((lb) {
-          final color = Color(int.parse(lb.colorHex.replaceFirst('#', '0xFF')));
+  Widget _buildBalanceTab() {
+    if (_isLoadingBalances) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        HRCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const HRSectionHeader(title: 'Leave Balance Overview', icon: Icons.beach_access_rounded),
+          if (_balances.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: Text('No leave balances available')),
+            ),
+          ..._balances.map((lb) {
+            Color color;
+            try {
+              color = Color(int.parse(lb.colorHex.replaceFirst('#', '0xFF')));
+            } catch (e) {
+              color = HRTheme.leave;
+            }
           return Padding(
             padding: const EdgeInsets.only(bottom: 14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -103,12 +167,16 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
       ])),
     ]),
   );
+  }
 
   Widget _buildHistoryTab() {
+    if (_isLoadingApplications) {
+      return const Center(child: CircularProgressIndicator());
+    }
     String _filter = 'All';
     return StatefulBuilder(builder: (_, ss) {
-      final filtered = _filter == 'All' ? HRMockData.leaveApplications
-          : HRMockData.leaveApplications.where((a) => a.status == _filter).toList();
+      final filtered = _filter == 'All' ? _applications
+          : _applications.where((a) => a.status == _filter).toList();
       return Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -155,6 +223,7 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
         ])),
         const SizedBox(height: 14),
         const HRSectionHeader(title: 'Upcoming Holidays', icon: Icons.event_note_rounded),
+        // Temporarily keep mock holidays or handle API integration later
         ...HRMockData.holidays.map((h) => HRCard(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -184,7 +253,7 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
     final firstDay = DateTime(now.year, now.month, 1);
     final startWeekday = firstDay.weekday;
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    final leaveSet = HRMockData.leaveApplications
+    final leaveSet = _applications
         .where((a) => a.status == 'Approved')
         .map((a) => a.fromDate.split(' ')[0])
         .toSet();

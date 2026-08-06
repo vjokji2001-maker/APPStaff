@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/hr_theme.dart';
 import '../data/hr_mock_data.dart';
+import '../data/hr_api_service.dart';
 import '../models/hr_models.dart';
 import '../widgets/hr_widgets.dart';
 
@@ -14,9 +15,35 @@ class HRRequestsScreen extends StatefulWidget {
 class _HRRequestsScreenState extends State<HRRequestsScreen> {
   String _filter = 'All';
   final List<String> _filters = ['All', 'Pending', 'Approved', 'Rejected'];
+  
+  bool _isLoading = true;
+  List<HRRequest> _requests = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRequests();
+  }
+
+  Future<void> _fetchRequests() async {
+    try {
+      final dynamic res = await HRApiService.getSwipeRequests();
+      final data = (res is Map && res['data'] != null) ? res['data'] as List : res as List<dynamic>;
+      setState(() {
+        _requests = data.map((e) => HRRequest.fromJson(e)).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching requests: $e');
+      setState(() {
+        _requests = [];
+        _isLoading = false;
+      });
+    }
+  }
 
   List<HRRequest> get _filtered {
-    final all = HRMockData.requests;
+    final all = _requests;
     if (_filter == 'All') return all;
     return all.where((r) => r.status == _filter).toList();
   }
@@ -39,7 +66,9 @@ class _HRRequestsScreenState extends State<HRRequestsScreen> {
           onTabChanged: (i) => setState(() => _filter = _filters[i]),
           activeColor: HRTheme.requests,
         ),
-        Expanded(child: _buildList(isDark)),
+        Expanded(child: _isLoading 
+          ? const Center(child: CircularProgressIndicator()) 
+          : _buildList(isDark)),
       ]),
     );
   }

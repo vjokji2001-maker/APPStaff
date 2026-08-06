@@ -3,6 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/hr_theme.dart';
 import '../data/hr_mock_data.dart';
 import '../widgets/hr_widgets.dart';
+import '../../services/user_information_service.dart';
+import '../../services/session_manger.dart';
+import '../../pages/welcome_page.dart';
 
 class HRSettingsScreen extends StatefulWidget {
   const HRSettingsScreen({super.key});
@@ -34,11 +37,70 @@ class _HRSettingsScreenState extends State<HRSettingsScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _phoneCtrl;
 
+  // Profile dynamic data
+  String _empName = HRMockData.employee.name;
+  String _empRole = HRMockData.employee.designation;
+  String _empCode = HRMockData.employee.employeeCode;
+  String _empInitials = HRMockData.employee.avatarInitials;
+
   @override
   void initState() {
     super.initState();
-    _nameCtrl = TextEditingController(text: HRMockData.employee.name);
+    _nameCtrl = TextEditingController(text: _empName);
     _phoneCtrl = TextEditingController(text: HRMockData.employee.phone);
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final completeData = await UserInformationService.getCompleteUserData();
+      Map<String, dynamic>? userData;
+      
+      if (completeData != null && completeData.containsKey('data')) {
+        userData = completeData['data'];
+      } else {
+        final userInfo = await UserInformationService.getSavedUserInformation();
+        if (userInfo.isNotEmpty && userInfo['userId']?.isNotEmpty == true) {
+          userData = userInfo;
+        }
+      }
+      
+      if (userData != null && mounted) {
+        String first = userData['firstName']?.toString() ?? '';
+        String last = userData['lastName']?.toString() ?? '';
+        String init = userData['initial']?.toString() ?? '';
+        
+        // Try pre-built fullName first, else build from parts
+        String fullName = userData['fullName']?.toString() ?? '';
+        if (fullName.isEmpty) {
+          fullName = '$init $first $last'.trim();
+        }
+        if (fullName.isEmpty) fullName = userData['userId']?.toString() ?? 'Employee';
+        
+        String job = userData['jobtitle']?.toString() ?? '';
+        String role = job.isNotEmpty ? job : 'Medical Staff';
+        String code = userData['userId']?.toString() ?? 'EMP001';
+        String phone = userData['mobileNo']?.toString() ?? '';
+        String avatarStr = first.isNotEmpty ? first[0].toUpperCase() : (fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U');
+        debugPrint('HR Settings - Name: $fullName | Role: $role');
+        
+        setState(() {
+          _empName = fullName;
+          _empRole = role;
+          _empCode = code;
+          _empInitials = avatarStr;
+          
+          if (_nameCtrl.text == HRMockData.employee.name) {
+             _nameCtrl.text = _empName;
+          }
+          if (_phoneCtrl.text == HRMockData.employee.phone) {
+             _phoneCtrl.text = phone;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading profile in settings: $e');
+    }
   }
 
   @override
@@ -97,15 +159,15 @@ class _HRSettingsScreenState extends State<HRSettingsScreen> {
         Row(children: [
           CircleAvatar(
             radius: 28, backgroundColor: HRTheme.primaryDark.withOpacity(0.12),
-            child: Text(HRMockData.employee.avatarInitials,
+            child: Text(_empInitials,
                 style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800, color: HRTheme.primaryDark)),
           ),
           const SizedBox(width: 14),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(HRMockData.employee.name, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700,
+            Text(_empName, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700,
                 color: isDark ? Colors.white : HRTheme.textPrimary)),
-            Text(HRMockData.employee.designation, style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary)),
-            Text(HRMockData.employee.employeeCode, style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textHint)),
+            Text(_empRole, style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary)),
+            Text(_empCode, style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textHint)),
           ])),
         ]),
         const SizedBox(height: 14),
@@ -264,7 +326,7 @@ class _HRSettingsScreenState extends State<HRSettingsScreen> {
           title: Text('Sign Out', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: HRTheme.error)),
           subtitle: Text('Log out from this device', style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textSecondary)),
           trailing: Icon(Icons.chevron_right_rounded, color: HRTheme.textHint),
-          onTap: () {},
+          onTap: _handleLogout,
         ),
       ]),
     );
@@ -281,6 +343,58 @@ class _HRSettingsScreenState extends State<HRSettingsScreen> {
       title: Text(label, style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary)),
       subtitle: Text(value, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : HRTheme.textPrimary)),
     );
+  }
+
+  Future<void> _handleLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(HRTheme.radiusLG)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: HRTheme.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(HRTheme.radiusSM),
+              ),
+              child: const Icon(Icons.logout_rounded, color: HRTheme.error, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Text('Sign Out', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to sign out? You will need to log in again to access the app.',
+          style: GoogleFonts.poppins(fontSize: 13, color: HRTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: HRTheme.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: HRTheme.error,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(HRTheme.radiusSM)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Sign Out', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      await SessionManager.fullLogout();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const WelcomePage()),
+          (route) => false,
+        );
+      }
+    }
   }
 
   void _showChangePasswordSheet() {

@@ -16,7 +16,7 @@ class ApiHost {
     'SECURITY_TEST': '192.168.1.13',
     // 'SECURITY_TEST': 'test.smartcarehis.com',
     'LMH_LIVE': '172.24.1.10',
-    'HRMS': 'localhost',
+    'HRMS': '103.177.84.241',
     'NEW_SERVER': '94.136.188.27',
     'LMH_Static': '49.248.253.211',
     'LOCAL_DEV_1': '192.168.0.121',
@@ -27,13 +27,14 @@ class ApiHost {
     'LOCAL_DEV_6': '192.168.1.3',
     'LOCAL_DEV_7': '192.168.0.137',
     'LOCAL_DEV_8': '192.168.1.38',
-    'LOCAL_DEV_9': '192.168.1.13',
+    'LOCAL_DEV_9': '192.168.1.14',
 
   };
 
   // --------------------- Active Configuration ---------------------
   // Change this to switch environments (like CURRENT_KEY in React)
   static const String CURRENT_KEY = 'SM_222';
+  static const String CURRENT_KEY_HR = 'HRMS';
   
   // Protocol and ports
   static const String PROTOCOL = 'http';
@@ -45,6 +46,7 @@ class ApiHost {
   // --------------------- Computed Properties ---------------------
   /// Get the active host based on CURRENT_KEY
   static String get activeHost => HOSTS[CURRENT_KEY] ?? HOSTS['SECURITY_TEST']!;
+  static String get activeHostHr => HOSTS[CURRENT_KEY_HR] ?? HOSTS['HRMS']!;
   static String get remoteAddr => activeHost;
 
   // --------------------- Base URLs ---------------------
@@ -58,6 +60,8 @@ class ApiHost {
   static String get sclyteBaseUrl => '$appBaseUrl/sclyte';
   static String get samBaseUrl => '$PROTOCOL://$activeHost:$SAM_PORT';
   static String get smartcarePortalUrl => '$PROTOCOL://$activeHost:$SMART_CARE_PORT/SMARTCARE';
+  static String get hrBaseUrl => '$PROTOCOL://$activeHostHr:9099';
+
 
   /// Backward-compatible aliases
   static String get baseUrl => '$smartcareMainBaseUrl/';

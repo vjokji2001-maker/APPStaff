@@ -1,0 +1,8 @@
+{
+  "kpis": [
+    {"title": "In‑House Patients", "value": "120", "icon": "local_hospital", "lightGradient": ["#81D4FA", "#4FC3F7"], "darkGradient": ["#1565C0", "#0D47A1"]},
+    {"title": "Occupied Beds", "value": "180 / 200", "icon": "hotel", "lightGradient": ["#FFF59D", "#FFEB3B"], "darkGradient": ["#F9A825", "#F57F17"]},
+    {"title": "Revenue Today", "value": "\u20B9 1.2M", "icon": "attach_money", "lightGradient": ["#A5D6A7", "#66BB6A"], "darkGradient": ["#2E7D32", "#1B5E20"]},
+    {"title": "Pending Approvals", "value": "5", "icon": "pending_actions", "lightGradient": ["#FFCC80", "#FFB74D"], "darkGradient": ["#E65100", "#BF360C"]}
+  ]
+}

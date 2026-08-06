@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/hr_theme.dart';
 import '../data/hr_mock_data.dart';
+import '../data/hr_api_service.dart';
 import '../models/hr_models.dart';
 import '../widgets/hr_widgets.dart';
 
@@ -15,6 +16,32 @@ class _HRPayrollScreenState extends State<HRPayrollScreen> {
   int _tabIndex = 0;
   int _selectedSlipIndex = 0;
   final List<String> _tabs = ['Salary Slip', 'Summary', 'Bonus & Incentives', 'Download'];
+
+  bool _isLoading = true;
+  List<SalarySlip> _slips = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPayroll();
+  }
+
+  Future<void> _fetchPayroll() async {
+    try {
+      final res = await HRApiService.getPayrollSummary();
+      final dataList = (res is Map && res['data'] != null) ? res['data'] as List : (res is List ? res : []);
+      setState(() {
+        _slips = dataList.map((e) => SalarySlip.fromJson(e)).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching payroll: $e');
+      setState(() {
+        _slips = [];
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +70,11 @@ class _HRPayrollScreenState extends State<HRPayrollScreen> {
           onTabChanged: (i) => setState(() => _tabIndex = i),
           activeColor: HRTheme.payroll,
         ),
-        Expanded(child: _buildTab()),
+        Expanded(child: _isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : _slips.isEmpty 
+            ? const HREmptyState(icon: Icons.payments_outlined, title: 'No Payroll Data', subtitle: 'Salary slips will appear here')
+            : _buildTab()),
       ]),
     );
   }
@@ -60,8 +91,9 @@ class _HRPayrollScreenState extends State<HRPayrollScreen> {
 
   Widget _buildSalarySlipTab() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final slips = HRMockData.salarySlips;
-    final slip = slips[_selectedSlipIndex];
+    final slips = _slips;
+    if (slips.isEmpty) return const SizedBox();
+    final slip = slips[_selectedSlipIndex.clamp(0, slips.length - 1)];
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -175,7 +207,8 @@ class _HRPayrollScreenState extends State<HRPayrollScreen> {
   }
 
   Widget _buildSummaryTab() {
-    final slips = HRMockData.salarySlips;
+    final slips = _slips;
+    if (slips.isEmpty) return const HREmptyState(icon: Icons.bar_chart_rounded, title: 'No Data', subtitle: 'Salary summary will appear here');
     final values = slips.reversed.map((s) => s.netSalary / 1000).toList();
     final labels = slips.reversed.map((s) => s.month.substring(0, 3)).toList();
     return SingleChildScrollView(
@@ -251,7 +284,7 @@ class _HRPayrollScreenState extends State<HRPayrollScreen> {
   }
 
   Widget _buildBonusTab() {
-    final slips = HRMockData.salarySlips;
+    final slips = _slips;
     final bonusSlips = slips.where((s) => s.bonus > 0 || s.nightAllowance > 0 || s.doctorIncentive > 0).toList();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -312,7 +345,7 @@ class _HRPayrollScreenState extends State<HRPayrollScreen> {
   }
 
   Widget _buildDownloadTab() {
-    final slips = HRMockData.salarySlips;
+    final slips = _slips;
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: slips.length,

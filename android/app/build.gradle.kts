@@ -41,10 +41,10 @@ android {
 
     defaultConfig {
         applicationId = "com.pranam.smartmate"
-        minSdk = flutter.minSdkVersion                                    // Android 6.0 (API 23) — broad compatibility
+        minSdk = flutter.minSdkVersion // Required for google_mlkit_text_recognition and mobile_scanner
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.2.1"
         
         // Enable multi-DEX for apps with many dependencies
         multiDexEnabled = true
@@ -85,4 +85,34 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     // Multi-DEX support
     implementation("androidx.multidex:multidex:2.0.1")
+}
+
+// Workaround for Flutter CLI not finding the generated APK.
+// This ensures that after 'assemble', the APK is forcefully copied
+// to the 'outputs/flutter-apk' directory where Flutter expects it.
+tasks.whenTaskAdded {
+    if (name.startsWith("assemble")) {
+        doLast {
+            val buildOutputsDir = File(layout.buildDirectory.get().asFile, "outputs")
+            val apkDir = File(buildOutputsDir, "apk")
+            val flutterApkDir = File(buildOutputsDir, "flutter-apk")
+            
+            if (apkDir.exists()) {
+                if (!flutterApkDir.exists()) flutterApkDir.mkdirs()
+                
+                apkDir.walkTopDown().forEach { file ->
+                    if (file.isFile && file.extension == "apk") {
+                        val newFileName = if (file.name.contains("debug", ignoreCase = true)) {
+                            "app-debug.apk"
+                        } else if (file.name.contains("release", ignoreCase = true)) {
+                            "app-release.apk"
+                        } else {
+                            file.name
+                        }
+                        file.copyTo(File(flutterApkDir, newFileName), overwrite = true)
+                    }
+                }
+            }
+        }
+    }
 }

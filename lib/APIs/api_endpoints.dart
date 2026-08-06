@@ -142,4 +142,43 @@ class ApiEndpoints {
   static String get treatmentRecords => '${ApiHost.sclyteBaseUrl}/patientTreatmentRecords';
   static String get sclyteLogin => '${ApiHost.sclyteBaseUrl}/login';
 
+  // ============ FROM MY HR ============
+  // Profile
+  static String employeeProfile(String empId) => '${ApiHost.hrBaseUrl}/hr/employee/get/by/$empId';
+  
+  // Attendance
+  static String myAttendance(String empId, String monthYear) => '${ApiHost.hrBaseUrl}/hr/attendance/my/attendance/employee/get/$empId/$monthYear';
+  static String dailyPunchLog(String empId, String date) => '${ApiHost.hrBaseUrl}/hr/attendance/daily/punch/log/get/by/$empId?date=$date';
+  
+  // Swipe (Regularization)
+  static String get swipeDashboard => '${ApiHost.hrBaseUrl}/hr/attendance/swipe/request/get/dashboard';
+  static String get swipeCreate => '${ApiHost.hrBaseUrl}/hr/attendance/swipe/request/create';
+
+  // Leaves
+  static String get leaveBalance => '${ApiHost.hrBaseUrl}/hr/attendance/emp/leave/balance/fetch';
+  static String get leaveCreate => '${ApiHost.hrBaseUrl}/hr/attendance/leave/request/create';
+  static String get leaveDashboard => '${ApiHost.hrBaseUrl}/hr/attendance/leave/request/dashboard';
+
+  // OD
+  static String get odCreate => '${ApiHost.hrBaseUrl}/hr/attendance/od/request/create';
+  static String get odDashboard => '${ApiHost.hrBaseUrl}/hr/attendance/od/request/get/dashboard';
+
+  // Holidays
+  static String get holidays => '${ApiHost.hrBaseUrl}/hr/master/attendance/holiday/get/all';
+
+  // Shift Roster
+  static String get shiftRosterFetch => '${ApiHost.hrBaseUrl}/hr/attendance/shift/get/dashboard';
+  static String get shiftRosterUpdate => '${ApiHost.hrBaseUrl}/hr/attendance/shift/update';
+
+  // Shift Templates
+  static String get shiftTemplateFetch => '${ApiHost.hrBaseUrl}/hr/master/attendance/shift/get/all';
+  static String get shiftTemplateCreate => '${ApiHost.hrBaseUrl}/hr/master/attendance/shift/create';
+  static String get shiftTemplateUpdate => '${ApiHost.hrBaseUrl}/hr/master/attendance/shift/update';
+  static String shiftTemplateView(String id) => '${ApiHost.hrBaseUrl}/hr/master/attendance/shift/get/by/$id';
+  static String shiftTemplateDelete(String id) => '${ApiHost.hrBaseUrl}/hr/master/attendance/shift/delete/$id';
+
+  // Payroll
+  static String get payrollSummary => '${ApiHost.hrBaseUrl}/hr/payroll/emp/payroll/summary/get/dashboard';
+  static String bankAccount(String empId) => '${ApiHost.hrBaseUrl}/hr/payroll/emp/bank/account/get/$empId';
+
 }
