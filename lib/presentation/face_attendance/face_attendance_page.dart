@@ -9,18 +9,21 @@ import 'widgets/camera_view.dart';
 import 'widgets/liveness_challenge.dart';
 import 'widgets/attendance_success_screen.dart';
 
+import 'widgets/face_attendance_error_view.dart';
+
 class FaceAttendancePage extends StatelessWidget {
-  const FaceAttendancePage({super.key});
+  final String punchDirection;
+  const FaceAttendancePage({super.key, required this.punchDirection});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => getIt<FaceAttendanceCubit>()..initialize(),
+      create: (_) => getIt<FaceAttendanceCubit>()..initialize(punchDirection),
       child: BlocBuilder<FaceAttendanceCubit, FaceAttendanceState>(
         builder: (context, state) {
           return Scaffold(
             appBar: AppBar(
-              title: Text('Face Attendance', style: GoogleFonts.poppins()),
+              title: Text(punchDirection == 'IN' ? 'Check In' : 'Check Out', style: GoogleFonts.poppins()),
             ),
             body: _buildBody(state, context),
           );
@@ -58,20 +61,9 @@ class FaceAttendancePage extends StatelessWidget {
     } else if (state is FaceAttendanceSuccess) {
       return AttendanceSuccessScreen(attendance: state.attendance);
     } else if (state is FaceAttendanceError) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red, size: 48),
-            const SizedBox(height: 12),
-            Text(state.message, style: GoogleFonts.poppins()),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => context.read<FaceAttendanceCubit>().retry(),
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
+      return FaceAttendanceErrorView(
+        rawError: state.message,
+        onRetry: () => context.read<FaceAttendanceCubit>().retry(),
       );
     }
     return const SizedBox.shrink();

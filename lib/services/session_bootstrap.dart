@@ -3,6 +3,7 @@ import 'package:staff_mate/services/clinic_service.dart';
 import 'package:staff_mate/services/user_information_service.dart';
 import 'package:staff_mate/services/session_manger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:staff_mate/my_hr/data/hr_api_service.dart';
 
 class SessionBootstrap {
   /// Call this after biometric success OR after full login.
@@ -48,13 +49,17 @@ class SessionBootstrap {
 
     try {
       final userInfoService = UserInformationService();
-      await userInfoService.fetchAndSaveUserInformation(
+      final userData = await userInfoService.fetchAndSaveUserInformation(
         token: token,
         clinicId: clinicId,
         userId: userId,
         zoneid: zoneid,
         branchId: 1,
       );
+      
+      final firstName = userData['firstName']?.toString();
+      // Auto-resolve HR Employee ID from shift roster
+      await HRApiService.resolveAndSaveEmpIdFromRoster(userId, firstName: firstName);
     } catch (e) {
       debugPrint('⚠️ User info bootstrap failed: $e');
     }

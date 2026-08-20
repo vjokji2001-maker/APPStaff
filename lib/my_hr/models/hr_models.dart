@@ -314,6 +314,7 @@ class LeaveBalance {
   final int pending;
   final int available;
   final String colorHex;
+  final int? leaveNameId;
 
   const LeaveBalance({
     required this.leaveType,
@@ -322,16 +323,18 @@ class LeaveBalance {
     required this.pending,
     required this.available,
     required this.colorHex,
+    this.leaveNameId,
   });
 
   factory LeaveBalance.fromJson(Map<String, dynamic> json) {
     return LeaveBalance(
-      leaveType: json['leaveType'] ?? json['leaveName'] ?? 'Unknown',
+      leaveType: json['leaveType'] ?? json['leaveName'] ?? json['name'] ?? 'Unknown',
       total: (json['total'] ?? 0).toInt(),
       used: (json['used'] ?? 0).toInt(),
       pending: (json['pending'] ?? 0).toInt(),
       available: (json['available'] ?? json['balance'] ?? 0).toInt(),
       colorHex: json['colorHex'] ?? '#1565C0',
+      leaveNameId: json['leaveNameId'] != null ? (json['leaveNameId'] as num).toInt() : null,
     );
   }
 }
@@ -363,7 +366,7 @@ class LeaveApplication {
 
   factory LeaveApplication.fromJson(Map<String, dynamic> json) {
     return LeaveApplication(
-      id: json['id']?.toString() ?? '',
+      id: json['id']?.toString() ?? json['requestId']?.toString() ?? '',
       leaveType: json['leaveType'] ?? json['leaveName'] ?? 'Leave',
       fromDate: json['fromDate'] ?? '',
       toDate: json['toDate'] ?? '',
@@ -1019,6 +1022,18 @@ class DashboardAnnouncement {
     required this.priority,
   });
 }
+// Placeholder classes for missing types
+class Birthday extends BirthdayItem {}
+
+class HRAnnouncement {}
+
+class RotaShift {}
+
+class QuickTask {}
+
+class PendingApproval { final String status; PendingApproval({this.status = 'Pending'}); }
+
+class CheckInOutStatus { bool isCheckedIn = false; String punchTime = ''; }
 
 class BirthdayItem {
   final String name;

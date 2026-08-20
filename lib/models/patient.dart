@@ -26,6 +26,7 @@ class Patient {
 final double patientBalanceDouble;
 final String admissionDate; 
 final String? conditionId;
+final int unreadNotesCount;
 
   Patient({
     required this.patientname,
@@ -55,6 +56,7 @@ final String? conditionId;
     required this.patientBalanceDouble,
     required this.admissionDate,
     this.conditionId,
+    this.unreadNotesCount = 0,
   });
 
   // Factory constructor to create Patient from JSON
@@ -93,8 +95,61 @@ final String? conditionId;
       patientBalanceDouble: double.tryParse(json['patient_balance']?.toString() ?? '') ?? 0.0,
       admissionDate: json['admissiondate']?.toString() ?? '',
       conditionId: json['conditionId']?.toString(),
-
+      unreadNotesCount: _calculateUnreadNotes(json),
     );
+  }
+
+  static int _calculateUnreadNotes(Map<String, dynamic> json) {
+    int count = 0;
+
+    // Check inside rmoNotes -> day_to_day_note_list (as per the provided JSON structure)
+    if (json.containsKey('rmoNotes') && json['rmoNotes'] != null) {
+      final rmoNotes = json['rmoNotes'];
+      if (rmoNotes is Map && rmoNotes.containsKey('day_to_day_note_list') && rmoNotes['day_to_day_note_list'] != null) {
+        final notesData = rmoNotes['day_to_day_note_list'];
+        if (notesData is List) {
+          for (var note in notesData) {
+            final status = note['status']?.toString();
+            if (status == '1' || status == 'true') {
+              count++;
+            }
+          }
+          return count;
+        }
+      }
+    }
+
+    // Fallback: check root level keys just in case
+    final keysToCheck = ['daytodaynotes', 'day_to_day_note_list', 'day_to_day_notes', 'nursing_notes', 'notes'];
+    for (var key in keysToCheck) {
+      if (json.containsKey(key) && json[key] != null) {
+        final notesData = json[key];
+        if (notesData is List) {
+          for (var note in notesData) {
+            final status = note['status']?.toString();
+            if (status == '1' || status == 'true' || note['isactive']?.toString() == '1') {
+              count++;
+            }
+          }
+        } else if (notesData is Map) {
+          final status = notesData['status']?.toString();
+          if (status == '1' || status == 'true' || notesData['isactive']?.toString() == '1') {
+            count++;
+          }
+        }
+        if (count > 0) return count;
+      }
+    }
+    
+    // Fallback: check if there is a direct count field
+    if (json.containsKey('day_to_day_notes_count')) {
+      return int.tryParse(json['day_to_day_notes_count']?.toString() ?? '0') ?? 0;
+    }
+    if (json.containsKey('unread_notes_count')) {
+      return int.tryParse(json['unread_notes_count']?.toString() ?? '0') ?? 0;
+    }
+
+    return count;
   }
   String get patientId => patientid;
 String get id => patientid; // Alias for compatibility

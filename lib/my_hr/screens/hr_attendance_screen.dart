@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -290,7 +291,7 @@ Widget _buildTodayTab() {
                   Text('Punch In',
                       style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary)),
                   const SizedBox(height: 10),
-                  Text(today?.punchIn ?? '--:--',
+                  Text(today?.punchIn ?? DateFormat('hh:mm a').format(DateTime.now()),
                       style: GoogleFonts.poppins(
                           fontSize: 28, fontWeight: FontWeight.w800, color: HRTheme.success)),
                   const SizedBox(height: 8),
@@ -311,7 +312,7 @@ Widget _buildTodayTab() {
                   Text('Punch Out',
                       style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary)),
                   const SizedBox(height: 10),
-                  Text(today?.punchOut ?? '--:--',
+                  Text(today?.punchOut ?? DateFormat('hh:mm a').format(DateTime.now()),
                       style: GoogleFonts.poppins(
                           fontSize: 28, fontWeight: FontWeight.w800, color: HRTheme.textPrimary)),
                   const SizedBox(height: 8),

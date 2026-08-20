@@ -183,7 +183,7 @@ return ThemeData(
                 '/dashboard': (context) =>
                     ActivityTracker(child: const DashboardPage()),
                 '/nurse': (context) => const NursePage(),
-                  '/face_attendance': (context) => FaceAttendancePage(),
+                  '/face_attendance': (context) => const FaceAttendancePage(punchDirection: 'IN'),
                   '/biometric-setup': (context) => BiometricSetupPage(
                       onContinue: () {
                         Navigator.of(context).pushNamedAndRemoveUntil(

@@ -5,6 +5,7 @@ import '../data/hr_mock_data.dart';
 import '../data/hr_api_service.dart';
 import '../models/hr_models.dart';
 import '../widgets/hr_widgets.dart';
+import '../../models/global_user_data.dart';
 
 class HRProfileScreen extends StatefulWidget {
   const HRProfileScreen({super.key});
@@ -24,14 +25,68 @@ class _HRProfileScreenState extends State<HRProfileScreen> {
     _fetchProfile();
   }
 
-  Future<void> _fetchProfile() async {
+  void _fetchProfile() {
     try {
-      final data = await HRApiService.getProfile();
-      // The API returns a Map, we parse it using HREmployee.fromJson
-      // Assuming the API response wrapper is { "data": {...} } or just {...}
-      final empData = data['data'] ?? data;
+      final userData = GlobalUserData().userData;
+      
+      if (userData != null) {
+        String first = userData['firstName']?.toString() ?? '';
+        String last = userData['lastName']?.toString() ?? '';
+        String init = userData['initial']?.toString() ?? '';
+        
+        String fullName = userData['fullName']?.toString() ?? '';
+        if (fullName.isEmpty) {
+          fullName = '$init $first $last'.trim();
+        }
+        if (fullName.isEmpty) fullName = userData['userId']?.toString() ?? 'Employee';
+        
+        String clinicName = userData['clinicName']?.toString() ?? '';
+        String job = userData['jobtitle']?.toString() ?? '';
+        String role = job.isNotEmpty ? job : 'Medical Staff';
+        String dept = userData['department']?.toString() ?? '';
+        if (dept.isEmpty) dept = clinicName.length > 20 ? clinicName.substring(0, 20) : (clinicName.isNotEmpty ? clinicName : 'General');
+        
+        String avatarStr = first.isNotEmpty ? first[0].toUpperCase() : (fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U');
+        
+        if (mounted) {
+          setState(() {
+            _emp = HREmployee(
+              id: userData['userId']?.toString() ?? '1',
+              name: fullName,
+              designation: role,
+              department: dept,
+              employeeCode: userData['userId']?.toString() ?? 'EMP001',
+              email: userData['email']?.toString() ?? '',
+              phone: userData['mobileNo']?.toString() ?? '',
+              dob: '',
+              gender: '',
+              bloodGroup: '',
+              maritalStatus: '',
+              joiningDate: '',
+              employmentType: 'Full-time',
+              workLocation: userData['location']?.toString() ?? 'Main Hospital',
+              reportingManager: '',
+              shift: 'General',
+              grade: '',
+              pfNumber: '',
+              uanNumber: '',
+              esiNumber: '',
+              panNumber: '',
+              aadhaarLast4: '',
+              address: userData['address']?.toString() ?? '',
+              emergencyContact: '',
+              emergencyRelation: '',
+              emergencyPhone: '',
+              avatarInitials: avatarStr,
+            );
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
       setState(() {
-        _emp = HREmployee.fromJson(empData);
+        _emp = HREmployee.empty();
         _isLoading = false;
       });
     } catch (e) {

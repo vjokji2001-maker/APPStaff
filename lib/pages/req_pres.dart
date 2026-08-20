@@ -105,6 +105,8 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
   bool _showTypeAheadDropdown = true;
 
   static const int _maxMedicineLimit = 15;
+  static const Duration _voiceListenDuration = Duration(seconds: 25);
+  static const Duration _voiceSilenceDuration = Duration(seconds: 4);
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   bool _speechAvailable = false;
@@ -246,7 +248,7 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       _speechTimeoutTimer?.cancel();
       _speechSilenceTimer?.cancel();
 
-      _speechTimeoutTimer = Timer(const Duration(seconds: 15), () {
+      _speechTimeoutTimer = Timer(_voiceListenDuration, () {
         if (_isListening) {
           if (_recognizedWords.isNotEmpty) {
             _processVoiceCommand(_recognizedWords.join(' '));
@@ -278,14 +280,14 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
           });
 
           _speechSilenceTimer?.cancel();
-          _speechSilenceTimer = Timer(const Duration(seconds: 2), () {
+          _speechSilenceTimer = Timer(_voiceSilenceDuration, () {
             if (_isListening && _recognizedWords.isNotEmpty && !_isProcessing) {
               _processVoiceCommand(_recognizedWords.join(' '));
             }
           });
         },
-        listenFor: const Duration(seconds: 15),
-        pauseFor: const Duration(seconds: 2),
+        listenFor: _voiceListenDuration,
+        pauseFor: _voiceSilenceDuration,
         partialResults: true,
         localeId: 'en_US',
         listenMode: stt.ListenMode.confirmation,
@@ -353,13 +355,39 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
 
     if (mounted) {
       setState(() => _showVoiceInput = false);
+
+      // Build summary of what was set
+      List<String> setFields = [];
+      if (parsedData['medicine'].toString().isNotEmpty) setFields.add('Medicine');
+      if (parsedData['frequency'].toString().isNotEmpty) setFields.add('Frequency: ${parsedData['frequency']}');
+      if (parsedData['duration'].toString().isNotEmpty) setFields.add('Duration: ${parsedData['duration']} days');
+      if (parsedData['instruction'].toString().isNotEmpty) setFields.add('${parsedData['instruction']}');
+      if (parsedData['unit'].toString().isNotEmpty) setFields.add('Unit: ${parsedData['unit']}');
+      if (parsedData['route'].toString().isNotEmpty) setFields.add('Route: ${parsedData['route']}');
+      if (parsedData['dose'].toString().isNotEmpty) setFields.add('Dose: ${parsedData['dose']}');
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✓ Voice command processed successfully'),
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('✓ Voice command processed successfully',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              if (setFields.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    setFields.skip(1).join(' · '),
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                ),
+            ],
+          ),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 3),
           behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
+          margin: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
         ),
       );
     }
@@ -524,45 +552,141 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       'frequency': '',
       'duration': '',
       'instruction': '',
+      'route': '',
+      'dose': '',
     };
 
     String cleanText = text.toLowerCase().trim();
 
+    // ── Strength extraction ───────────────────────────────────────────────
+    // Try "medicine 650" pattern first
     if (medicineName.contains(' ')) {
       String lastPart = medicineName.split(' ').last;
       if (RegExp(r'^\d+$').hasMatch(lastPart)) {
         result['strength'] = lastPart;
       }
     }
+    // Try "650 mg", "500mg", "250 ml" patterns from full text
+    final strengthPattern = RegExp(r'(\d+)\s*(mg|ml|mcg|gm|gram|g)\b', caseSensitive: false);
+    final strengthMatch = strengthPattern.firstMatch(cleanText);
+    if (strengthMatch != null && result['strength']!.isEmpty) {
+      result['strength'] = strengthMatch.group(1)!;
+    }
 
-    // Hinglish + English duration parsing
-    final durationPattern = RegExp(r'(\d+)\s*(day|days|d|din|mahina|month|mahine)', caseSensitive: false);
+    // ── Dosage extraction ─────────────────────────────────────────────────
+    // "dosage 10", "10 mg dosage"
+    final dosagePattern = RegExp(r'dosage\s*(\d+\.?\d*)|(\d+\.?\d*)\s*dosage', caseSensitive: false);
+    final dosageMatch = dosagePattern.firstMatch(cleanText);
+    if (dosageMatch != null) {
+      result['dosage'] = dosageMatch.group(1) ?? dosageMatch.group(2) ?? '';
+    }
+
+    // ── Unit extraction ───────────────────────────────────────────────────
+    if (cleanText.contains('tablet') || cleanText.contains('goli') || cleanText.contains('tab')) {
+      result['unit'] = 'Tablet';
+    } else if (cleanText.contains('capsule') || cleanText.contains('cap')) {
+      result['unit'] = 'Capsule';
+    } else if (cleanText.contains('syrup') || cleanText.contains('liquid') || cleanText.contains('sharbat')) {
+      result['unit'] = 'Syrup';
+    } else if (cleanText.contains('injection') || cleanText.contains('inject') || cleanText.contains('sui') || cleanText.contains('teeka')) {
+      result['unit'] = 'Injection';
+    } else if (cleanText.contains('drop') || cleanText.contains('boond')) {
+      result['unit'] = 'Drops';
+    } else if (cleanText.contains('cream') || cleanText.contains('malham')) {
+      result['unit'] = 'Cream';
+    } else if (cleanText.contains('ointment')) {
+      result['unit'] = 'Ointment';
+    } else if (cleanText.contains('inhaler') || cleanText.contains('pump')) {
+      result['unit'] = 'Inhaler';
+    }
+
+    // ── Route extraction ──────────────────────────────────────────────────
+    if (cleanText.contains('oral') || cleanText.contains('muh se') || cleanText.contains('munh se')) {
+      result['route'] = 'ORAL';
+    } else if (cleanText.contains('iv') || cleanText.contains('intravenous') || cleanText.contains('nass')) {
+      result['route'] = 'IV';
+    } else if (cleanText.contains('im') || cleanText.contains('intramuscular')) {
+      result['route'] = 'IM';
+    } else if (cleanText.contains('subcutaneous') || cleanText.contains('sc') || cleanText.contains('sub cut')) {
+      result['route'] = 'SC';
+    } else if (cleanText.contains('topical') || cleanText.contains('skin') || cleanText.contains('chamdi')) {
+      result['route'] = 'TOPICAL';
+    } else if (cleanText.contains('nasal') || cleanText.contains('naak') || cleanText.contains('nose')) {
+      result['route'] = 'NASAL';
+    } else if (cleanText.contains('rectal')) {
+      result['route'] = 'RECTAL';
+    } else if (cleanText.contains('eye') || cleanText.contains('aankh') || cleanText.contains('ophthalmic')) {
+      result['route'] = 'OPHTHALMIC';
+    } else if (cleanText.contains('ear') || cleanText.contains('kaan')) {
+      result['route'] = 'OTIC';
+    }
+
+    // ── Dose count extraction (e.g. "ek goli", "do goli", "2 tablet") ───
+    final doseNumberPattern = RegExp(r'(\d+)\s*(goli|tablet|capsule|tab|cap)', caseSensitive: false);
+    final doseNumberMatch = doseNumberPattern.firstMatch(cleanText);
+    if (doseNumberMatch != null) {
+      result['dose'] = doseNumberMatch.group(1)!;
+    } else if (cleanText.contains('ek goli') || cleanText.contains('one tablet')) {
+      result['dose'] = '1';
+    } else if (cleanText.contains('do goli') || cleanText.contains('two tablet') || cleanText.contains('2 goli')) {
+      result['dose'] = '2';
+    } else if (cleanText.contains('teen goli') || cleanText.contains('three tablet') || cleanText.contains('3 goli')) {
+      result['dose'] = '3';
+    } else if (cleanText.contains('aadhi goli') || cleanText.contains('half tablet') || cleanText.contains('aadha')) {
+      result['dose'] = '0.5';
+    }
+
+    // ── Duration parsing (Hinglish + English) ─────────────────────────────
+    final durationPattern = RegExp(r'(\d+)\s*(day|days|d|din|mahina|month|mahine|week|hafte|hafta)', caseSensitive: false);
     final durationMatch = durationPattern.firstMatch(cleanText);
     if (durationMatch != null) {
       int durValue = int.tryParse(durationMatch.group(1)!) ?? 1;
       String durUnit = durationMatch.group(2)!.toLowerCase();
       if (durUnit.contains('mahina') || durUnit.contains('month') || durUnit.contains('mahine')) {
-        durValue = durValue * 30; // convert to days
+        durValue = durValue * 30;
+      } else if (durUnit.contains('week') || durUnit.contains('hafte') || durUnit.contains('hafta')) {
+        durValue = durValue * 7;
       }
       result['duration'] = durValue.toString();
     }
+    // Also check Hindi number words: "paanch din", "teen din", "saat din", "das din"
+    if (result['duration']!.isEmpty) {
+      final hindiNumbers = {
+        'ek': 1, 'do': 2, 'teen': 3, 'char': 4, 'paanch': 5, 'panch': 5,
+        'chhe': 6, 'saat': 7, 'aath': 8, 'nau': 9, 'das': 10,
+        'pandrah': 15, 'bees': 20, 'tees': 30,
+      };
+      for (final entry in hindiNumbers.entries) {
+        final pattern = RegExp('${entry.key}\\s*(din|day|days)', caseSensitive: false);
+        if (pattern.hasMatch(cleanText)) {
+          result['duration'] = entry.value.toString();
+          break;
+        }
+      }
+    }
 
-    // Hinglish frequency parsing
-    bool hasMorning = cleanText.contains('morning') || cleanText.contains('morn') || cleanText.contains('subah');
-    bool hasAfternoon = cleanText.contains('afternoon') || cleanText.contains('noon') || cleanText.contains('dopahar');
-    bool hasNight = cleanText.contains('night') || cleanText.contains('evening') || cleanText.contains('raat') || cleanText.contains('sham') || cleanText.contains('shyam');
+    // ── Frequency parsing (Hinglish + English) ────────────────────────────
+    bool hasMorning = cleanText.contains('morning') || cleanText.contains('morn') || cleanText.contains('subah') || cleanText.contains('savere');
+    bool hasAfternoon = cleanText.contains('afternoon') || cleanText.contains('noon') || cleanText.contains('dopahar') || cleanText.contains('lunch');
+    bool hasNight = cleanText.contains('night') || cleanText.contains('evening') || cleanText.contains('raat') || cleanText.contains('sham') || cleanText.contains('shyam') || cleanText.contains('raat ko');
     
-    // Check for "din me do baar", "din me teen baar"
-    if (cleanText.contains('din me do baar') || cleanText.contains('din mein do baar') || cleanText.contains('twice') || cleanText.contains('two times')) {
+    // Check Hindi phrase patterns first
+    if (cleanText.contains('din me do baar') || cleanText.contains('din mein do baar') || cleanText.contains('twice') || cleanText.contains('two times') || cleanText.contains('do baar')) {
       result['frequency'] = '1-0-1';
-    } else if (cleanText.contains('din me teen baar') || cleanText.contains('din mein teen baar') || cleanText.contains('thrice') || cleanText.contains('three times')) {
+    } else if (cleanText.contains('din me teen baar') || cleanText.contains('din mein teen baar') || cleanText.contains('thrice') || cleanText.contains('three times') || cleanText.contains('teen baar')) {
       result['frequency'] = '1-1-1';
-    } else if (cleanText.contains('din me ek baar') || cleanText.contains('din mein ek baar') || cleanText.contains('once') || cleanText.contains('one time')) {
+    } else if (cleanText.contains('din me char baar') || cleanText.contains('four times') || cleanText.contains('char baar')) {
+      result['frequency'] = '1-1-1-1';
+    } else if (cleanText.contains('din me ek baar') || cleanText.contains('din mein ek baar') || cleanText.contains('once') || cleanText.contains('one time') || cleanText.contains('ek baar') || cleanText.contains('once daily') || cleanText.contains('daily once')) {
       result['frequency'] = '1-0-0';
     } else if (hasMorning && hasNight && hasAfternoon) {
       result['frequency'] = '1-1-1';
     } else if (hasMorning && hasNight) {
       result['frequency'] = '1-0-1';
+    } else if (hasMorning && hasAfternoon) {
+      result['frequency'] = '1-1-0';
+    } else if (hasAfternoon && hasNight) {
+      result['frequency'] = '0-1-1';
     } else if (hasMorning) {
       result['frequency'] = '1-0-0';
     } else if (hasNight) {
@@ -571,12 +695,23 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       result['frequency'] = '0-1-0';
     }
 
-    // Hinglish instruction parsing
-    if (cleanText.contains('khali pet') || cleanText.contains('khane se pehle') || cleanText.contains('before food') || cleanText.contains('before meal')) {
+    // ── Instruction parsing (Hinglish + English) ──────────────────────────
+    if (cleanText.contains('khali pet') || cleanText.contains('khane se pehle') || cleanText.contains('before food') || cleanText.contains('before meal') || cleanText.contains('empty stomach') || cleanText.contains('bhooke pet')) {
       result['instruction'] = 'Before Food';
-    } else if (cleanText.contains('khane ke baad') || cleanText.contains('after food') || cleanText.contains('after meal')) {
+    } else if (cleanText.contains('khane ke baad') || cleanText.contains('after food') || cleanText.contains('after meal') || cleanText.contains('khana khane ke baad') || cleanText.contains('bhojan ke baad')) {
       result['instruction'] = 'After Food';
+    } else if (cleanText.contains('with food') || cleanText.contains('khane ke sath') || cleanText.contains('khane ke saath')) {
+      result['instruction'] = 'With Food';
+    } else if (cleanText.contains('bed time') || cleanText.contains('sone se pehle') || cleanText.contains('bedtime') || cleanText.contains('sote waqt')) {
+      result['instruction'] = 'At Bed Time';
+    } else if (cleanText.contains('sos') || cleanText.contains('zaroorat') || cleanText.contains('when needed') || cleanText.contains('as needed')) {
+      result['instruction'] = 'SOS';
+    } else if (cleanText.contains('stat') || cleanText.contains('turant') || cleanText.contains('immediately') || cleanText.contains('abhi')) {
+      result['instruction'] = 'STAT';
     }
+
+    debugPrint('=== VOICE PARSED DATA ===');
+    result.forEach((k, v) => debugPrint('  $k: $v'));
 
     return result;
   }
@@ -584,6 +719,62 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
   Future<void> _applyParsedDataToForm(Map<String, dynamic> parsedData) async {
     setState(() => _voiceCommandApplied = true);
 
+    // ── Step 1: Apply ALL voice-parsed values immediately to the form ────
+    setState(() {
+      // Set frequency from voice
+      if (parsedData['frequency'] != null && parsedData['frequency'].toString().isNotEmpty) {
+        selectedFrequency = parsedData['frequency'];
+      }
+
+      // Set duration from voice
+      if (parsedData['duration'] != null && parsedData['duration'].toString().isNotEmpty) {
+        durationController.text = parsedData['duration'];
+      }
+
+      // Set instruction from voice
+      if (parsedData['instruction'] != null && parsedData['instruction'].toString().isNotEmpty) {
+        selectedDosageTime = parsedData['instruction'];
+        selectedInstruction = parsedData['instruction'];
+      }
+
+      // Set route from voice
+      if (parsedData['route'] != null && parsedData['route'].toString().isNotEmpty) {
+        selectedRoute = parsedData['route'];
+      }
+
+      // Set unit from voice
+      if (parsedData['unit'] != null && parsedData['unit'].toString().isNotEmpty) {
+        // Find matching unit from loaded units list
+        final voiceUnit = parsedData['unit'].toString().toLowerCase();
+        final matchedUnit = units.firstWhere(
+          (u) => u.toLowerCase().contains(voiceUnit) || voiceUnit.contains(u.toLowerCase()),
+          orElse: () => '',
+        );
+        if (matchedUnit.isNotEmpty) {
+          selectedUnit = matchedUnit;
+        }
+      }
+
+      // Set dose from voice
+      if (parsedData['dose'] != null && parsedData['dose'].toString().isNotEmpty) {
+        doseController.text = parsedData['dose'];
+      }
+
+      // Set strength from voice
+      if (parsedData['strength'] != null && parsedData['strength'].toString().isNotEmpty) {
+        strengthController.text = parsedData['strength'];
+      }
+
+      // Set dosage from voice
+      if (parsedData['dosage'] != null && parsedData['dosage'].toString().isNotEmpty) {
+        dosageController.text = parsedData['dosage'];
+      }
+    });
+
+    // Calculate quantity after setting frequency & duration
+    _calculateQuantity();
+
+    // ── Step 2: Set medicine name and fetch API details ──────────────────
     if (parsedData['medicine'].isNotEmpty) {
       medicineController.text = parsedData['medicine'];
       _typeAheadController.text = parsedData['medicine'];
@@ -604,39 +795,68 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
           medicineDetails = details;
           _isSearchingMedicine = false;
 
-          if (voiceData['strength'].isNotEmpty) {
+          // ── Strength: voice wins, else API ────────────────────────────
+          if (voiceData['strength'] != null && voiceData['strength'].toString().isNotEmpty) {
             strengthController.text = voiceData['strength'];
-          } else if (details['strength'] != null) {
+          } else if (strengthController.text.isEmpty && details['strength'] != null) {
             strengthController.text = details['strength']?.toString() ?? '';
           }
 
+          // ── Dosage: voice wins, else API ──────────────────────────────
           if (dosageController.text.isEmpty && details['weight'] != null) {
             dosageController.text = details['weight']?.toString() ?? '';
           }
 
+          // ── Dose count: voice wins, else API ──────────────────────────
           if (doseController.text.isEmpty) {
             doseController.text = details['dose']?.toString() ?? '1';
           }
 
-          if (voiceData['unit'].isEmpty && details['unit'] != null) {
-            selectedUnit = details['unit']?.toString();
-            selectedUnitId = details['unitid'] is int
-                ? details['unitid']
-                : int.tryParse('${details['unitid']}');
+          // ── Unit: voice wins, else API ────────────────────────────────
+          if (selectedUnit == null || selectedUnit!.isEmpty) {
+            if (voiceData['unit'] != null && voiceData['unit'].toString().isNotEmpty) {
+              // Already set by _applyParsedDataToForm, just get unitId from API
+              if (details['unitid'] != null) {
+                selectedUnitId = details['unitid'] is int
+                    ? details['unitid']
+                    : int.tryParse('${details['unitid']}');
+              }
+            } else if (details['unit'] != null) {
+              selectedUnit = details['unit']?.toString();
+              selectedUnitId = details['unitid'] is int
+                  ? details['unitid']
+                  : int.tryParse('${details['unitid']}');
+            }
+          } else {
+            // Unit was set by voice, still try to get unitId
+            if (details['unitid'] != null) {
+              selectedUnitId = details['unitid'] is int
+                  ? details['unitid']
+                  : int.tryParse('${details['unitid']}');
+            }
           }
 
-          if (voiceData['frequency'].isEmpty && details['dosefreq'] != null) {
+          // ── Frequency: voice wins, else API ───────────────────────────
+          if ((selectedFrequency == null || selectedFrequency!.isEmpty) &&
+              voiceData['frequency'].toString().isEmpty &&
+              details['dosefreq'] != null) {
             selectedFrequency = details['dosefreq']?.toString();
           }
 
-          if (details['route'] != null &&
-              details['route'].toString().isNotEmpty) {
-            selectedRoute = details['route']?.toString();
-          } else if (selectedRoute == null && routes.isNotEmpty) {
-            selectedRoute = 'ORAL';
+          // ── Route: voice wins, else API ───────────────────────────────
+          if (selectedRoute == null || selectedRoute!.isEmpty) {
+            if (voiceData['route'] != null && voiceData['route'].toString().isNotEmpty) {
+              selectedRoute = voiceData['route'];
+            } else if (details['route'] != null && details['route'].toString().isNotEmpty) {
+              selectedRoute = details['route']?.toString();
+            } else if (routes.isNotEmpty) {
+              selectedRoute = 'ORAL';
+            }
           }
 
-          if (voiceData['instruction'].isEmpty) {
+          // ── Instruction: voice wins, else API ─────────────────────────
+          if ((selectedDosageTime == null || selectedDosageTime!.isEmpty) &&
+              voiceData['instruction'].toString().isEmpty) {
             if (details['dosageTime'] != null) {
               selectedDosageTime = details['dosageTime']?.toString();
               selectedInstruction = details['dosageTime']?.toString();
@@ -644,47 +864,23 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               selectedDosageTime = details['instruction']?.toString();
               selectedInstruction = details['instruction']?.toString();
             }
-          } else {
-            selectedDosageTime = voiceData['instruction'];
-            selectedInstruction = voiceData['instruction'];
           }
 
-          if (voiceData['duration'].isEmpty && details['days'] != null) {
+          // ── Duration: voice wins, else API ────────────────────────────
+          if (durationController.text.isEmpty && details['days'] != null) {
             durationController.text = details['days']?.toString() ?? '';
-          } else if (voiceData['duration'].isNotEmpty) {
-            durationController.text = voiceData['duration'];
           }
         });
 
         Future.microtask(() => _calculateQuantity());
       } else if (mounted) {
-        setState(() {
-          _isSearchingMedicine = false;
-          if (voiceData['duration'].isNotEmpty)
-            durationController.text = voiceData['duration'];
-          if (voiceData['frequency'].isNotEmpty)
-            selectedFrequency = voiceData['frequency'];
-          if (voiceData['instruction'].isNotEmpty) {
-            selectedDosageTime = voiceData['instruction'];
-            selectedInstruction = voiceData['instruction'];
-          }
-        });
+        setState(() => _isSearchingMedicine = false);
         Future.microtask(() => _calculateQuantity());
       }
     } catch (e) {
       debugPrint("Error fetching medicine details: $e");
       if (mounted) {
-        setState(() {
-          _isSearchingMedicine = false;
-          if (voiceData['duration'].isNotEmpty)
-            durationController.text = voiceData['duration'];
-          if (voiceData['frequency'].isNotEmpty)
-            selectedFrequency = voiceData['frequency'];
-          if (voiceData['instruction'].isNotEmpty) {
-            selectedDosageTime = voiceData['instruction'];
-            selectedInstruction = voiceData['instruction'];
-          }
-        });
+        setState(() => _isSearchingMedicine = false);
         Future.microtask(() => _calculateQuantity());
       }
     }
@@ -2443,11 +2639,13 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                         _buildVoiceExample('Basic Medicine:',
                             '"Dolo 650, 5 days, morning and night"'),
                         _buildVoiceExample('With Instructions:',
-                            '"Paracetamol 500 mg, 3 days, after food, twice daily"'),
-                        _buildVoiceExample('Multiple Times:',
-                            '"Azithromycin 250 mg, once daily, 3 days, before food"'),
-                        _buildVoiceExample('Complete Prescription:',
-                            '"Amoxicillin 250 mg, 7 days, morning afternoon night, after lunch"'),
+                            '"Paracetamol 500 mg tablet, 3 days, after food, twice daily"'),
+                        _buildVoiceExample('Hinglish Command:',
+                            '"Amoxicillin 250 mg, paanch din, subah aur raat, khane ke baad"'),
+                        _buildVoiceExample('Complete (Hindi):',
+                            '"Dolo 650 ek goli, saat din, subah dopahar raat, khane ke baad"'),
+                        _buildVoiceExample('With Route:',
+                            '"Injection Ceftriaxone 1 gm, IV, 5 days, twice daily"'),
 
                         const SizedBox(height: 16),
 
@@ -2464,9 +2662,11 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                             children: [
                               _buildTip('Speak clearly and at a normal pace'),
                               _buildTip('Start with medicine name (e.g., "Dolo 650")'),
-                              _buildTip('Specify duration in days (e.g., "5 days")'),
-                              _buildTip('Mention frequency (morning, afternoon, night)'),
-                              _buildTip('Add instructions like "after food" or "before food"'),
+                              _buildTip('Specify duration: "5 days", "paanch din", "1 week"'),
+                              _buildTip('Mention frequency: "subah raat", "morning night", "do baar"'),
+                              _buildTip('Add instructions: "khane ke baad", "after food", "khali pet"'),
+                              _buildTip('Specify type: "tablet/goli", "syrup/sharbat", "injection/sui"'),
+                              _buildTip('Route: "oral", "IV", "IM", "topical"'),
                             ],
                           ),
                         ),

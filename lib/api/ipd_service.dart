@@ -1890,8 +1890,9 @@ class IpdService {
     required int day,
     required int id,
     required String createdByUserId,
+    int status = 1,
   }) async {
-    debugPrint('Saving day-to-day note for ipdid: $ipdid, day: $day');
+    debugPrint('Saving day-to-day note for ipdid: $ipdid, day: $day, status: $status');
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -1940,6 +1941,7 @@ class IpdService {
         'day': day,
         'id': id,
         'createdByUserId': createdByUserId,
+        'status': status,
       };
 
       debugPrint('--DAY TO DAY NOTES SAVE API--');

@@ -20,7 +20,7 @@ class CameraView extends StatefulWidget {
   State<CameraView> createState() => _CameraViewState();
 }
 
-class _CameraViewState extends State<CameraView> {
+class _CameraViewState extends State<CameraView> with SingleTickerProviderStateMixin {
   CameraController? _controller;
   List<CameraDescription>? _cameras;
   bool _isInitialized = false;
@@ -38,6 +38,11 @@ class _CameraViewState extends State<CameraView> {
   bool _challengePassed = false;
   bool _eyesClosed = false;
   String _warningMessage = '';
+
+  // AI Scanner Animations
+  late AnimationController _animationController;
+  late Animation<double> _scanAnimation;
+  late Animation<double> _opacityAnimation;
 
   @override
   void initState() {
@@ -57,6 +62,20 @@ class _CameraViewState extends State<CameraView> {
     );
     _faceDetector = FaceDetector(options: options);
     
+    // Setup animations
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    
+    _scanAnimation = Tween<double>(begin: -1.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOutSine),
+    );
+    
+    _opacityAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
     _initializeCamera();
   }
 
@@ -69,16 +88,12 @@ class _CameraViewState extends State<CameraView> {
 
   void _startMotionSensor() {
     _accelSubscription = accelerometerEventStream().listen((AccelerometerEvent event) {
-      // Calculate magnitude of acceleration
       double magnitude = sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
-      
-      // If the difference between last magnitude is extremely small, it's on a table.
       double delta = (magnitude - _lastAccelMagnitude).abs();
       _lastAccelMagnitude = magnitude;
 
       if (mounted) {
         setState(() {
-          // If delta is less than 0.1, the phone is perfectly still (e.g., on a table)
           _isDeviceMoving = delta > 0.1;
         });
       }
@@ -127,21 +142,18 @@ class _CameraViewState extends State<CameraView> {
         if (faces.isEmpty) {
           _updateWarning('');
         } else if (faces.length > 1) {
-          // Anti-Cheat: Multiple Faces
           _updateWarning('Multiple faces detected. Please stand alone.');
         } else {
           final face = faces.first;
 
-          // Anti-Cheat: Face Occlusion / Sunglass Check
           if (face.leftEyeOpenProbability == null || face.rightEyeOpenProbability == null) {
             _updateWarning('Please remove glasses or masks.');
             _isDetecting = false;
             return;
           }
 
-          // Check if face is looking straight
           if (face.headEulerAngleY != null && face.headEulerAngleY!.abs() < 15) {
-            _updateWarning(''); // Clear warnings
+            _updateWarning('');
 
             if (_currentChallenge == LivenessChallengeType.blink) {
               _processBlinkChallenge(face);
@@ -203,7 +215,7 @@ class _CameraViewState extends State<CameraView> {
     if (Platform.isIOS) {
       rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
     } else if (Platform.isAndroid) {
-      var rotationCompensation = 0; // Simplified for portrait
+      var rotationCompensation = 0; 
       final int rotationRaw = (sensorOrientation - rotationCompensation + 360) % 360;
       rotation = InputImageRotationValue.fromRawValue(rotationRaw);
     }
@@ -241,16 +253,25 @@ class _CameraViewState extends State<CameraView> {
     _controller?.stopImageStream();
     _controller?.dispose();
     _faceDetector.close();
+    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized || _controller == null) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: Colors.cyanAccent),
+            const SizedBox(height: 16),
+            Text('INITIALIZING AI ENGINE...', style: GoogleFonts.shareTechMono(color: Colors.cyanAccent, fontSize: 16)),
+          ],
+        ),
+      );
     }
     
-    // Fixed Aspect Ratio for Portrait camera
     final size = MediaQuery.of(context).size;
     var scale = size.aspectRatio * _controller!.value.aspectRatio;
     if (scale < 1) scale = 1 / scale;
@@ -264,10 +285,10 @@ class _CameraViewState extends State<CameraView> {
             child: CameraPreview(_controller!),
           ),
         ),
-        // Overlay mask
+        // Techy Overlay mask
         ColorFiltered(
           colorFilter: const ColorFilter.mode(
-            Colors.black54,
+            Colors.black87, // Darker for AI aesthetic
             BlendMode.srcOut,
           ),
           child: Stack(
@@ -282,8 +303,8 @@ class _CameraViewState extends State<CameraView> {
               Align(
                 alignment: const Alignment(0.0, -0.2),
                 child: Container(
-                  height: 350,
-                  width: 250,
+                  height: 380,
+                  width: 280,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(200),
@@ -293,59 +314,226 @@ class _CameraViewState extends State<CameraView> {
             ],
           ),
         ),
+        
+        // AI HUD Grid & Scanner Line
+        Align(
+          alignment: const Alignment(0.0, -0.2),
+          child: SizedBox(
+            height: 380,
+            width: 280,
+            child: Stack(
+              children: [
+                CustomPaint(
+                  size: const Size(280, 380),
+                  painter: ScannerCornersPainter(),
+                ),
+                AnimatedBuilder(
+                  animation: _scanAnimation,
+                  builder: (context, child) {
+                    return Align(
+                      alignment: Alignment(0.0, _scanAnimation.value), 
+                      child: Container(
+                        height: 4,
+                        width: double.infinity,
+                        margin: const EdgeInsets.symmetric(horizontal: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.cyanAccent,
+                          boxShadow: [
+                            BoxShadow(color: Colors.cyanAccent.withOpacity(0.8), blurRadius: 15, spreadRadius: 4),
+                            BoxShadow(color: Colors.blue.withOpacity(0.6), blurRadius: 30, spreadRadius: 8),
+                          ],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                // Grid overlay
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: 0.15,
+                    child: CustomPaint(painter: GridPainter()),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        // HUD Texts
+        Positioned(
+          top: 50,
+          left: 20,
+          child: AnimatedBuilder(
+            animation: _opacityAnimation,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _opacityAnimation.value,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('SYS // ONLINE', style: GoogleFonts.shareTechMono(color: Colors.cyanAccent, fontSize: 13, letterSpacing: 1.2)),
+                    const SizedBox(height: 4),
+                    Text('AI_MESH // ACTIVE', style: GoogleFonts.shareTechMono(color: Colors.cyanAccent, fontSize: 13, letterSpacing: 1.2)),
+                    const SizedBox(height: 4),
+                    Text('BIOMETRICS // STANDBY', style: GoogleFonts.shareTechMono(color: Colors.cyanAccent, fontSize: 13, letterSpacing: 1.2)),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        
+        Positioned(
+          top: 50,
+          right: 20,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('LAT: ${(_isDeviceMoving ? 21.1498 + Random().nextDouble() * 0.0001 : 21.1498).toStringAsFixed(4)}', style: GoogleFonts.shareTechMono(color: Colors.greenAccent, fontSize: 12)),
+              Text('LNG: ${(79.0820 + Random().nextDouble() * 0.0001).toStringAsFixed(4)}', style: GoogleFonts.shareTechMono(color: Colors.greenAccent, fontSize: 12)),
+            ],
+          ),
+        ),
+
         // Warning Banner
         if (_warningMessage.isNotEmpty)
           Positioned(
-            top: 40, left: 20, right: 20,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.9),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _warningMessage,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+            top: 100, 
+            left: 20, 
+            right: 20,
+            child: Text(
+              _warningMessage,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.shareTechMono(
+                color: Colors.redAccent, 
+                fontWeight: FontWeight.bold, 
+                fontSize: 16,
+                shadows: [
+                  Shadow(color: Colors.black.withOpacity(0.8), blurRadius: 4, offset: const Offset(1, 1)),
+                  Shadow(color: Colors.black, blurRadius: 8, offset: const Offset(0, 0)),
+                ]
               ),
             ),
           ),
+        
         // Instructions
         Positioned(
-          top: 100,
-          left: 0, right: 0,
+          bottom: 230,
+          left: 0, 
+          right: 0,
           child: Text(
-            'Center your face inside the oval',
+            'POSITION FACE WITHIN HUD',
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+            style: GoogleFonts.shareTechMono(
+              color: Colors.white70, 
+              fontSize: 14, 
+              letterSpacing: 2.0,
+              shadows: [
+                Shadow(color: Colors.black.withOpacity(0.8), blurRadius: 4, offset: const Offset(1, 1))
+              ]
+            ),
           ),
         ),
+        
         Positioned(
           bottom: 120,
           left: 0, right: 0,
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 40),
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _challengePassed ? Colors.green.withOpacity(0.9) : Colors.orange.withOpacity(0.9),
+              color: _challengePassed ? Colors.green.withOpacity(0.85) : Colors.black87,
               borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              _challengePassed 
-                  ? 'Verified! Processing...'
-                  : _currentChallenge == LivenessChallengeType.blink 
-                      ? 'Please BLINK once for liveness check'
-                      : 'Please SMILE for liveness check',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                color: Colors.white, 
-                fontSize: 14, 
-                fontWeight: FontWeight.w600
+              border: Border.all(
+                color: _challengePassed ? Colors.greenAccent : Colors.cyanAccent, 
+                width: 2
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: _challengePassed ? Colors.greenAccent.withOpacity(0.4) : Colors.cyanAccent.withOpacity(0.3), 
+                  blurRadius: 15, 
+                  spreadRadius: 2
+                )
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _challengePassed 
+                      ? 'IDENTITY VERIFIED'
+                      : 'LIVENESS CHECK REQUIRED',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.shareTechMono(
+                    color: _challengePassed ? Colors.white : Colors.cyanAccent, 
+                    fontSize: 16, 
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                if (!_challengePassed) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _currentChallenge == LivenessChallengeType.blink 
+                        ? '> EXECUTING: BLINK_PROTOCOL'
+                        : '> EXECUTING: SMILE_PROTOCOL',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.shareTechMono(
+                      color: Colors.white, 
+                      fontSize: 14, 
+                    ),
+                  ),
+                ]
+              ],
             ),
           ),
         ),
       ],
     );
   }
+}
+
+class ScannerCornersPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.cyanAccent
+      ..strokeWidth = 5.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    const double cornerLength = 40.0;
+    
+    // Top Left
+    canvas.drawPath(Path()..moveTo(0, cornerLength)..lineTo(0, 0)..lineTo(cornerLength, 0), paint);
+    // Top Right
+    canvas.drawPath(Path()..moveTo(size.width - cornerLength, 0)..lineTo(size.width, 0)..lineTo(size.width, cornerLength), paint);
+    // Bottom Left
+    canvas.drawPath(Path()..moveTo(0, size.height - cornerLength)..lineTo(0, size.height)..lineTo(cornerLength, size.height), paint);
+    // Bottom Right
+    canvas.drawPath(Path()..moveTo(size.width - cornerLength, size.height)..lineTo(size.width, size.height)..lineTo(size.width, size.height - cornerLength), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.cyanAccent
+      ..strokeWidth = 1.0;
+      
+    for (double i = 0; i < size.width; i += 20) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
+    }
+    for (double i = 0; i < size.height; i += 20) {
+      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

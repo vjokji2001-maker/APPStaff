@@ -23,6 +23,11 @@ class AttendanceSuccessScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Text('ID: ${attendance.id}', style: GoogleFonts.poppins()),
             Text('Time: ${attendance.timestamp}', style: GoogleFonts.poppins()),
+            const SizedBox(height: 30),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Back to Dashboard'),
+            )
           ],
         ),
       ),

@@ -1,17 +1,152 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:staff_mate/APIs/api_endpoints.dart';
 import 'package:staff_mate/APIs/api_headers.dart';
 import 'package:staff_mate/APIs/api_request.dart';
+import 'package:staff_mate/APIs/api_host.dart';
 
 class HRApiService {
   static Future<Map<String, String>> _hrHeaders() {
     return ApiHeaders.getHeaders(isHrRequest: true);
   }
-  static const String _defaultEmpId = '0086bd62-d49a-4cb9-8818-aa7955db1c63'; // Temporary until we have real auth user ID
+  static Future<String> getLoggedEmpId() async {
+    final prefs = await SharedPreferences.getInstance();
+    String empId = prefs.getString('empId') ?? '';
+    
+    // If the stored empId is empty or not a valid UUID format (i.e. if it doesn't contain a hyphen)
+    // we can attempt to resolve it dynamically from the roster.
+    if (empId.isEmpty || !empId.contains('-')) {
+      final userId = prefs.getString('userId') ?? '';
+      final firstName = prefs.getString('firstName') ?? '';
+      if (userId.isNotEmpty) {
+        final resolved = await resolveAndSaveEmpIdFromRoster(userId, firstName: firstName);
+        if (resolved != null && resolved.isNotEmpty) {
+          empId = resolved;
+        }
+      }
+    }
+    return empId;
+  }
+
+  /// Resolve and save employee ID by querying the shift roster
+  static Future<String?> resolveAndSaveEmpIdFromRoster(String userId, {String? firstName}) async {
+    final now = DateTime.now();
+    final fromDate = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    
+    final future = now.add(const Duration(days: 7));
+    final toDate = '${future.year}-${future.month.toString().padLeft(2, '0')}-${future.day.toString().padLeft(2, '0')}';
+    
+    // Query the shift roster for all employees (pageSize: 1000)
+    try {
+      print('Resolving empId from Shift Roster dashboard for user: $userId (Name: $firstName)...');
+      final response = await getShiftRoster(
+        fromDate: fromDate,
+        toDate: toDate,
+        pageSize: 1000, // Fetch all employees so we can locate the current user locally
+        empId: "", // Prevents recursive loop
+      );
+      
+      final foundEmpId = _findUserEmpIdInRosterResponse(response, userId: userId, firstName: firstName);
+      if (foundEmpId != null && foundEmpId.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('empId', foundEmpId);
+        print('Resolved empId successfully from Roster list: $foundEmpId');
+        return foundEmpId;
+      }
+    } catch (e) {
+      print('Error querying entire shift roster for resolution: $e');
+    }
+    
+    return null;
+  }
+
+  static String? _findUserEmpIdInRosterResponse(dynamic response, {required String userId, String? firstName}) {
+    if (response is Map) {
+      final dataMap = response['data'];
+      List<dynamic>? dataList;
+      if (dataMap is List) {
+        dataList = dataMap;
+      } else if (dataMap is Map) {
+        dataList = dataMap['dataList'] ?? dataMap['content'];
+      } else {
+        dataList = response['dataList'] ?? response['content'];
+      }
+      
+      if (dataList != null && dataList.isNotEmpty) {
+        // Flatten dataList in case it contains nested lists (e.g. [[row1, row2]])
+        final List<dynamic> flatList = [];
+        for (final item in dataList) {
+          if (item is List) {
+            flatList.addAll(item);
+          } else {
+            flatList.add(item);
+          }
+        }
+        
+        print('Shift Roster fetched ${flatList.length} rows. Looking for match...');
+        
+        final lowerUserId = userId.toLowerCase();
+        final lowerFirstName = firstName?.toLowerCase() ?? '';
+        
+        // 1. Try matching employeeCode exactly with userId
+        for (final row in flatList) {
+          if (row is Map) {
+            final empCode = row['employeeCode']?.toString().toLowerCase() ?? '';
+            if (empCode.isNotEmpty && (empCode == lowerUserId || lowerUserId.contains(empCode) || empCode.contains(lowerUserId))) {
+              final empId = row['employeeId']?.toString() ?? row['empId']?.toString();
+              if (empId != null && empId.isNotEmpty) {
+                print('Match Found by Employee Code: $empCode -> $empId');
+                return empId;
+              }
+            }
+          }
+        }
+        
+        // 2. Try matching employeeName with firstName
+        if (lowerFirstName.isNotEmpty) {
+          for (final row in flatList) {
+            if (row is Map) {
+              final empName = row['employeeName']?.toString().toLowerCase() ?? '';
+              if (empName.isNotEmpty && (empName.contains(lowerFirstName) || lowerFirstName.contains(empName))) {
+                final empId = row['employeeId']?.toString() ?? row['empId']?.toString();
+                if (empId != null && empId.isNotEmpty) {
+                  print('Match Found by Name: $empName -> $empId');
+                  return empId;
+                }
+              }
+            }
+          }
+        }
+        
+        // 3. Fallback: If there's only 1 row in the roster, it belongs to the logged-in user
+        if (flatList.length == 1) {
+          final firstRow = flatList.first;
+          if (firstRow is Map) {
+            final empId = firstRow['employeeId']?.toString() ?? firstRow['empId']?.toString();
+            if (empId != null && empId.isNotEmpty) {
+              print('Fallback Match: Roster has only 1 row. Using empId: $empId');
+              return empId;
+            }
+          }
+        }
+      } else {
+        print('Shift Roster returned empty list.');
+      }
+    }
+    return null;
+  }
+
+  static Future<String> _getEffectiveEmpId(String? empId) async {
+    if (empId != null && empId.isNotEmpty) {
+      return empId;
+    }
+    return await getLoggedEmpId();
+  }
 
   /// Get Employee Profile
   static Future<Map<String, dynamic>> getProfile({String? empId}) async {
-    final id = empId ?? _defaultEmpId;
     try {
+      final id = await _getEffectiveEmpId(empId);
+      if (id.isEmpty) throw Exception('Employee ID is missing');
       final response = await ApiRequest.get(
         ApiEndpoints.employeeProfile(id),
         headers: await _hrHeaders(),
@@ -23,28 +158,106 @@ class HRApiService {
     }
   }
 
-  /// Get Leave Balance
- /// Get Leave Balance
-static Future<dynamic> getLeaveBalances() async {
-  try {
-    final response = await ApiRequest.post(
-      ApiEndpoints.leaveBalance,
-       {},
-      headers: await _hrHeaders(),
-    );
-    return response;
-  } catch (e) {
-    print('Error fetching leave balances: $e');
-    rethrow;
-  }
-}
-
-  /// Get Leave Requests
-  static Future<dynamic> getLeaveRequests() async {
+  /// Get Year Cycles from master API
+  static Future<List<dynamic>> getYearCycles() async {
     try {
       final response = await ApiRequest.post(
+        '${ApiHost.hrBaseUrl}/hr/master/year/cycle/get/all',
+        {
+          "paginationInfo": {
+            "pageSize": 1000,
+            "currentPage": 1
+          },
+          "name": "",
+          "code": ""
+        },
+        headers: await _hrHeaders(),
+      );
+      final data = response is Map ? response['data'] : response;
+      return data is List ? data : [];
+    } catch (e) {
+      print('Error fetching year cycles: $e');
+      return [];
+    }
+  }
+
+  /// Helper to determine the current year cycle ID
+  static Future<int?> getCurrentYearCycleId() async {
+    final cycles = await getYearCycles();
+    if (cycles.isEmpty) return null;
+    
+    for (final cycle in cycles) {
+      if (cycle['status']?.toString().toUpperCase() == 'ACTIVE') {
+        return int.tryParse(cycle['id']?.toString() ?? '');
+      }
+    }
+    
+    // Fallback to first if no ACTIVE found
+    if (cycles.isNotEmpty) {
+      return int.tryParse(cycles.first['id']?.toString() ?? '');
+    }
+    return null;
+  }
+
+  /// Get Leave Balance using dynamic user ID and year cycle ID
+  static Future<dynamic> getLeaveBalances({String? empId, int? yearId}) async {
+    try {
+      final id = await _getEffectiveEmpId(empId);
+      if (id.isEmpty) throw Exception('Employee ID is missing');
+      final resolvedYearId = yearId ?? await getCurrentYearCycleId();
+      final body = {
+        "empId": id,
+        if (resolvedYearId != null) "yearId": resolvedYearId,
+      };
+      
+      final response = await ApiRequest.post(
+        ApiEndpoints.leaveBalance,
+        body,
+        headers: await _hrHeaders(),
+      );
+      return response;
+    } catch (e) {
+      print('Error fetching leave balances: $e');
+      rethrow;
+    }
+  }
+
+  /// Get Leave Requests with pagination and dynamic user ID
+  static Future<dynamic> getLeaveRequests({
+    String? empId,
+    int page = 1,
+    int pageSize = 10,
+    String? fromDate,
+    String? toDate,
+    String? status,
+    String sortingOrder = 'DESC',
+    String sortingField = 'lor.app_dt',
+    String sortingLabel = 'Application Date',
+  }) async {
+    try {
+      final id = await _getEffectiveEmpId(empId);
+      if (id.isEmpty) throw Exception('Employee ID is missing');
+      final body = {
+        "paginationInfo": {
+          "pageSize": pageSize,
+          "currentPage": page,
+          "dataSorting": {
+            "sortingOrder": sortingOrder,
+            "byColumn": {
+              "label": sortingLabel,
+              "field": sortingField
+            }
+          }
+        },
+        "fromDate": fromDate,
+        "toDate": toDate,
+        "empId": id,
+        "status": status
+      };
+      
+      final response = await ApiRequest.post(
         ApiEndpoints.leaveDashboard,
-        {},
+        body,
         headers: await _hrHeaders(),
       );
       return response;
@@ -85,8 +298,9 @@ static Future<dynamic> getLeaveBalances() async {
 
   /// Get My Attendance
   static Future<Map<String, dynamic>> getMyAttendance({String? empId, required String monthYear}) async {
-    final id = empId ?? _defaultEmpId;
     try {
+      final id = await _getEffectiveEmpId(empId);
+      if (id.isEmpty) throw Exception('Employee ID is missing');
       final response = await ApiRequest.get(
         ApiEndpoints.myAttendance(id, monthYear),
         headers: await _hrHeaders(),
@@ -127,8 +341,14 @@ static Future<dynamic> getLeaveBalances() async {
     String sortingField = 'employeeName',
     String sortingLabel = 'EmployeeName',
     String sortingOrder = 'ASC',
+    String? empId,
+    String? jobTitle,
   }) async {
     try {
+      final resolvedEmpId = empId ?? await getLoggedEmpId();
+      final prefs = await SharedPreferences.getInstance();
+      final resolvedJobTitle = jobTitle ?? prefs.getString('jobtitle') ?? prefs.getString('UserJobtitle') ?? '';
+
       final response = await ApiRequest.post(
         ApiEndpoints.shiftRosterFetch,
         {
@@ -151,6 +371,8 @@ static Future<dynamic> getLeaveBalances() async {
           'branchId': branchId,
           'designationId': designationId,
           'departmentId': departmentId,
+          'empId': resolvedEmpId,
+          'jobTitle': resolvedJobTitle,
         },
         headers: await _hrHeaders(),
       );
@@ -159,6 +381,51 @@ static Future<dynamic> getLeaveBalances() async {
       print('Error fetching shift roster: $e');
       rethrow;
     }
+  }
+
+  // --- Leave CRUD ---
+  static Future<dynamic> getLeaveRequestById(String id) async {
+    return ApiRequest.get(ApiEndpoints.leaveView(id), headers: await _hrHeaders());
+  }
+  static Future<dynamic> cancelLeaveRequest(Map<String, dynamic> payload) async {
+    return ApiRequest.put(ApiEndpoints.leaveCancel, payload, headers: await _hrHeaders());
+  }
+  static Future<dynamic> deleteLeaveRequest(String id) async {
+    return ApiRequest.delete(ApiEndpoints.leaveDelete(id), headers: await _hrHeaders());
+  }
+
+  // --- Swipe CRUD ---
+  static Future<dynamic> getSwipeDashboard(Map<String, dynamic> payload) async {
+    return ApiRequest.post(ApiEndpoints.swipeDashboard, payload, headers: await _hrHeaders());
+  }
+  static Future<dynamic> createSwipeRequest(Map<String, dynamic> payload) async {
+    return ApiRequest.post(ApiEndpoints.swipeCreate, payload, headers: await _hrHeaders());
+  }
+  static Future<dynamic> getSwipeRequestById(String id) async {
+    return ApiRequest.get(ApiEndpoints.swipeView(id), headers: await _hrHeaders());
+  }
+  static Future<dynamic> updateSwipeRequest(Map<String, dynamic> payload) async {
+    return ApiRequest.put(ApiEndpoints.swipeUpdate, payload, headers: await _hrHeaders());
+  }
+  static Future<dynamic> deleteSwipeRequest(String id) async {
+    return ApiRequest.delete(ApiEndpoints.swipeDelete(id), headers: await _hrHeaders());
+  }
+
+  // --- OD CRUD ---
+  static Future<dynamic> getOdDashboard(Map<String, dynamic> payload) async {
+    return ApiRequest.post(ApiEndpoints.odDashboard, payload, headers: await _hrHeaders());
+  }
+  static Future<dynamic> createOdRequest(Map<String, dynamic> payload) async {
+    return ApiRequest.post(ApiEndpoints.odCreate, payload, headers: await _hrHeaders());
+  }
+  static Future<dynamic> getOdRequestById(String id) async {
+    return ApiRequest.get(ApiEndpoints.odView(id), headers: await _hrHeaders());
+  }
+  static Future<dynamic> cancelOdRequest(Map<String, dynamic> payload) async {
+    return ApiRequest.put(ApiEndpoints.odCancel, payload, headers: await _hrHeaders());
+  }
+  static Future<dynamic> deleteOdRequest(String id) async {
+    return ApiRequest.delete(ApiEndpoints.odDelete(id), headers: await _hrHeaders());
   }
 
   /// Update Shift Roster
@@ -269,33 +536,4 @@ static Future<dynamic> getLeaveBalances() async {
     }
   }
 
-  /// Create Swipe Request
-  static Future<Map<String, dynamic>> createSwipeRequest(Map<String, dynamic> data) async {
-    try {
-      final response = await ApiRequest.post(
-        ApiEndpoints.swipeCreate,
-        data,
-        headers: await _hrHeaders(),
-      );
-      return response as Map<String, dynamic>;
-    } catch (e) {
-      print('Error creating swipe request: $e');
-      rethrow;
-    }
-  }
-
-  /// Create OD Request
-  static Future<Map<String, dynamic>> createODRequest(Map<String, dynamic> data) async {
-    try {
-      final response = await ApiRequest.post(
-        ApiEndpoints.odCreate,
-        data,
-        headers: await _hrHeaders(),
-      );
-      return response as Map<String, dynamic>;
-    } catch (e) {
-      print('Error creating OD request: $e');
-      rethrow;
-    }
-  }
 }

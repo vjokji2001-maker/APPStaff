@@ -4,6 +4,7 @@ import 'package:staff_mate/APIs/api_debug_http.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:staff_mate/APIs/api_endpoints.dart';
+import 'package:staff_mate/models/global_user_data.dart';
 
 class UserInformationService {
   Future<Map<String, dynamic>> fetchAndSaveUserInformation({
@@ -56,7 +57,9 @@ class UserInformationService {
         }
       }
 
-      final Map<String, dynamic> data = json['data'] ?? {};
+      final Map<String, dynamic> data = (json.containsKey('data') && json['data'] is Map)
+          ? json['data'] as Map<String, dynamic>
+          : json;
       
       if (data.isEmpty) {
         throw Exception('No user data received from API');
@@ -69,6 +72,14 @@ class UserInformationService {
       debugPrint('Mobile: ${data['mobileNo']}');
       debugPrint('Role: ${data['jobtitle']}');
       debugPrint('Clinic: ${data['clinicName']}');
+
+      // Populate Global User Data
+      try {
+        GlobalUserData().setFullResponse(json);
+        debugPrint('✅ User information populated in GlobalUserData');
+      } catch (e) {
+        debugPrint('⚠️ Failed to populate GlobalUserData: $e');
+      }
 
       // Save COMPLETE user data to SharedPreferences
       await _saveUserDataToPrefs(prefs, data);
@@ -100,6 +111,7 @@ class UserInformationService {
     await prefs.setString('mobileNo', data['mobileNo']?.toString() ?? '');
     await prefs.setString('email', data['email']?.toString() ?? '');
     await prefs.setString('jobtitle', data['jobtitle']?.toString() ?? '');
+    await prefs.setString('UserJobtitle', data['jobtitle']?.toString() ?? ''); // React key
     await prefs.setString('clinicName', data['clinicName']?.toString() ?? '');
     await prefs.setString('userType', data['userType']?.toString() ?? '');
 
@@ -113,11 +125,16 @@ class UserInformationService {
     
     // Clinic/Branch Information
     await prefs.setString('clinicUserid', data['clinicUserid']?.toString() ?? '');
+    await prefs.setString('CLINICUSERID', data['clinicUserid']?.toString() ?? ''); // React key
     await prefs.setString('branchId', data['branchId']?.toString() ?? '');
+    await prefs.setString('branch_id', data['branchId']?.toString() ?? ''); // React key
+    await prefs.setString('BUSINESSLOCATION', data['branchId']?.toString() ?? ''); // React key
     await prefs.setString('branchAbrivation', data['branchAbrivation']?.toString() ?? '');
+    await prefs.setString('CLINICABBRIVATION', data['branchAbrivation']?.toString() ?? ''); // React key
     
     // Address Information
     await prefs.setString('country', data['country']?.toString() ?? '');
+    await prefs.setString('CLINICCOUNTRY', data['country']?.toString() ?? ''); // React key
     await prefs.setString('state', data['state']?.toString() ?? '');
     await prefs.setString('city', data['city']?.toString() ?? '');
     await prefs.setString('address', data['address']?.toString() ?? '');
@@ -126,6 +143,11 @@ class UserInformationService {
     // Additional Information
     await prefs.setString('globalaccess', data['globalaccess']?.toString() ?? '');
     await prefs.setString('hasDiary', data['hasDiary']?.toString() ?? '');
+    
+    final hasDiaryValue = data['hasDiary'];
+    final isPract = hasDiaryValue == 1 || hasDiaryValue == '1' || hasDiaryValue == true;
+    await prefs.setBool('PRACTHASDIARY', isPract); // React key
+    
     await prefs.setString('landLine', data['landLine']?.toString() ?? '');
     await prefs.setString('lastpasswordDate', data['lastpasswordDate']?.toString() ?? '');
     
@@ -133,24 +155,41 @@ class UserInformationService {
     await prefs.setString('sectionId', data['sectionId']?.toString() ?? '');
     await prefs.setString('sectionName', data['sectionName']?.toString() ?? '');
     await prefs.setString('specializationId', data['specializationId']?.toString() ?? '');
+    
+    // Employee & Roster Details
     await prefs.setString('empId', data['empId']?.toString() ?? '');
+    await prefs.setString('USERNUMERICID', data['id']?.toString() ?? ''); // React key
+    await prefs.setString('id', data['id']?.toString() ?? ''); // numeric id
+    await prefs.setString('userGroup', data['userGroup']?.toString() ?? ''); // React key
+    
+    final deptId = data['department_id'] ?? data['departmentId'];
+    await prefs.setString('department_id', deptId?.toString() ?? '1'); // React key
+    await prefs.setString('Department_id', deptId?.toString() ?? '1'); // React key
     
     // Save accessinfo as JSON string
     if (data['accessinfo'] != null) {
       await prefs.setString('accessinfo', jsonEncode(data['accessinfo']));
+      await prefs.setString('MAINACCESS', jsonEncode(data['accessinfo'])); // React key
     }
     
     // Save configurationMap as JSON string
     if (data['configurationMap'] != null) {
       await prefs.setString('configurationMap', jsonEncode(data['configurationMap']));
+      await prefs.setString('CONFIGURATION', jsonEncode(data['configurationMap'])); // React key
     }
     
     // Save tallyConfigurationMap as JSON string
     if (data['tallyConfigurationMap'] != null) {
       await prefs.setString('tallyConfigurationMap', jsonEncode(data['tallyConfigurationMap']));
+      await prefs.setString('tallyDetails', jsonEncode(data['tallyConfigurationMap'])); // React key
+    }
+
+    // Save hipId
+    if (data['hipId'] != null) {
+      await prefs.setString('HIPID', jsonEncode(data['hipId'])); // React key
     }
     
-    debugPrint('📋 Saved ${data.length} user data fields to SharedPreferences');
+    debugPrint('📋 Saved ${data.length} user data fields including HRMS keys to SharedPreferences');
   }
 
   /// Get all saved user information from SharedPreferences.

@@ -17,8 +17,11 @@ import 'package:staff_mate/pages/vitals_page.dart';
 import 'package:staff_mate/pages/day_to_day_notes.dart';
 import 'package:staff_mate/pages/upload_doc.dart';
 import 'package:staff_mate/APIs/api_endpoints.dart';
-import 'package:staff_mate/APIs/api_endpoints.dart';
-
+import 'package:staff_mate/widgets/ipd/shift_bed_dialog.dart';
+import 'package:staff_mate/widgets/ipd/apply_package_dialog.dart';
+import 'package:staff_mate/widgets/ipd/day_to_day_notes_dialog.dart';
+import 'package:staff_mate/widgets/ipd/day_to_day_notes_sheet.dart';
+import 'package:staff_mate/widgets/ipd/vitals_entry_sheet.dart';
 class IpdDashboardPage extends StatefulWidget {
   const IpdDashboardPage({super.key});
 
@@ -301,14 +304,14 @@ Future<void> _loadUserInitial() async {
     }
   }
 
-  // void _openVitalsEntry(Patient patient) {
-  //   showModalBottomSheet(
-  //     context: context,
-  //     isScrollControlled: true,
-  //     backgroundColor: Colors.transparent,
-  //     builder: (context) => VitalsEntrySheet(patient: patient),
-  //   );
-  // }
+  void _openVitalsEntry(Patient patient) {
+    Navigator.push(
+      context, 
+      MaterialPageRoute(builder: (_) => VitalsPage(patient: patient))
+    ).then((_) {
+      _refreshDashboardData();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -457,6 +460,7 @@ Future<void> _loadUserInitial() async {
                               patient: _filteredPatients[index],
                               excessLimit: _excessLimitAmount,
                               onCardTap: () => _showPatientQuickActionSheet(_filteredPatients[index]),
+                              onRefresh: _refreshDashboardData,
                             );
                           },
                         ),
@@ -612,15 +616,28 @@ void _showPatientQuickActionSheet(Patient patient) {
     }},
     {'icon': Icons.favorite, 'label': 'Vitals', 'color': Colors.redAccent, 'onTap': () {
       Navigator.pop(context);
-      Navigator.push(context, MaterialPageRoute(builder: (_) => VitalsPage(patient: patient))).then((_) => _refreshDashboardData());
+      _openVitalsEntry(patient);
+    }},
+    {'icon': Icons.card_giftcard, 'label': 'Packages', 'color': Colors.pink, 'onTap': () {
+      Navigator.pop(context);
+      showDialog(
+        context: context,
+        builder: (context) => ApplyPackageDialog(patient: patient),
+      ).then((_) => _refreshDashboardData());
     }},
     {'icon': Icons.notifications_none, 'label': 'Notifications', 'color': Colors.purple, 'onTap': () {
       Navigator.pop(context);
       Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationDetailsPage(patientName: patient.patientname, patientId: patient.ipdNo, admissionId: patient.admissionId))).then((_) => _refreshDashboardData());
     }},
-    {'icon': Icons.note_add, 'label': 'Day Notes', 'color': Colors.brown, 'onTap': () {
+    {'icon': Icons.note_add, 'label': 'Day Notes', 'color': Colors.brown, 'onTap': () async {
       Navigator.pop(context);
-      Navigator.push(context, MaterialPageRoute(builder: (_) => DayToDayNotesPage(ipdId: patient.ipdNo, admissionDate: patient.admissionDate, patientName: patient.patientname, admissionId: patient.admissionId, patientId: ''))).then((_) => _refreshDashboardData());
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('day_notes_read_${patient.admissionId}', true);
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => DayToDayNotesDialog(patient: patient),
+      ).then((_) => _refreshDashboardData());
     }},
     {'icon': Icons.upload_file, 'label': 'Upload Doc', 'color': Colors.green, 'onTap': () {
       Navigator.pop(context);
@@ -628,14 +645,15 @@ void _showPatientQuickActionSheet(Patient patient) {
     }},
     {'icon': Icons.local_hospital, 'label': 'Shift Patient', 'color': Colors.deepPurple, 'onTap': () {
       Navigator.pop(context);
-      Navigator.push(context, MaterialPageRoute(builder: (_) => ShiftPatientPage(patient: patient))).then((_) => _refreshDashboardData());
+      showDialog(
+        context: context,
+        builder: (context) => ShiftBedDialog(
+          patient: patient,
+          onShiftComplete: _refreshDashboardData,
+        ),
+      );
     }},
   ];
-
-  // Split into 2 rows
-  final int half = (actions.length / 2).ceil();
-  final row1 = actions.sublist(0, half);
-  final row2 = actions.sublist(half);
 
   showModalBottomSheet(
     context: context,
@@ -675,71 +693,23 @@ void _showPatientQuickActionSheet(Patient patient) {
           ),
 
           const Divider(height: 20),
-
-          // Row 1
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: row1.map((a) => _actionBtn(
+          
+          Wrap(
+            alignment: WrapAlignment.spaceAround,
+            spacing: 8,
+            runSpacing: 16,
+            children: actions.map((a) => _actionBtn(
               a['icon'] as IconData,
               a['label'] as String,
               a['color'] as Color,
               a['onTap'] as VoidCallback,
             )).toList(),
           ),
-
-          const SizedBox(height: 12),
-
-          // Row 2
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              ...row2.map((a) => _actionBtn(
-                a['icon'] as IconData,
-                a['label'] as String,
-                a['color'] as Color,
-                a['onTap'] as VoidCallback,
-              )),
-              // Fill empty slots so row 2 aligns with row 1
-              if (row2.length < half)
-                ...List.generate(half - row2.length, (_) => const SizedBox(width: 60)),
-            ],
-          ),
         ],
       ),
     ),
   );
 }
-
-// Widget _actionBtn(IconData icon, String label, Color color, VoidCallback onTap) {
-//   return InkWell(
-//     onTap: onTap,
-//     borderRadius: BorderRadius.circular(12),
-//     child: SizedBox(
-//       width: 60,
-//       child: Column(
-//         mainAxisSize: MainAxisSize.min,
-//         children: [
-//           Container(
-//             padding: const EdgeInsets.all(10),
-//             decoration: BoxDecoration(
-//               color: color.withOpacity(0.1),
-//               borderRadius: BorderRadius.circular(12),
-//             ),
-//             child: Icon(icon, color: color, size: 22),
-//           ),
-//           const SizedBox(height: 5),
-//           Text(
-//             label,
-//             textAlign: TextAlign.center,
-//             maxLines: 2,
-//             overflow: TextOverflow.ellipsis,
-//             style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w500, height: 1.2),
-//           ),
-//         ],
-//       ),
-//     ),
-//   );
-// }
 
 Widget _actionBtn(IconData icon, String label, Color color, VoidCallback onTap) {
   return SizedBox(
@@ -780,12 +750,14 @@ class PatientGridCardCompact extends StatelessWidget {
   final Patient patient;
   final double excessLimit;
   final VoidCallback onCardTap;
+  final VoidCallback? onRefresh;
   
   const PatientGridCardCompact({
     super.key, 
     required this.patient, 
     required this.excessLimit,
     required this.onCardTap,
+    this.onRefresh,
   });
 
   @override
@@ -795,11 +767,20 @@ class PatientGridCardCompact extends StatelessWidget {
     final balance = patient.patientBalance ?? 0.0;
     bool hasExcess = balance > 0 && balance > excessLimit;
     Color statusColor;
-    String party = patient.party.toLowerCase();
+    
+    // Safely handle potentially null strings in dart2js
+    final safeParty = (patient.party as dynamic) ?? '';
+    String party = safeParty.toString().toLowerCase();
+    
+    final safeDischarge = (patient.dischargeStatus as dynamic) ?? '';
+    String dischargeStr = safeDischarge.toString().toLowerCase();
+
+    final safeMlc = (patient.isMlc as dynamic) ?? '';
+    String mlcStr = safeMlc.toString().toLowerCase();
     
     if (isAvailable) statusColor = Colors.tealAccent.shade700; 
-    else if (patient.dischargeStatus != '0' && patient.dischargeStatus != '0.0') statusColor = Colors.yellow; 
-    else if (patient.isMlc != '0' && patient.isMlc != '0.0') statusColor = Colors.redAccent;
+    else if (dischargeStr == '1' || dischargeStr == 'true') statusColor = Colors.yellow; 
+    else if (mlcStr == '1' || mlcStr == 'true') statusColor = Colors.redAccent;
     else if (hasExcess) statusColor = Colors.orangeAccent; 
     else if (party.contains('corporate')) statusColor = Colors.pink.shade200; 
     else if (party.contains('third party')) statusColor = Colors.lightGreen.shade400; 
@@ -824,34 +805,60 @@ class PatientGridCardCompact extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 4, 6, 4), 
               child: isAvailable 
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.bed, color: statusColor, size: 24),
-                      Text(patient.bedname, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
-                      Text("Avail", style: GoogleFonts.poppins(fontSize: 10, color: statusColor, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Row(
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircleAvatar(radius: 11, backgroundColor: statusColor.withOpacity(0.2), child: Text(patient.patientname.isNotEmpty ? patient.patientname[0] : "?", style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold))),
-                        const SizedBox(width: 6),
-                        Expanded(child: Text(patient.bedname, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13))),
+                        Icon(Icons.bed, color: statusColor, size: 24),
+                        Text((patient.bedname as dynamic)?.toString() ?? 'N/A', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
+                        Text("Avail", style: GoogleFonts.poppins(fontSize: 10, color: statusColor, fontWeight: FontWeight.w600)),
                       ],
                     ),
-                    const SizedBox(height: 4), 
-                    Text(patient.patientname, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 11)),
-                    Text(patient.ward, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 9, color: Colors.grey[700])),
-                    Text("IPD: ${patient.ipdNo}", style: TextStyle(fontSize: 9, color: Colors.grey[600])),
-                  ],
-                ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 11, 
+                            backgroundColor: statusColor.withOpacity(0.2), 
+                            child: Text(
+                              ((patient.patientname as dynamic)?.toString() ?? '').isNotEmpty 
+                                ? (patient.patientname as dynamic).toString()[0] 
+                                : "?", 
+                              style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold)
+                            )
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(child: Text((patient.bedname as dynamic)?.toString() ?? '', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87))),
+                        ],
+                      ),
+                      const SizedBox(height: 4), 
+                      Text((patient.patientname as dynamic)?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 11, color: Colors.black87)),
+                      Text((patient.ward as dynamic)?.toString() ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 9, color: Colors.grey[700])),
+                      Text("IPD: ${(patient.ipdNo as dynamic)?.toString() ?? ''}", style: TextStyle(fontSize: 9, color: Colors.grey[600])),
+                    ],
+                  ),
             ),
+            if (!isAvailable)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: BlinkingNotesIcon(
+                  patient: patient,
+                  onNotesTap: () async {
+                    await showDialog(
+                      context: context,
+                      builder: (context) => DayToDayNotesDialog(patient: patient),
+                    );
+                    if (onRefresh != null) {
+                      onRefresh!();
+                    }
+                  },
+                ),
+              ),
           ],
         ),
       ),
@@ -882,622 +889,102 @@ class PatientGridCardCompact extends StatelessWidget {
 //   String _selectedMM = '00';
 //   bool _isLoading = false;
 //   String? _errorMessage;
-//   List<Map<String, dynamic>> _vitalsMasterData = [];
-//   final IpdService _ipdService = IpdService();
+
+
+
+class BlinkingNotesIcon extends StatefulWidget {
+  final Patient patient;
+  final VoidCallback onNotesTap;
+
+  const BlinkingNotesIcon({
+    super.key,
+    required this.patient,
+    required this.onNotesTap,
+  });
+
+  @override
+  State<BlinkingNotesIcon> createState() => _BlinkingNotesIconState();
+}
+
+class _BlinkingNotesIconState extends State<BlinkingNotesIcon> {
+  late bool _hasUnread;
+
+  @override
+  void initState() {
+    super.initState();
+    _hasUnread = widget.patient.unreadNotesCount > 0;
+  }
   
-//   final List<String> _hours = List.generate(24, (i) => i.toString().padLeft(2, '0'));
-//   final List<String> _minutes = List.generate(60, (i) => i.toString().padLeft(2, '0'));
+  @override
+  void didUpdateWidget(BlinkingNotesIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.patient.unreadNotesCount != oldWidget.patient.unreadNotesCount) {
+      setState(() {
+        _hasUnread = widget.patient.unreadNotesCount > 0;
+      });
+    }
+  }
 
-//   static const Color darkBlue = Color(0xFF1A237E);
-//   final Color bgGrey = const Color(0xFFF5F7FA);
 
-//   @override
-//   void initState() {
-//     super.initState();
-//     final now = DateTime.now();
-//     _dateController.text = DateFormat('yyyy-MM-dd').format(now); 
-//     _selectedHH = now.hour.toString().padLeft(2, '0');
-//     _selectedMM = now.minute.toString().padLeft(2, '0');
-    
-//     _loadVitalsMasterData();
-//   }
 
-//   Future<void> _loadVitalsMasterData() async {
-//     setState(() {
-//       _isLoading = true;
-//       _errorMessage = null;
-//     });
+  @override
+  Widget build(BuildContext context) {
+    Widget icon = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(
+          Icons.notifications,
+          color: _hasUnread ? Colors.redAccent : Colors.grey.shade400,
+          size: 20,
+        ),
+        if (_hasUnread)
+          Positioned(
+            right: -2,
+            top: -2,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(
+                minWidth: 16,
+                minHeight: 16,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.redAccent,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '${widget.patient.unreadNotesCount}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  height: 1,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
 
-//     try {
-//       final response = await _ipdService.fetchVitalsMasterData();
-      
-//       if (response['success'] == true) {
-//         final List<dynamic> masterData = response['data'] ?? [];
-        
-//         _vitalsMasterData = masterData.map((item) {
-//           if (item is Map<String, dynamic>) {
-//             return item;
-//           } else {
-//             return <String, dynamic>{};
-//           }
-//         }).toList();
-        
-//         debugPrint('Loaded ${_vitalsMasterData.length} vitals master items');
-//       } else {
-//         setState(() {
-//           _errorMessage = response['message'] ?? 'Failed to load vitals data';
-//         });
-//       }
-//     } catch (e) {
-//       setState(() {
-//         _errorMessage = 'Error loading vitals data: $e';
-//       });
-//     } finally {
-//       if (mounted) {
-//         setState(() {
-//           _isLoading = false;
-//         });
-//       }
-//     }
-//   }
-
-//   String _getVitalHint(String vitalId) {
-//     if (_vitalsMasterData.isEmpty) {
-//       return '(0-0)';
-//     }
-    
-//     try {
-//       for (var vital in _vitalsMasterData) {
-//         final id = vital['id']?.toString() ?? '';
-//         if (id == vitalId) {
-//           final min = vital['min_value_f']?.toString() ?? '0';
-//           final max = vital['max_value_f']?.toString() ?? '0';
-//           return '($min-$max)';
-//         }
-//       }
-//     } catch (e) {
-//       debugPrint('Error getting vital hint: $e');
-//     }
-    
-//     return '(0-0)';
-//   }
-
-//   Future<void> _onSaveVitals() async {
-//     setState(() {
-//       _errorMessage = null;
-//     });
-
-//     debugPrint('=== PATIENT INFO FOR VITALS ===');
-//     debugPrint('Patient Name: ${widget.patient.patientname}');
-//     debugPrint('IPD No: ${widget.patient.ipdNo}');
-//     debugPrint('Patient ID (from patientId field): ${widget.patient.patientId}');
-//     debugPrint('Patient ID (from id field): ${widget.patient.id}');
-//     debugPrint('Admission ID: ${widget.patient.admissionId}');
-//     debugPrint('All patient fields available:');
-//     debugPrint('- patientId: ${widget.patient.patientId}');
-//     debugPrint('- id: ${widget.patient.id}');
-//     debugPrint('- admissionId: ${widget.patient.admissionId}');
-//     debugPrint('- ipdNo: ${widget.patient.ipdNo}');
-//     debugPrint('===============================');
-
-//     if (_dateController.text.isEmpty) {
-//       setState(() {
-//         _errorMessage = 'Please select a date';
-//       });
-//       return;
-//     }
-
-//     String admissionId = widget.patient.admissionId?.toString() ?? '';
-    
-//     if (admissionId.isEmpty || admissionId == '0') {
-//       final prefs = await SharedPreferences.getInstance();
-//       admissionId = prefs.getString('admissionid') ?? '';
-//     }
-    
-//     if (admissionId.isEmpty || admissionId == '0') {
-//       setState(() {
-//         _errorMessage = 'Valid Admission ID not found. Please refresh patient data.';
-//       });
-//       debugPrint('ERROR: Invalid admission ID: $admissionId');
-//       return;
-//     }
-
-//     String patientId = widget.patient.patientId?.toString() ?? '';
-    
-//     if (patientId.isEmpty) {
-//       patientId = widget.patient.id?.toString() ?? '';
-//     }
-    
-//     if (patientId.isEmpty) {
-//       setState(() {
-//         _errorMessage = 'Patient ID not found in patient data.';
-//       });
-//       debugPrint('ERROR: Could not find patient ID in patient object');
-//       return;
-//     }
-
-//     debugPrint('=== VITALS SAVE REQUEST ===');
-//     debugPrint('Patient ID: $patientId');
-//     debugPrint('Admission ID: $admissionId');
-//     debugPrint('Date: ${_dateController.text}');
-//     debugPrint('Time: $_selectedHH:$_selectedMM');
-//     debugPrint('============================');
-
-//     setState(() {
-//       _isLoading = true;
-//     });
-
-//     try {
-//       final vitalEntries = _prepareVitalEntries();
-
-//       if (vitalEntries.isEmpty) {
-//         setState(() {
-//           _errorMessage = 'Please enter at least one vital sign';
-//           _isLoading = false;
-//         });
-//         return;
-//       }
-
-//       debugPrint('Sending ${vitalEntries.length} vital entries');
-
-//       final response = await _ipdService.savePatientVitals(
-//         patientId: patientId,
-//         admissionId: admissionId,
-//         date: _dateController.text, 
-//         time: '$_selectedHH:$_selectedMM',
-//         vitalEntries: vitalEntries,
-//       );
-
-//       debugPrint('Save vitals response received');
-//       debugPrint('Success: ${response['success']}');
-//       debugPrint('Message: ${response['message']}');
-//       debugPrint('Error: ${response['error']}');
-
-//       if (response['success'] == true) {
-//         if (mounted) {
-//           ScaffoldMessenger.of(context).showSnackBar(
-//             SnackBar(
-//               content: Text(response['message'] ?? 'Vitals saved successfully'),
-//               backgroundColor: Colors.green,
-//               duration: const Duration(seconds: 2),
-//             ),
-//           );
-          
-//           Navigator.pop(context);
-//         }
-//       } else {
-//         setState(() {
-//           _errorMessage = response['message'] ?? 'Failed to save vitals.';
-//           if (response['error'] != null) {
-//             _errorMessage = '${_errorMessage}\nAPI Error: ${response['error']}';
-//           }
-//         });
-//       }
-//     } catch (e, stackTrace) {
-//       debugPrint('Error saving vitals: $e');
-//       debugPrint('StackTrace: $stackTrace');
-//       setState(() {
-//         _errorMessage = 'Network error: ${e.toString()}';
-//       });
-//     } finally {
-//       if (mounted) {
-//         setState(() {
-//           _isLoading = false;
-//         });
-//       }
-//     }
-//   }
-
-//   List<Map<String, dynamic>> _prepareVitalEntries() {
-//     final entries = <Map<String, dynamic>>[];
-    
-//     if (_tempController.text.isNotEmpty) {
-//       entries.add({'vitalMasterId': 1, 'finding': _tempController.text});
-//     }
-//     if (_hrController.text.isNotEmpty) {
-//       entries.add({'vitalMasterId': 2, 'finding': _hrController.text});
-//     }
-//     if (_rrController.text.isNotEmpty) {
-//       entries.add({'vitalMasterId': 3, 'finding': _rrController.text});
-//     }
-//     if (_sysBpController.text.isNotEmpty) {
-//       entries.add({'vitalMasterId': 4, 'finding': _sysBpController.text});
-//     }
-//     if (_diaBpController.text.isNotEmpty) {
-//       entries.add({'vitalMasterId': 5, 'finding': _diaBpController.text});
-//     }
-//     if (_rbsController.text.isNotEmpty) {
-//       entries.add({'vitalMasterId': 6, 'finding': _rbsController.text});
-//     }
-//     if (_spo2Controller.text.isNotEmpty) {
-//       entries.add({'vitalMasterId': 13, 'finding': _spo2Controller.text});
-//     }
-    
-//     debugPrint('Prepared ${entries.length} vital entries');
-//     return entries;
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       height: MediaQuery.of(context).size.height * 0.90,
-//       decoration: const BoxDecoration(
-//         color: Colors.white,
-//         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-//       ),
-//       child: Stack(
-//         children: [
-//           Column(
-//             children: [
-//               Container(
-//                 padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
-//                 decoration: BoxDecoration(
-//                   border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
-//                 ),
-//                 child: Row(
-//                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                   children: [
-//                     Expanded(
-//                       child: Column(
-//                         crossAxisAlignment: CrossAxisAlignment.start,
-//                         children: [
-//                           Text("Capture Vitals", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: darkBlue)),
-//                           Text("${widget.patient.patientname} | IPD: ${widget.patient.ipdNo}", 
-//                             style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
-//                             maxLines: 1, overflow: TextOverflow.ellipsis,
-//                           ),
-//                         ],
-//                       ),
-//                     ),
-//                     GestureDetector(
-//                       onTap: _isLoading ? null : () => Navigator.pop(context),
-//                       child: Container(
-//                         padding: const EdgeInsets.all(6),
-//                         decoration: BoxDecoration(
-//                           color: _isLoading ? Colors.grey[200] : Colors.grey[100],
-//                           borderRadius: BorderRadius.circular(8),
-//                         ),
-//                         child: Icon(
-//                           Icons.close,
-//                           color: _isLoading ? Colors.grey[400] : Colors.black54,
-//                           size: 20,
-//                         ),
-//                       ),
-//                     ),
-//                   ],
-//                 ),
-//               ),
-              
-//               if (_errorMessage != null)
-//                 Container(
-//                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-//                   color: Colors.red[50],
-//                   child: Row(
-//                     children: [
-//                       const Icon(Icons.error_outline, color: Colors.red, size: 16),
-//                       const SizedBox(width: 8),
-//                       Expanded(
-//                         child: Text(
-//                           _errorMessage!,
-//                           style: const TextStyle(color: Colors.red, fontSize: 12),
-//                         ),
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-
-//               Expanded(
-//                 child: SingleChildScrollView(
-//                   padding: const EdgeInsets.all(20),
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       _buildSectionHeader("Date & Time"),
-//                       Container(
-//                         padding: const EdgeInsets.all(12),
-//                         decoration: BoxDecoration(
-//                           color: Colors.white,
-//                           borderRadius: BorderRadius.circular(16),
-//                           border: Border.all(color: Colors.grey[200]!),
-//                           boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))],
-//                         ),
-//                         child: Column(
-//                           children: [
-//                             GestureDetector(
-//                               onTap: _isLoading ? null : () async {
-//                                 DateTime? picked = await showDatePicker(
-//                                   context: context, 
-//                                   initialDate: DateTime.now(), 
-//                                   firstDate: DateTime(2020), 
-//                                   lastDate: DateTime(2030),
-//                                   builder: (context, child) {
-//                                     return Theme(
-//                                       data: ThemeData.light().copyWith(
-//                                         colorScheme: const ColorScheme.light(primary: darkBlue),
-//                                       ),
-//                                       child: child!,
-//                                     );
-//                                   }
-//                                 );
-//                                 if (picked != null && mounted) {
-//                                   setState(() {
-//                                     _dateController.text = DateFormat('yyyy-MM-dd').format(picked);
-//                                   });
-//                                 }
-//                               },
-//                               child: Container(
-//                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 9),
-//                                 decoration: BoxDecoration(
-//                                   color: bgGrey,
-//                                   borderRadius: BorderRadius.circular(12),
-//                                   border: Border.all(color: Colors.grey[200]!),
-//                                 ),
-//                                 child: Row(
-//                                   children: [
-//                                     const Icon(Icons.calendar_month, color: darkBlue, size: 20),
-//                                     const SizedBox(width: 10),
-//                                     Text(_dateController.text, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
-//                                     const Spacer(),
-//                                     Icon(Icons.edit, color: Colors.grey[400], size: 16),
-//                                   ],
-//                                 ),
-//                               ),
-//                             ),
-//                             const SizedBox(height: 12),
-                            
-//                             Row(
-//                               children: [
-//                                 Expanded(
-//                                   child: _buildTimeDropdown(
-//                                     label: "Hour",
-//                                     value: _selectedHH,
-//                                     items: _hours,
-//                                     onChanged: (value) {
-//                                       if (!_isLoading && value != null) {
-//                                         setState(() => _selectedHH = value);
-//                                       }
-//                                     },
-//                                   ),
-//                                 ),
-//                                 const SizedBox(width: 10),
-//                                 const Text(":", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-//                                 const SizedBox(width: 10),
-//                                 Expanded(
-//                                   child: _buildTimeDropdown(
-//                                     label: "Minute",
-//                                     value: _selectedMM,
-//                                     items: _minutes,
-//                                     onChanged: (value) {
-//                                       if (!_isLoading && value != null) {
-//                                         setState(() => _selectedMM = value);
-//                                       }
-//                                     },
-//                                   ),
-//                                 ),
-//                               ],
-//                             ),
-//                           ],
-//                         ),
-//                       ),
-
-//                       const SizedBox(height: 20),
-
-//                       _buildSectionHeader("Vital Signs"),
-                      
-//                       Row(
-//                         children: [
-//                           Expanded(child: _buildModernInput(
-//                             controller: _tempController, 
-//                             label: "Temp F ${_getVitalHint('1')}", 
-//                             hint: "98.6", 
-//                             icon: Icons.thermostat, 
-//                             suffix: "°F",
-//                             keyboardType: TextInputType.number,
-//                           )),
-//                           const SizedBox(width: 15),
-//                           Expanded(child: _buildModernInput(
-//                             controller: _hrController, 
-//                             label: "Heart Rate ${_getVitalHint('2')}", 
-//                             hint: "72", 
-//                             icon: Icons.monitor_heart, 
-//                             suffix: "bpm",
-//                             keyboardType: TextInputType.number,
-//                           )),
-//                         ],
-//                       ),
-//                       const SizedBox(height: 15),
-
-//                       Row(
-//                         children: [
-//                           Expanded(child: _buildModernInput(
-//                             controller: _sysBpController, 
-//                             label: "Sys BP ${_getVitalHint('4')}", 
-//                             hint: "120", 
-//                             icon: Icons.arrow_upward, 
-//                             suffix: "mmHg",
-//                             keyboardType: TextInputType.number,
-//                           )),
-//                           const SizedBox(width: 15),
-//                           Expanded(child: _buildModernInput(
-//                             controller: _diaBpController, 
-//                             label: "Dia BP ${_getVitalHint('5')}", 
-//                             hint: "80", 
-//                             icon: Icons.arrow_downward, 
-//                             suffix: "mmHg",
-//                             keyboardType: TextInputType.number,
-//                           )),
-//                         ],
-//                       ),
-//                       const SizedBox(height: 15),
-
-//                       Row(
-//                         children: [
-//                           Expanded(child: _buildModernInput(
-//                             controller: _rrController, 
-//                             label: "Resp. Rate ${_getVitalHint('3')}", 
-//                             hint: "18", 
-//                             icon: Icons.air, 
-//                             suffix: "/min",
-//                             keyboardType: TextInputType.number,
-//                           )),
-//                           const SizedBox(width: 15),
-//                           Expanded(child: _buildModernInput(
-//                             controller: _spo2Controller, 
-//                             label: "SpO2 ${_getVitalHint('13')}", 
-//                             hint: "98", 
-//                             icon: Icons.water_drop, 
-//                             suffix: "%",
-//                             keyboardType: TextInputType.number,
-//                           )),
-//                         ],
-//                       ),
-//                       const SizedBox(height: 15),
-
-//                       _buildModernInput(
-//                         controller: _rbsController, 
-//                         label: "RBS ${_getVitalHint('6')}", 
-//                         hint: "100", 
-//                         icon: Icons.bloodtype, 
-//                         suffix: "mg/dL",
-//                         keyboardType: TextInputType.number,
-//                       ),
-                      
-//                       const SizedBox(height: 40),
-//                     ],
-//                   ),
-//                 ),
-//               ),
-
-//               Container(
-//                 padding: const EdgeInsets.all(20),
-//                 decoration: BoxDecoration(
-//                   color: Colors.white,
-//                   boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
-//                 ),
-//                 child: SizedBox(
-//                   width: double.infinity,
-//                   height: 50,
-//                   child: ElevatedButton(
-//                     onPressed: _isLoading ? null : _onSaveVitals,
-//                     style: ElevatedButton.styleFrom(
-//                       backgroundColor: darkBlue,
-//                       foregroundColor: Colors.white,
-//                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//                       elevation: 5,
-//                       shadowColor: darkBlue.withOpacity(0.3),
-//                     ),
-//                     child: _isLoading 
-//                         ? const SizedBox(
-//                             height: 20,
-//                             width: 20,
-//                             child: CircularProgressIndicator(
-//                               strokeWidth: 2,
-//                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-//                             ),
-//                           )
-//                         : Text("Save Vitals", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
-//                   ),
-//                 ),
-//               ),
-//             ],
-//           ),
-
-//           if (_isLoading)
-//             Positioned.fill(
-//               child: Container(
-//                 color: Colors.black54,
-//                 child: const Center(
-//                   child: CircularProgressIndicator(
-//                     valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-//                   ),
-//                 ),
-//               ),
-//             ),
-//         ],
-//       ),
-//     );
-//   }
-
-//   Widget _buildSectionHeader(String title) {
-//     return Padding(
-//       padding: const EdgeInsets.only(bottom: 10, left: 2),
-//       child: Text(title, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey[700])),
-//     );
-//   }
-
-//   Widget _buildModernInput({
-//     required TextEditingController controller,
-//     required String label,
-//     required IconData icon,
-//     String? hint,
-//     String? suffix,
-//     TextInputType keyboardType = TextInputType.number,
-//   }) {
-//     return Column(
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         Text(label, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[500])),
-//         const SizedBox(height: 6),
-//         Container(
-//           decoration: BoxDecoration(
-//             color: bgGrey,
-//             borderRadius: BorderRadius.circular(12),
-//             border: Border.all(color: Colors.grey[200]!),
-//           ),
-//           child: TextField(
-//             controller: controller,
-//             keyboardType: keyboardType,
-//             enabled: !_isLoading,
-//             style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
-//             decoration: InputDecoration(
-//               prefixIcon: Icon(icon, color: darkBlue.withOpacity(0.7), size: 18),
-//               suffixText: suffix,
-//               suffixStyle: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500]),
-//               hintText: hint,
-//               hintStyle: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 13),
-//               border: InputBorder.none,
-//               contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-//             ),
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-
-//   Widget _buildTimeDropdown({
-//     required String label,
-//     required String value,
-//     required List<String> items,
-//     required ValueChanged<String?> onChanged,
-//   }) {
-//     return Column(
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         Text(label, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[500])),
-//         const SizedBox(height: 6),
-//         Container(
-//           height: 48,
-//           padding: const EdgeInsets.symmetric(horizontal: 12),
-//           decoration: BoxDecoration(
-//             color: bgGrey,
-//             borderRadius: BorderRadius.circular(12),
-//             border: Border.all(color: Colors.grey[200]!),
-//           ),
-//           child: DropdownButtonHideUnderline(
-//             child: DropdownButton<String>(
-//               value: value,
-//               isExpanded: true,
-//               icon: const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey),
-//               style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
-//               items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-//               onChanged: onChanged,
-//             ),
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-// }
-
-// TreatmentRecordWebViewPage removed - use TreatmentRecordPage instead
-// WebView is not supported on Flutter Web
+    return GestureDetector(
+      onTap: widget.onNotesTap,
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.9),
+          shape: BoxShape.circle,
+          boxShadow: [
+            if (_hasUnread)
+              BoxShadow(
+                color: Colors.redAccent.withOpacity(0.3),
+                blurRadius: 4,
+                spreadRadius: 1,
+              )
+          ],
+        ),
+        child: icon,
+      ),
+    );
+  }
+}

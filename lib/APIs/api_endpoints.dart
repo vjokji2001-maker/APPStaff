@@ -30,6 +30,9 @@ class ApiEndpoints {
   
   // ============ FROM PackageService ============
   static String get packageExists => '${ApiHost.billingBaseUrl}/patientpackage/getPackageIfExists';
+  static String get packageListIpd => '${ApiHost.billingBaseUrl}/packagemaster/parentlist/';
+  static String get packageChildList => '${ApiHost.billingBaseUrl}/packagemaster/childlist/';
+  static String get applyPackage => '${ApiHost.billingBaseUrl}/patientpackage/apply';
   static String get referenceList => '${ApiHost.smartcareMainBaseUrl}/refrencelist';
   static String get chargeTypeList => '${ApiHost.billingBaseUrl}/charges/chargetype/list';
   static String get masterDetailList => '${ApiHost.billingBaseUrl}/charges/master-detail-list';
@@ -150,18 +153,27 @@ class ApiEndpoints {
   static String myAttendance(String empId, String monthYear) => '${ApiHost.hrBaseUrl}/hr/attendance/my/attendance/employee/get/$empId/$monthYear';
   static String dailyPunchLog(String empId, String date) => '${ApiHost.hrBaseUrl}/hr/attendance/daily/punch/log/get/by/$empId?date=$date';
   
-  // Swipe (Regularization)
-  static String get swipeDashboard => '${ApiHost.hrBaseUrl}/hr/attendance/swipe/request/get/dashboard';
-  static String get swipeCreate => '${ApiHost.hrBaseUrl}/hr/attendance/swipe/request/create';
-
   // Leaves
   static String get leaveBalance => '${ApiHost.hrBaseUrl}/hr/attendance/emp/leave/balance/fetch';
   static String get leaveCreate => '${ApiHost.hrBaseUrl}/hr/attendance/leave/request/create';
   static String get leaveDashboard => '${ApiHost.hrBaseUrl}/hr/attendance/leave/request/dashboard';
+  static String leaveView(String id) => '${ApiHost.hrBaseUrl}/hr/attendance/leave/request/fetchById/$id';
+  static String get leaveCancel => '${ApiHost.hrBaseUrl}/hr/attendance/leave/request/cancel';
+  static String leaveDelete(String id) => '${ApiHost.hrBaseUrl}/hr/attendance/leave/request/delete/$id';
+
+  // Swipe (Regularization)
+  static String get swipeDashboard => '${ApiHost.hrBaseUrl}/hr/attendance/swipe/request/get/dashboard';
+  static String get swipeCreate => '${ApiHost.hrBaseUrl}/hr/attendance/swipe/request/create';
+  static String swipeView(String id) => '${ApiHost.hrBaseUrl}/hr/attendance/swipe/request/get/by/$id';
+  static String get swipeUpdate => '${ApiHost.hrBaseUrl}/hr/attendance/swipe/request/update';
+  static String swipeDelete(String id) => '${ApiHost.hrBaseUrl}/hr/attendance/swipe/request/delete/$id';
 
   // OD
   static String get odCreate => '${ApiHost.hrBaseUrl}/hr/attendance/od/request/create';
   static String get odDashboard => '${ApiHost.hrBaseUrl}/hr/attendance/od/request/get/dashboard';
+  static String odView(String id) => '${ApiHost.hrBaseUrl}/hr/attendance/od/request/getById/$id';
+  static String get odCancel => '${ApiHost.hrBaseUrl}/hr/attendance/od/request/cancel';
+  static String odDelete(String id) => '${ApiHost.hrBaseUrl}/hr/attendance/od/request/delete/$id';
 
   // Holidays
   static String get holidays => '${ApiHost.hrBaseUrl}/hr/master/attendance/holiday/get/all';

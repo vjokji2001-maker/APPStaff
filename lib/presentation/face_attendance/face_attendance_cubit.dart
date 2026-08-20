@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safe_device/safe_device.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:staff_mate/domain/entities/attendance.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -18,18 +19,44 @@ class FaceAttendanceCubit extends Cubit<FaceAttendanceState> {
   final double hospitalLng = 79.0882;
   final double maxAllowedDistanceMeters = 100.0;
 
+  String? _empId;
+  String? _punchDirection;
+  double? _currentLat;
+  double? _currentLng;
+
   FaceAttendanceCubit({
     required this.enrollmentUseCase,
     required this.recognitionUseCase,
     required this.livenessUseCase,
   }) : super(FaceAttendanceInitial());
 
-  Future<void> initialize() async {
+  Future<void> initialize(String punchDirection) async {
+    _punchDirection = punchDirection;
     emit(FaceAttendancePermissionLoading());
-    // Auto-request permissions on launch for convenience
-    await [Permission.camera, Permission.location].request();
+
+    final prefs = await SharedPreferences.getInstance();
+    _empId = prefs.getString('empId');
+    if (_empId == null || _empId!.isEmpty) {
+      // Fallback to userId if empId is not found (some APIs use userId)
+      _empId = prefs.getString('userId');
+    }
     
-    final missing = await _checkPermissions();
+    if (_empId == null || _empId!.isEmpty) {
+      emit(FaceAttendanceError(message: 'Employee ID not found. Please login again.'));
+      return;
+    }
+
+    List<String> missing = await _checkPermissions();
+    if (missing.isNotEmpty) {
+      // Only request the specific permissions that are missing
+      List<Permission> toRequest = [];
+      if (missing.contains('Camera')) toRequest.add(Permission.camera);
+      if (missing.contains('Location')) toRequest.add(Permission.location);
+      
+      await toRequest.request();
+      missing = await _checkPermissions();
+    }
+    
     if (missing.isEmpty) {
       await _checkLocationAndProceed();
     } else {
@@ -39,18 +66,28 @@ class FaceAttendanceCubit extends Cubit<FaceAttendanceState> {
 
   Future<List<String>> _checkPermissions() async {
     List<String> missing = [];
-    if (await Permission.camera.status.isDenied) {
+    if (!(await Permission.camera.status.isGranted)) {
       missing.add('Camera');
     }
-    if (await Permission.location.status.isDenied) {
+    if (!(await Permission.location.status.isGranted)) {
       missing.add('Location');
     }
     return missing;
   }
 
   Future<void> requestPermissions() async {
-    await [Permission.camera, Permission.location].request();
-    await initialize();
+    List<String> missing = await _checkPermissions();
+    List<Permission> toRequest = [];
+    if (missing.contains('Camera')) toRequest.add(Permission.camera);
+    if (missing.contains('Location')) toRequest.add(Permission.location);
+    
+    if (toRequest.isNotEmpty) {
+      await toRequest.request();
+    }
+    
+    if (_punchDirection != null) {
+      await initialize(_punchDirection!);
+    }
   }
 
   Future<void> _checkLocationAndProceed() async {
@@ -80,29 +117,17 @@ class FaceAttendanceCubit extends Cubit<FaceAttendanceState> {
       Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
 
+      _currentLat = position.latitude;
+      _currentLng = position.longitude;
+
       // 3. Mock Location Detection (Anti-Cheat)
       if (position.isMocked) {
         emit(FaceAttendanceError(message: 'Security Alert: Fake GPS / Mock Location detected. Attendance blocked.'));
         return;
       }
 
-      double distanceInMeters = Geolocator.distanceBetween(
-        position.latitude,
-        position.longitude,
-        hospitalLat,
-        hospitalLng,
-      );
-
-      if (distanceInMeters <= maxAllowedDistanceMeters || hospitalLat == 0.0) {
-        emit(FaceAttendanceReady());
-      } else {
-        // BYPASS FOR TESTING: Ignore distance check and allow attendance anyway
-        emit(FaceAttendanceReady());
-        /*
-        emit(FaceAttendanceError(
-            message: 'You are ${distanceInMeters.toStringAsFixed(1)}m away. You must be within ${maxAllowedDistanceMeters.toInt()}m of the hospital to mark attendance.'));
-        */
-      }
+      // Backend handles distance validation, so we just capture location and proceed.
+      emit(FaceAttendanceReady());
     } catch (e) {
       emit(FaceAttendanceError(message: 'Location error: $e'));
     }
@@ -117,7 +142,14 @@ class FaceAttendanceCubit extends Cubit<FaceAttendanceState> {
         emit(FaceAttendanceError(message: 'Liveness verification failed. Please try again.'));
         return;
       }
-      final attendance = await enrollmentUseCase.recordAttendance(embedding);
+      final attendance = await enrollmentUseCase.recordAttendance(
+        empId: _empId!,
+        punchType: 'MANUAL', // or 'FACE' if biometric
+        punchDirection: _punchDirection ?? 'IN',
+        faceEmbedding: embedding.toString(),
+        latitude: _currentLat ?? 0.0,
+        longitude: _currentLng ?? 0.0,
+      );
       emit(FaceAttendanceSuccess(attendance: attendance));
     } catch (e) {
       emit(FaceAttendanceError(message: e.toString()));
@@ -131,7 +163,9 @@ class FaceAttendanceCubit extends Cubit<FaceAttendanceState> {
   }
 
   void retry() {
-    initialize(); // Recheck location on retry
+    if (_punchDirection != null) {
+      initialize(_punchDirection!);
+    }
   }
 }
 

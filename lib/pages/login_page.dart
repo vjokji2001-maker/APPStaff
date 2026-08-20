@@ -11,6 +11,7 @@ import 'package:staff_mate/services/clinic_service.dart';
 import 'package:staff_mate/services/session_manger.dart';
 import 'package:staff_mate/services/user_information_service.dart';
 import 'package:staff_mate/widgets/otp_verification_dialog.dart';
+import 'package:staff_mate/my_hr/data/hr_api_service.dart';
 
 class AppColors {
   static const Color primaryDarkBlue = Color(0xFF1A237E);
@@ -105,6 +106,26 @@ class _LoginPageState extends State<LoginPage> {
         }
         if (ApiService.refreshToken != null) {
           _loginResponseData!['refreshToken'] = ApiService.refreshToken;
+        }
+
+        // Hit /smartcaremain/userinformation immediately after login status is 200
+        try {
+          final token = ApiService.accessToken ?? _loginResponseData!['token'] ?? '';
+          final clinicId = _loginResponseData!['clinicid'] ?? _loginResponseData!['clinicId'] ?? '';
+          final userId = _loginResponseData!['userId'] ?? '';
+          final zoneId = _loginResponseData!['zoneid'] ?? 'Asia/Kolkata';
+
+          final userInfoService = UserInformationService();
+          await userInfoService.fetchAndSaveUserInformation(
+            token: token,
+            clinicId: clinicId,
+            userId: userId,
+            zoneid: zoneId,
+            branchId: 1,
+          );
+          debugPrint('✅ Pre-OTP: User information successfully fetched and stored.');
+        } catch (e) {
+          debugPrint('⚠️ Pre-OTP User info fetch failed: $e');
         }
 
         final prefs = await SharedPreferences.getInstance();
@@ -214,13 +235,18 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final userInfoService = UserInformationService();
-      await userInfoService.fetchAndSaveUserInformation(
+      final userData = await userInfoService.fetchAndSaveUserInformation(
         token: _loginResponseData!['token'] ?? '',
         clinicId: _loginResponseData!['clinicid'] ?? '',
         userId: _loginResponseData!['userId'] ?? '',
         zoneid: _loginResponseData!['zoneid'] ?? 'Asia/Kolkata',
         branchId: 1,
       );
+      final firstName = userData['firstName']?.toString();
+      final userId = (_loginResponseData!['userId'] ?? '').toString();
+      
+      // Auto-resolve HR Employee ID from shift roster
+      await HRApiService.resolveAndSaveEmpIdFromRoster(userId, firstName: firstName);
     } catch (userError) {
       debugPrint("User information fetch failed: $userError");
     }

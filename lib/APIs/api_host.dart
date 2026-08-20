@@ -28,6 +28,7 @@ class ApiHost {
     'LOCAL_DEV_7': '192.168.0.137',
     'LOCAL_DEV_8': '192.168.1.38',
     'LOCAL_DEV_9': '192.168.1.14',
+    'sclyte_local': '192.168.1.194'
 
   };
 

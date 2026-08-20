@@ -5,10 +5,14 @@ import '../theme/hr_theme.dart';
 import '../data/hr_mock_data.dart';
 import '../data/hr_api_service.dart';
 import '../../services/user_information_service.dart';
+import '../../models/global_user_data.dart';
+import '../../models/staff_dob.dart';
 import '../models/hr_models.dart';
 import '../widgets/hr_widgets.dart';
 import 'hr_attendance_screen.dart';
 import 'hr_leave_screen.dart';
+import 'dart:async';
+import 'package:intl/intl.dart';
 import 'hr_payroll_screen.dart';
 import 'hr_shift_screen.dart';
 import 'hr_profile_screen.dart';
@@ -38,15 +42,31 @@ class _HRDashboardScreenState extends State<HRDashboardScreen>
   late final Animation<double> _fadeAnim;
   final _scrollCtrl = ScrollController();
 
-  bool _isCheckedIn = false;
-  String _punchTime = '';
+  bool _isLoading = true;
+  bool _isLoggingOut = false;
+  bool _loadingBirthdays = true;
+  bool _loadingAnnouncements = true;
+  bool _loadingTrainings = true;
+  bool _loadingDocuments = true;
+  String currentDate = '';
+bool _isCheckedIn = false;
+String _punchTime = '';
+
+  List<StaffDOB> todayBirthdays = [];
+  List<Birthday> upcomingBirthdays = [];
+  List<HRAnnouncement> announcements = [];
+  List<TrainingCourse> trainings = [];
+  List<HRDocument> documents = [];
+  List<RotaShift> rotaShifts = [];
+  List<QuickTask> quickTasks = [];
+  List<PendingApproval> pendingApprovals = [];
+  CheckInOutStatus checkInOutStatus = CheckInOutStatus();
 
   HREmployee? _emp;
   AttendanceSummary? _summary;
   List<LeaveBalance> _leaveBalances = [];
   List<SalarySlip> _salarySlips = [];
   List<HRHoliday> _holidays = [];
-  bool _isLoading = true;
 
   @override
   void initState() {
@@ -61,36 +81,62 @@ class _HRDashboardScreenState extends State<HRDashboardScreen>
   }
 
   Future<void> _loadAllData() async {
+    _fetchProfile();
     await Future.wait([
-      _fetchProfile(),
-      _fetchAttendance(),
-      _fetchLeaveBalances(),
-      _fetchPayroll(),
-      _fetchHolidays(),
+      // _fetchAttendance(),
+      // _fetchLeaveBalances(),
+      // _fetchPayroll(),
+      // _fetchHolidays(),
+      // _fetchAnnouncements(),
+      // _fetchBirthdays(),
+      // _fetchTrainings(),
+      // _fetchDocuments(),
     ]);
     if (mounted) setState(() => _isLoading = false);
   }
 
-  Future<void> _fetchProfile() async {
+  Future<void> _fetchAnnouncements() async {
+    // TODO: Replace with real API call, e.g., HRApiService.getAnnouncements()
+    setState(() {
+      announcements = [];
+      _loadingAnnouncements = false;
+    });
+  }
+
+  Future<void> _fetchBirthdays() async {
+    // TODO: Replace with real API call for birthdays
+    setState(() {
+      todayBirthdays = [];
+      upcomingBirthdays = [];
+      _loadingBirthdays = false;
+    });
+  }
+
+  Future<void> _fetchTrainings() async {
+    // TODO: Replace with real API call for trainings
+    setState(() {
+      trainings = [];
+      _loadingTrainings = false;
+    });
+  }
+
+  Future<void> _fetchDocuments() async {
+    // TODO: Replace with real API call for documents
+    setState(() {
+      documents = [];
+      _loadingDocuments = false;
+    });
+  }
+
+  void _fetchProfile() {
     try {
-      final completeData = await UserInformationService.getCompleteUserData();
-      Map<String, dynamic>? userData;
-      
-      if (completeData != null && completeData.containsKey('data')) {
-        userData = completeData['data'];
-      } else {
-        final userInfo = await UserInformationService.getSavedUserInformation();
-        if (userInfo.isNotEmpty && userInfo['userId']?.isNotEmpty == true) {
-          userData = userInfo;
-        }
-      }
+      final userData = GlobalUserData().userData;
       
       if (userData != null) {
         String first = userData['firstName']?.toString() ?? '';
         String last = userData['lastName']?.toString() ?? '';
         String init = userData['initial']?.toString() ?? '';
         
-        // Try pre-built fullName first, else build from parts
         String fullName = userData['fullName']?.toString() ?? '';
         if (fullName.isEmpty) {
           fullName = '$init $first $last'.trim();
@@ -105,25 +151,23 @@ class _HRDashboardScreenState extends State<HRDashboardScreen>
         
         String avatarStr = first.isNotEmpty ? first[0].toUpperCase() : (fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U');
         
-        debugPrint('HR Dashboard - Name: $fullName | Role: $role | Dept: $dept');
-        
         if (mounted) {
           setState(() {
             _emp = HREmployee(
-              id: userData!['userId']?.toString() ?? '1',
+              id: userData['userId']?.toString() ?? '1',
               name: fullName,
               designation: role,
               department: dept,
-              employeeCode: userData!['userId']?.toString() ?? 'EMP001',
-              email: userData!['email']?.toString() ?? '',
-              phone: userData!['mobileNo']?.toString() ?? '',
+              employeeCode: userData['userId']?.toString() ?? 'EMP001',
+              email: userData['email']?.toString() ?? '',
+              phone: userData['mobileNo']?.toString() ?? '',
               dob: '',
               gender: '',
               bloodGroup: '',
               maritalStatus: '',
               joiningDate: '',
               employmentType: 'Full-time',
-              workLocation: userData!['location']?.toString() ?? 'Main Hospital',
+              workLocation: userData['location']?.toString() ?? 'Main Hospital',
               reportingManager: '',
               shift: 'General',
               grade: '',
@@ -132,7 +176,7 @@ class _HRDashboardScreenState extends State<HRDashboardScreen>
               esiNumber: '',
               panNumber: '',
               aadhaarLast4: '',
-              address: userData!['address']?.toString() ?? '',
+              address: userData['address']?.toString() ?? '',
               emergencyContact: '',
               emergencyRelation: '',
               emergencyPhone: '',
@@ -143,9 +187,8 @@ class _HRDashboardScreenState extends State<HRDashboardScreen>
         return;
       }
       
-      final data = await HRApiService.getProfile();
-      final empData = data['data'] ?? data;
-      if (mounted) setState(() => _emp = HREmployee.fromJson(empData));
+      // Fallback
+      if (mounted) setState(() => _emp = HREmployee.empty());
     } catch (e) {
       if (mounted) setState(() => _emp = HREmployee.empty());
     }
@@ -212,25 +255,15 @@ class _HRDashboardScreenState extends State<HRDashboardScreen>
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
 
-  void _handlePunch() {
-    final now = TimeOfDay.now();
-    final formatted =
-        '${now.hourOfPeriod.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} ${now.period.name.toUpperCase()}';
-    setState(() {
-      _isCheckedIn = !_isCheckedIn;
-      _punchTime = formatted;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isCheckedIn ? 'Punched In at $_punchTime' : 'Punched Out at $_punchTime',
-          style: GoogleFonts.poppins(),
-        ),
-        backgroundColor: _isCheckedIn ? HRTheme.success : HRTheme.error,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  Future<void> _handlePunch() async {
+    final direction = _isCheckedIn ? 'OUT' : 'IN';
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FaceAttendancePage(punchDirection: direction),
       ),
     );
+    _loadAllData();
   }
 
   String _greeting() {
@@ -251,7 +284,7 @@ Widget build(BuildContext context) {
   final emp = _emp ?? HREmployee.empty();
   final summary = _summary ?? AttendanceSummary.empty();
   final unread = HRMockData.notifications.where((n) => !n.isRead).length;
-  final pendingApprovals = HRMockData.approvals.where((a) => a.status == 'Pending').length;
+  final pendingApprovalsCount = pendingApprovals.where((a) => a.status == 'Pending').length;
 
   return Scaffold(
     backgroundColor: isDark ? HRTheme.bgDark : const Color(0xFFF7F8FA),
@@ -261,43 +294,35 @@ Widget build(BuildContext context) {
         controller: _scrollCtrl,
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // Header
           SliverToBoxAdapter(child: _buildHeader(emp, unread, isDark)),
 
-          // Punch Card
           if (!_isLoading) SliverToBoxAdapter(child: _buildPunchCard(isDark)),
 
-          // Key Metrics
           if (!_isLoading) SliverToBoxAdapter(child: _buildKeyMetrics(summary)),
 
-          // Quick Actions
           if (!_isLoading)
-            SliverToBoxAdapter(child: _buildQuickActions(pendingApprovals, unread)),
+            SliverToBoxAdapter(child: _buildQuickActions(pendingApprovalsCount, unread)),
 
-          // Attendance Snapshot
           if (!_isLoading)
             SliverToBoxAdapter(child: _buildAttendanceSnapshot(summary)),
 
-          // Leave
           if (!_isLoading) SliverToBoxAdapter(child: _buildLeaveSection()),
 
-          // Salary
           if (!_isLoading) SliverToBoxAdapter(child: _buildSalarySummary()),
 
-          // Holidays
           if (!_isLoading) SliverToBoxAdapter(child: _buildUpcomingHolidays()),
 
-          // Announcements
-          if (!_isLoading) SliverToBoxAdapter(child: _buildAnnouncements()),
+          if (!_isLoading && !_loadingAnnouncements)
+            SliverToBoxAdapter(child: _buildAnnouncements()),
 
-          // Birthdays
-          if (!_isLoading) SliverToBoxAdapter(child: _buildBirthdays(isDark)),
+          if (!_isLoading && !_loadingBirthdays)
+            SliverToBoxAdapter(child: _buildBirthdays(isDark)),
 
-          // Training
-          if (!_isLoading) SliverToBoxAdapter(child: _buildTrainingReminders()),
+          if (!_isLoading && !_loadingTrainings)
+            SliverToBoxAdapter(child: _buildTrainingReminders()),
 
-          // Document Expiry
-          if (!_isLoading) SliverToBoxAdapter(child: _buildDocExpirySection()),
+          if (!_isLoading && !_loadingDocuments)
+            SliverToBoxAdapter(child: _buildDocExpirySection()),
 
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
@@ -335,12 +360,12 @@ Widget build(BuildContext context) {
                 onTap: () => Navigator.maybePop(context),
               ),
               const Spacer(),
-              _headerIconButton(
-                icon: Icons.notifications_outlined,
-                onTap: () => _navigate(const HRNotificationsScreen()),
-                badge: unread > 0 ? unread : null,
-              ),
-              const SizedBox(width: 10),
+              // _headerIconButton(
+              //   icon: Icons.notifications_outlined,
+              //   onTap: () => _navigate(const HRNotificationsScreen()),
+              //   badge: unread > 0 ? unread : null,
+              // ),
+              // const SizedBox(width: 10),
               _headerIconButton(
                 icon: Icons.settings_outlined,
                 onTap: () => _navigate(const HRSettingsScreen()),
@@ -524,12 +549,12 @@ Widget build(BuildContext context) {
                   const SizedBox(height: 14),
                   Row(
                     children: [
-                      _punchChip(Icons.login_rounded, 'In', '08:02 AM', HRTheme.success),
+                      _punchChip(Icons.login_rounded, 'In', _isCheckedIn ? _punchTime : DateFormat('hh:mm a').format(now), HRTheme.success),
                       const SizedBox(width: 10),
                       _punchChip(
                         Icons.logout_rounded,
                         'Out',
-                        _isCheckedIn ? '--:--' : (_punchTime.isEmpty ? '--:--' : _punchTime),
+                        _isCheckedIn ? DateFormat('hh:mm a').format(now) : '--:--',
                         HRTheme.error,
                       ),
                     ],
@@ -708,8 +733,6 @@ Widget build(BuildContext context) {
   // ─────────────────────────────────────────────────────────────────
   Widget _buildQuickActions(int pendingApprovals, int unread) {
     final actions = [
-      _QuickAction('Face Attendance', Icons.face, HRTheme.attendance,
-          () => _navigate(const FaceAttendancePage())),
       _QuickAction('Attendance', Icons.fingerprint_rounded, HRTheme.attendance,
           () => _navigate(const HRAttendanceScreen())),
       _QuickAction('Leave', Icons.calendar_today_rounded, HRTheme.leave,
@@ -717,15 +740,7 @@ Widget build(BuildContext context) {
       // _QuickAction('Payroll', Icons.payments_rounded, HRTheme.payroll,
       //     () => _navigate(const HRPayrollScreen())),
       _QuickAction('Shift', Icons.schedule_rounded, HRTheme.shift,
-          // () => _navigate(const HRShiftScreen())),
-      // _QuickAction('Requests', Icons.send_rounded, HRTheme.requests,
-      //     () => _navigate(const HRRequestsScreen()), badge: pendingApprovals),
-      // _QuickAction('Approvals', Icons.approval_rounded, HRTheme.approvals,r
-      //     () => _navigate(const HRApprovalsScreen()), badge: pendingApprovals),
-      // _QuickAction('Documents', Icons.folder_rounded, HRTheme.documents,
-      //     () => _navigate(const HRDocumentsScreen())),
-      // _QuickAction('More', Icons.grid_view_rounded, HRTheme.primaryDark,
-          () {}), // you can open a bottom sheet here
+          () => _navigate(const HRShiftScreen())),
     ];
 
     return Padding(
@@ -745,10 +760,10 @@ Widget build(BuildContext context) {
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 4,
+            crossAxisCount: 3,
             mainAxisSpacing: 14,
             crossAxisSpacing: 12,
-            childAspectRatio: 0.85,
+            childAspectRatio: 1.1,
             children: actions.map((a) {
               return GestureDetector(
                 onTap: a.onTap,

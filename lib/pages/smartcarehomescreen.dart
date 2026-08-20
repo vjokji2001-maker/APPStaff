@@ -1,5 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:staff_mate/models/global_user_data.dart';
+import 'package:staff_mate/my_hr/screens/hr_shift_screen.dart';
+import 'package:staff_mate/my_hr/screens/hr_approvals_screen.dart';
+import 'package:staff_mate/my_hr/screens/hr_attendance_screen.dart';
+import 'package:staff_mate/my_hr/data/hr_api_service.dart';
+import 'package:staff_mate/services/my_tasks_service.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +26,7 @@ import 'package:staff_mate/ai/chat_screen.dart';
 import 'package:staff_mate/ai/chat_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:staff_mate/api/api_service.dart';
+import 'package:staff_mate/presentation/face_attendance/face_attendance_page.dart';
 
 class AppColors {
   static const Color primaryDarkBlue = Color(0xFF1A237E);
@@ -59,10 +66,10 @@ class SmartCareHomeScreen extends StatefulWidget {
   });
 
   @override
-  State<SmartCareHomeScreen> createState() => _SmartCareHomeScreenState();
+  State<SmartCareHomeScreen> createState() => SmartCareHomeScreenState();
 }
 
-class _SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
+class SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
   String fullName = 'Dr. Staff Member';
   String userId = '';
   String clinicName = 'Smart Care Hospital';
@@ -76,6 +83,7 @@ class _SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
   bool isLoading = true;
   bool _isLoggingOut = false; 
   bool _loadingBirthdays = true;
+  bool _loadingShifts = true;
   String currentDate = '';
   
   List<StaffDOB> todayBirthdays = []; 
@@ -95,6 +103,8 @@ class _SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
     _setCurrentDate();
     _loadSampleData();
     _loadTodayBirthdays();
+    _loadDynamicTasks();
+    _loadDynamicRotaShifts();
   }
 
   void _scrollToTop() {
@@ -111,47 +121,26 @@ class _SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
   }
 
   void _loadSampleData() {
-    trainings = [
-      Training(title: 'Advanced Life Support', date: 'Mar 15, 2024', status: 'Upcoming'),
-      Training(title: 'HIPAA Compliance', date: 'Mar 20, 2024', status: 'Mandatory'),
-      Training(title: 'New Equipment Training', date: 'Mar 25, 2024', status: 'Optional'),
-      Training(title: 'Emergency Response', date: 'Mar 30, 2024', status: 'Mandatory'),
-    ];
+    // NOTE: quickTasks and pendingApprovals are intentionally left empty here.
+    // They are populated exclusively by _loadDynamicTasks() from the real API,
+    // so no hardcoded/fake data is ever shown to the user.
+    quickTasks = [];
+    pendingApprovals = [];
 
-    rotaShifts = [
-      RotaShift(date: 'Today', shift: 'Morning (7 AM - 3 PM)', location: 'Main Ward'),
-      RotaShift(date: 'Tomorrow', shift: 'Evening (3 PM - 11 PM)', location: 'Emergency'),
-      RotaShift(date: 'Mar 14', shift: 'Night (11 PM - 7 AM)', location: 'ICU'),
-      RotaShift(date: 'Mar 15', shift: 'Morning (7 AM - 3 PM)', location: 'OPD'),
-    ];
+    // rotaShifts placeholder — overwritten by _loadDynamicRotaShifts()
+    rotaShifts = [];
 
-    quickTasks = [
-      QuickTask(title: 'Patient Rounds', priority: 'High', time: '9:00 AM', completed: false),
-      QuickTask(title: 'Documentation', priority: 'Medium', time: '2:00 PM', completed: false),
-      QuickTask(title: 'Team Meeting', priority: 'Low', time: '4:00 PM', completed: true),
-      QuickTask(title: 'Lab Reports Review', priority: 'High', time: '11:00 AM', completed: false),
-    ];
-
-    pendingApprovals = [
-      PendingApproval(type: 'Leave Request', name: 'Dr. Lisa Park', days: '3 days', status: 'Pending'),
-      PendingApproval(type: 'Overtime', name: 'Nurse John Doe', hours: '4 hours', status: 'Pending'),
-      PendingApproval(type: 'Supply Order', name: 'Admin Team', items: '5 items', status: 'Pending'),
-      PendingApproval(type: 'Conference', name: 'Dr. Smith', days: '2 days', status: 'Pending'),
-    ];
+    // trainings placeholder (no dynamic loader yet — keep empty)
+    trainings = [];
 
     checkInOutStatus = CheckInOutStatus(
-      checkedIn: true,
-      checkInTime: '07:30 AM',
-      location: 'Main Hospital',
-      totalHours: '8.5',
+      checkedIn: false,
+      checkInTime: DateFormat('hh:mm a').format(DateTime.now()),
+      location: '',
+      totalHours: '0',
     );
 
-    upcomingBirthdays = [
-      Birthday(name: 'Dr. Sarah Johnson', department: 'Cardiology', time: 'Today'),
-      Birthday(name: 'Nurse Michael Chen', department: 'ICU', time: 'Tomorrow'),
-      Birthday(name: 'Dr. Robert Wilson', department: 'Orthopedics', time: 'In 2 days'),
-      Birthday(name: 'Nurse Lisa Park', department: 'Pediatrics', time: 'In 3 days'),
-    ];
+    upcomingBirthdays = [];
   }
 
 Future<void> _loadTodayBirthdays() async {
@@ -222,6 +211,159 @@ Future<void> _loadTodayBirthdays() async {
     }
   }
 }
+
+  Future<void> _loadDynamicTasks() async {
+    try {
+      debugPrint('=== HOME SCREEN: Loading dynamic tasks ===');
+      // Fetch TODAY + UPCOMING tasks — same API used by MyTasksPage
+      final todayResp = await MyTasksService.fetchTasksByStatus('TODAY');
+      final upcomingResp = await MyTasksService.fetchTasksByStatus('UPCOMING');
+
+      List<dynamic> todayData = _extractList(todayResp);
+      List<dynamic> upcomingData = _extractList(upcomingResp);
+      // Combine and reverse the list so the last items from the API come first
+      final allTasksData = [...todayData, ...upcomingData].reversed.toList();
+
+      debugPrint('HOME: Today tasks: ${todayData.length}, Upcoming: ${upcomingData.length}');
+
+      final List<QuickTask> loaded = [];
+      for (var item in allTasksData) {
+        if (item is Map<String, dynamic>) {
+          final String title = item['taskName']?.toString() ??
+              item['title']?.toString() ??
+              'Unnamed Task';
+          final String priorityStr =
+              item['priority']?.toString() ?? 'Medium';
+
+          String timeStr = '--';
+          if (item['dueDate'] != null || item['taskDate'] != null) {
+            try {
+              final parsedDate = DateTime.parse(
+                  (item['dueDate'] ?? item['taskDate']).toString());
+              timeStr = DateFormat('h:mm a').format(parsedDate);
+            } catch (_) {}
+          }
+
+          final bool completed = item['completed'] == true ||
+              item['isCompleted'] == true ||
+              item['status']?.toString().toLowerCase() == 'completed';
+
+          if (!completed) {
+            loaded.add(QuickTask(
+              title: title,
+              priority: priorityStr,
+              time: timeStr,
+              completed: false,
+            ));
+          }
+        }
+      }
+
+      debugPrint('HOME: Loaded ${loaded.length} pending tasks');
+      if (mounted) {
+        setState(() {
+          quickTasks = loaded;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading dynamic tasks for home: $e');
+    }
+  }
+
+  /// Helper to extract list from any API response shape
+  List<dynamic> _extractList(Map<String, dynamic> response) {
+    if (response.containsKey('data')) {
+      final dataObj = response['data'];
+      if (dataObj is List) return dataObj;
+      if (dataObj is Map<String, dynamic>) {
+        if (dataObj['list'] is List) return dataObj['list'] as List;
+        if (dataObj['content'] is List) return dataObj['content'] as List;
+      }
+    }
+    if (response['list'] is List) return response['list'] as List;
+    if (response['content'] is List) return response['content'] as List;
+    return [];
+  }
+
+  void refreshData() {
+    _loadDynamicTasks();
+    _loadDynamicRotaShifts();
+    _loadTodayBirthdays();
+  }
+
+  Future<void> _loadDynamicRotaShifts() async {
+    if (mounted) setState(() => _loadingShifts = true);
+    try {
+      final now = DateTime.now();
+      final monday = now.subtract(Duration(days: now.weekday - 1));
+      final sunday = monday.add(const Duration(days: 6));
+
+      final response = await HRApiService.getShiftRoster(
+        fromDate: DateFormat('yyyy-MM-dd').format(monday),
+        toDate: DateFormat('yyyy-MM-dd').format(sunday),
+        pageSize: 100,
+      );
+
+      final data = response is Map ? response['data'] ?? response : null;
+      if (data == null) return;
+      
+      final dataList = data['dataList'] ?? data['content'] ?? data['records'];
+      if (dataList is! List || dataList.isEmpty) return;
+
+      final List<dynamic> flatList = [];
+      for (final item in dataList) {
+        if (item is List) {
+          flatList.addAll(item);
+        } else {
+          flatList.add(item);
+        }
+      }
+
+      String? userCode;
+      try {
+        final userData = GlobalUserData().userData;
+        if (userData != null) {
+          userCode = userData['userId']?.toString() ?? userData['empId']?.toString();
+        }
+      } catch (_) {}
+
+      final dynamic foundRow = flatList.firstWhere(
+        (r) {
+          if (r is! Map) return false;
+          final code = r['employeeCode']?.toString().toLowerCase() ?? '';
+          return code.isNotEmpty && code == userCode?.toLowerCase();
+        },
+        orElse: () => flatList.first,
+      );
+
+      if (foundRow is! Map) return;
+      final List<dynamic> empShiftList = foundRow['empShiftList'] is List ? foundRow['empShiftList'] : [];
+      
+      final List<RotaShift> loadedRota = [];
+      for (final s in empShiftList) {
+        if (s is Map) {
+          final String sName = s['shiftName']?.toString() ?? s['shiftCode']?.toString() ?? '';
+          if (sName.isNotEmpty && sName.toLowerCase() != 'off' && sName.toLowerCase() != 'weekly off') {
+            loadedRota.add(RotaShift(
+              date: s['date']?.toString() ?? '',
+              shift: sName,
+              location: s['ward']?.toString() ?? s['location']?.toString() ?? 'Main Hospital',
+            ));
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          rotaShifts = loadedRota;
+          _loadingShifts = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading dynamic rota for home: $e');
+      if (mounted) setState(() => _loadingShifts = false);
+    }
+  }
 
 String _formatDateForAPI(DateTime date) {
   final day = date.day.toString().padLeft(2, '0');
@@ -671,17 +813,12 @@ Widget _buildStaffBirthdayCard(StaffDOB staff) {
         trailing: bday.time,
         color: AppColors.pink,
       )).toList();
-    } else if (title == "Trainings") {
-      content = trainings.map((training) => GestureDetector(
-        onTap: () => _navigateToTraining(context),
-        child: _buildDetailCard(
-          icon: Icons.school,
-          title: training.title,
-          subtitle: training.date,
-          trailing: training.status,
-          color: AppColors.infoBlue,
-        ),
-      )).toList();
+    } else if (title == "Attendance") {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const HRAttendanceScreen()),
+      );
+      return;
     } else if (title == "My Rota") {
       Navigator.push(
         context,
@@ -872,36 +1009,15 @@ return;
   }
 
   void _toggleCheckInOut() {
-    setState(() {
-      if (checkInOutStatus.checkedIn) {
-        checkInOutStatus = CheckInOutStatus(
-          checkedIn: false,
-          checkInTime: '--:--',
-          location: 'Not Set',
-          totalHours: '0.0',
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Checked out successfully', style: GoogleFonts.poppins()),
-            backgroundColor: AppColors.successGreen,
-          ),
-        );
-      } else {
-        final now = DateTime.now();
-        final formattedTime = DateFormat('hh:mm a').format(now);
-        checkInOutStatus = CheckInOutStatus(
-          checkedIn: true,
-          checkInTime: formattedTime,
-          location: 'Main Hospital',
-          totalHours: '0.0',
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Checked in successfully at $formattedTime', style: GoogleFonts.poppins()),
-            backgroundColor: AppColors.successGreen,
-          ),
-        );
-      }
+    final direction = checkInOutStatus.checkedIn ? 'OUT' : 'IN';
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FaceAttendancePage(punchDirection: direction),
+      ),
+    ).then((_) {
+      // After returning from face auth, refresh check-in status
+      if (mounted) setState(() {});
     });
   }
 
@@ -1039,6 +1155,7 @@ return;
                       },
                       child: ListView.builder(
                         controller: _scrollController,
+                        physics: const BouncingScrollPhysics(),
                         padding: EdgeInsets.all(horizontalPadding),
                         itemCount: 1,
                         itemBuilder: (context, index) {
@@ -1055,9 +1172,11 @@ return;
                               const SizedBox(height: 12),
                               
                               SizedBox(
-                                height: 130,
+                                height: 135,
                                 child: ListView(
                                   scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  padding: const EdgeInsets.only(left: 2, right: 2),
                                   children: [
                                     _buildCompactEventCard(
                                       title: "Birthdays",
@@ -1069,21 +1188,31 @@ return;
                                     ),
                                     const SizedBox(width: 10),
                                     _buildCompactEventCard(
-                                      title: "Trainings",
-                                      count: trainings.length,
-                                      icon: Icons.school,
-                                      color: AppColors.infoBlue,
+                                      title: "Attendance",
+                                      count: 0,
+                                      icon: Icons.fingerprint,
+                                      color: const Color(0xFF00C897),
                                       context: context,
-                                      onTap: () => _navigateToTraining(context),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => const HRAttendanceScreen()),
+                                        );
+                                      },
                                     ),
                                     const SizedBox(width: 10),
                                     _buildCompactEventCard(
-                                      title: "My Rota",
+                                      title: "My Shift",
                                       count: rotaShifts.length,
                                       icon: Icons.schedule,
                                       color: AppColors.purple,
                                       context: context,
-                                      onTap: () => _showEventDetails("My Rota"),
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => const HRShiftScreen()),
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),
@@ -1102,24 +1231,43 @@ return;
                                       context: context,
                                     ),
                                     const SizedBox(height: 12),
-                                    ...quickTasks.take(3).map((task) => 
-                                      GestureDetector(
-                                        onTap: () {
+                                    if (quickTasks.isEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 24),
+                                        child: Center(
+                                          child: Text(
+                                            "All caught up! No pending tasks.",
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 12,
+                                              color: AppColors.textBodyColor,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      ...quickTasks.take(3).map((task) => 
+                                        GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(builder: (context) => const MyTasksPage()),
+                                            );
+                                          },
+                                          child: _buildCompactTaskItem(task, context),
+                                        )
+                                      ),
+                                    const SizedBox(height: 12),
+                                    _buildSeeAllButton(
+                                      onTap: () {
+                                        if (widget.onTabChange != null) {
+                                          widget.onTabChange!(3);
+                                        } else {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(builder: (context) => const MyTasksPage()),
                                           );
-                                        },
-                                        child: _buildCompactTaskItem(task, context),
-                                      )
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _buildSeeAllButton(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(builder: (context) => const MyTasksPage()),
-                                        );
+                                        }
                                       },
                                       context: context,
                                     ),
@@ -1130,27 +1278,32 @@ return;
                               const SizedBox(height: 20),
                               
                               // Approvals Pending Section
-                              _buildShadowBox(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildCompactSectionHeader(
-                                      title: "Approvals Pending",
-                                      icon: Icons.pending_actions,
-                                      context: context,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    ...pendingApprovals.take(3).map((approval) => 
-                                      _buildCompactApprovalItem(approval, context)
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _buildSeeAllButton(
-                                      onTap: () => _showEventDetails("Approvals"),
-                                      context: context,
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              // _buildShadowBox(
+                              //   child: Column(
+                              //     crossAxisAlignment: CrossAxisAlignment.start,
+                              //     children: [
+                              //       _buildCompactSectionHeader(
+                              //         title: "Approvals Pending",
+                              //         icon: Icons.pending_actions,
+                              //         context: context,
+                              //       ),
+                              //       const SizedBox(height: 12),
+                              //       ...pendingApprovals.take(3).map((approval) => 
+                              //         _buildCompactApprovalItem(approval, context)
+                              //       ),
+                              //       const SizedBox(height: 12),
+                              //       _buildSeeAllButton(
+                              //         onTap: () {
+                              //           Navigator.push(
+                              //             context,
+                              //             MaterialPageRoute(builder: (context) => const HRApprovalsScreen()),
+                              //           );
+                              //         },
+                              //         context: context,
+                              //       ),
+                              //     ],
+                              //   ),
+                              // ),
                               
                               const SizedBox(height: 20),
                               
@@ -1187,46 +1340,88 @@ return;
                               
                               const SizedBox(height: 12),
                               
-                              _buildShadowBox(
-                                child: _buildCustomExpansionSection(
-                                  title: "Trainings",
-                                  icon: Icons.school,
-                                  children: trainings.take(3).map((training) => 
-                                    GestureDetector(
-                                      onTap: () => _navigateToTraining(context),
-                                      child: _buildCompactListItem(
-                                        icon: Icons.school,
-                                        title: training.title,
-                                        subtitle: training.date,
-                                        trailing: training.status,
-                                        color: AppColors.infoBlue,
-                                        context: context,
-                                      ),
-                                    )
-                                  ).toList(),
-                                  context: context,
-                                  onSeeAll: () => _navigateToTraining(context),
-                                ),
-                              ),
+                              // _buildShadowBox(
+                              //   child: _buildCustomExpansionSection(
+                              //     title: "Trainings",
+                              //     icon: Icons.school,
+                              //     children: trainings.take(3).map((training) => 
+                              //       GestureDetector(
+                              //         onTap: () => _navigateToTraining(context),
+                              //         child: _buildCompactListItem(
+                              //           icon: Icons.school,
+                              //           title: training.title,
+                              //           subtitle: training.date,
+                              //           trailing: training.status,
+                              //           color: AppColors.infoBlue,
+                              //           context: context,
+                              //         ),
+                              //       )
+                              //     ).toList(),
+                              //     context: context,
+                              //     onSeeAll: () => _navigateToTraining(context),
+                              //   ),
+                              // ),
                               
                               const SizedBox(height: 12),
                               
                               _buildShadowBox(
                                 child: _buildCustomExpansionSection(
-                                  title: "My Rota",
+                                  title: "My Shift",
                                   icon: Icons.schedule,
-                                  children: rotaShifts.take(3).map((rota) => 
-                                    _buildCompactListItem(
-                                      icon: Icons.schedule,
-                                      title: rota.shift,
-                                      subtitle: rota.location,
-                                      trailing: rota.date,
-                                      color: AppColors.purple,
-                                      context: context,
-                                    )
-                                  ).toList(),
+                                  children: _loadingShifts
+                                      ? [
+                                          const Padding(
+                                            padding: EdgeInsets.symmetric(vertical: 16),
+                                            child: Center(
+                                              child: CircularProgressIndicator(
+                                                color: AppColors.purple,
+                                                strokeWidth: 2,
+                                              ),
+                                            ),
+                                          )
+                                        ]
+                                      : rotaShifts.isEmpty
+                                          ? [
+                                              Padding(
+                                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                                child: Center(
+                                                  child: Column(
+                                                    children: [
+                                                      Icon(Icons.schedule_outlined,
+                                                          size: 36,
+                                                          color: AppColors.textBodyColor.withOpacity(0.5)),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        'No shifts this week',
+                                                        style: GoogleFonts.poppins(
+                                                          fontSize: 12,
+                                                          color: AppColors.textBodyColor,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ]
+                                          : rotaShifts.take(3).map((rota) =>
+                                              _buildCompactListItem(
+                                                icon: Icons.schedule,
+                                                title: rota.shift,
+                                                subtitle: rota.location,
+                                                trailing: rota.date,
+                                                color: AppColors.purple,
+                                                context: context,
+                                              )
+                                            ).toList(),
                                   context: context,
-                                  onSeeAll: () => _showEventDetails("My Rota"),
+                                  onSeeAll: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const HRShiftScreen(),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                               
@@ -1419,7 +1614,7 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: screenWidth * 0.35,
+        width: screenWidth * 0.38,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,

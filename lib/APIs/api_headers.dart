@@ -26,7 +26,7 @@ class ApiHeaders {
       'clinicid': isClinicAdmin
           ? 'admin'
           : (isHrRequest
-              ? 'hr_staging'
+              ? (clinicId.isNotEmpty ? '${clinicId}_hrms' : 'hr_staging')
               : (clinicId.isNotEmpty ? clinicId : 'hr_staging')),
       if (authorizationToken.isNotEmpty) 'Authorization': authorizationToken,
       if (zoneId.isNotEmpty) 'zoneid': zoneId,

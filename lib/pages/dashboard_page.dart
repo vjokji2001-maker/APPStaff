@@ -17,6 +17,7 @@ class _DashboardPageState extends State<DashboardPage> {
   int _currentTab = 0;
 
   final PageStorageBucket _bucket = PageStorageBucket();
+  final GlobalKey<SmartCareHomeScreenState> _homeScreenKey = GlobalKey<SmartCareHomeScreenState>();
 
   // Keys to maintain nested navigation
   final List<GlobalKey<NavigatorState>> _navigatorKeys = [
@@ -27,16 +28,21 @@ class _DashboardPageState extends State<DashboardPage> {
   ];
 
   // The actual pages
-  final List<Widget> _pages = [
-    const SmartCareHomeScreen(key: PageStorageKey('Page1')),
-    const IpdDashboardPage(key: PageStorageKey('Page4')),
-    const HRDashboardScreen(key: PageStorageKey('PageHR')),
-    const MyTasksPage(key: PageStorageKey('Page6')),
-  ];
+  late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
+    _pages = [
+      SmartCareHomeScreen(
+        key: _homeScreenKey,
+        onTabChange: changeTab,
+        onNavigateToTasks: navigateToTasks,
+      ),
+      const IpdDashboardPage(key: PageStorageKey('Page4')),
+      const HRDashboardScreen(key: PageStorageKey('PageHR')),
+      const MyTasksPage(key: PageStorageKey('Page6')),
+    ];
     
     // Set session expiry callback
     SessionManager.setSessionExpiryCallback((showDialog) {
@@ -165,6 +171,9 @@ class _DashboardPageState extends State<DashboardPage> {
       setState(() {
         _currentTab = index;
       });
+      if (index == 0) {
+        _homeScreenKey.currentState?.refreshData();
+      }
     }
   }
 
