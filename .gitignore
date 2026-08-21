@@ -9,7 +9,7 @@
 .pub-cache/
 .pub/
 /build/
-pubspec.lock
+# pubspec.lock  <-- intentionally tracked for team version consistency
 
 # ============================================================
 # Android build artifacts
