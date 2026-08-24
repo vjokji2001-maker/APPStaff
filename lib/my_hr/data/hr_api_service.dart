@@ -206,7 +206,7 @@ class HRApiService {
       if (id.isEmpty) throw Exception('Employee ID is missing');
       final resolvedYearId = yearId ?? await getCurrentYearCycleId();
       final body = {
-        "empId": id,
+        "employeeId": id,
         if (resolvedYearId != null) "yearId": resolvedYearId,
       };
       

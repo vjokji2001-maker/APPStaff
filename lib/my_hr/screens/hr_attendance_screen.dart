@@ -30,6 +30,7 @@ class HRAttendanceScreen extends StatefulWidget {
 class _HRAttendanceScreenState extends State<HRAttendanceScreen> {
   int _tab = 0;
   bool _isLoading = true;
+  DateTime _selectedMonth = DateTime.now();
   AttendanceSummary? _summary;
   List<AttendanceRecord> _records = [];
   List<double> _trendValues = [];
@@ -43,9 +44,11 @@ class _HRAttendanceScreenState extends State<HRAttendanceScreen> {
   }
 
   Future<void> _fetchAttendance() async {
+    setState(() {
+      _isLoading = true;
+    });
     try {
-      final now = DateTime.now();
-      final monthYear = '${now.month.toString().padLeft(2, '0')}-${now.year}';
+      final monthYear = '${_selectedMonth.month.toString().padLeft(2, '0')}-${_selectedMonth.year}';
       final res = await HRApiService.getMyAttendance(monthYear: monthYear);
       final responseMap = Map<String, dynamic>.from(res);
 
@@ -108,14 +111,20 @@ class _HRAttendanceScreenState extends State<HRAttendanceScreen> {
           onTabChanged: (i) => setState(() => _tab = i),
           activeColor: HRTheme.attendance,
         ),
-        Expanded(child: _isLoading 
-          ? const Center(child: CircularProgressIndicator()) 
-          : IndexedStack(index: _tab, children: [
-          _buildTodayTab(),
-          _buildHistoryTab(),
-          _buildSummaryTab(),
-          _buildReportTab(),
-        ])),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _fetchAttendance,
+            color: HRTheme.attendance,
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator()) 
+              : IndexedStack(index: _tab, children: [
+                  _buildTodayTab(),
+                  _buildHistoryTab(),
+                  _buildSummaryTab(),
+                  _buildReportTab(),
+                ]),
+          ),
+        ),
       ]),
     );
   }
@@ -239,7 +248,7 @@ Widget _buildTodayTab() {
                           fontWeight: FontWeight.w500,
                         )),
                     const SizedBox(height: 8),
-                    Text(_todayDateLabel(DateTime.now()),
+                    Text(_todayDateLabel(_selectedMonth),
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontSize: 22,
@@ -264,15 +273,18 @@ Widget _buildTodayTab() {
                   ],
                 ),
               ),
-              Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(26),
+              GestureDetector(
+                onTap: _pickMonthYear,
+                child: Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(26),
+                  ),
+                  child: const Icon(Icons.event_available_rounded,
+                      color: Colors.white, size: 44),
                 ),
-                child: const Icon(Icons.event_available_rounded,
-                    color: Colors.white, size: 44),
               ),
             ],
           ),
@@ -402,14 +414,6 @@ Widget _buildTodayTab() {
           ),
         ),
 
-        const SizedBox(height: 20),
-
-        HRPrimaryButton(
-          label: 'Apply Attendance Correction',
-          icon: Icons.edit_calendar,
-          color: HRTheme.attendance,
-          onPressed: _showCorrectionSheet,
-        ),
       ],
     ),
   );
@@ -696,8 +700,7 @@ Widget _buildTodayTab() {
   }
 
   String get _displayMonthYear {
-    final now = DateTime.now();
-    return '${_month(now.month)} ${now.year}';
+    return '${_month(_selectedMonth.month)} ${_selectedMonth.year}';
   }
 
   String get _attendanceInsight {
@@ -747,7 +750,7 @@ Widget _buildTodayTab() {
 
   AttendanceRecord? get _currentRecord {
     if (_records.isEmpty) return null;
-    final today = DateTime.now();
+    final today = _selectedMonth;
     return _records.firstWhere(
       (record) {
         final date = _parseRecordDate(record.date);
@@ -755,6 +758,21 @@ Widget _buildTodayTab() {
       },
       orElse: () => _records.first,
     );
+  }
+
+  Future<void> _pickMonthYear() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedMonth,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null && (picked.month != _selectedMonth.month || picked.year != _selectedMonth.year)) {
+      setState(() {
+        _selectedMonth = picked;
+      });
+      _fetchAttendance();
+    }
   }
 
   void _prepareAttendanceTrend(List<AttendanceRecord> records) {
@@ -1014,13 +1032,6 @@ Widget _buildTodayTab() {
     }
     return _records;
   }
-
-  void _showCorrectionSheet() {
-    showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (_) => _CorrectionBottomSheet(),
-    );
-  }
 }
 
 // ── Attendance record card ────────────────────────────────────────────────────
@@ -1092,10 +1103,12 @@ class _AttendanceCard extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
+              _detailChip('Shift In', record.shiftInTime, Icons.schedule, HRTheme.primaryDark),
+              _detailChip('Shift Out', record.shiftOutTime, Icons.schedule, HRTheme.primaryDark),
               _detailChip('Punch In', record.punchIn, Icons.login, HRTheme.success),
               _detailChip('Punch Out', record.punchOut, Icons.logout, HRTheme.error),
-              _detailChip('Work Hours', record.workHours, Icons.timer, HRTheme.attendance),
-              _detailChip('Extra', record.extraHours, Icons.add_task_rounded, HRTheme.cyan),
+              _detailChip('Work Hrs', record.workHours, Icons.timer, HRTheme.attendance),
+              _detailChip('Extra Hrs', record.extraHours, Icons.add_task_rounded, HRTheme.cyan),
             ],
           ),
         ],
@@ -1127,54 +1140,6 @@ class _AttendanceCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _CorrectionBottomSheet extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        top: 20, left: 16, right: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark ? HRTheme.bgCardDark : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(HRTheme.radiusXXL)),
-      ),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Center(child: Container(width: 40, height: 4,
-            decoration: BoxDecoration(color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(HRTheme.radiusFull)))),
-        const SizedBox(height: 16),
-        Text('Attendance Correction Request', style: GoogleFonts.poppins(
-            fontSize: 16, fontWeight: FontWeight.w700, color: HRTheme.textPrimary)),
-        const SizedBox(height: 16),
-        TextFormField(decoration: InputDecoration(labelText: 'Date',
-            prefixIcon: const Icon(Icons.calendar_today_rounded),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(HRTheme.radiusSM)))),
-        const SizedBox(height: 12),
-        TextFormField(decoration: InputDecoration(labelText: 'Correct Punch In Time',
-            prefixIcon: const Icon(Icons.login),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(HRTheme.radiusSM)))),
-        const SizedBox(height: 12),
-        TextFormField(decoration: InputDecoration(labelText: 'Correct Punch Out Time',
-            prefixIcon: const Icon(Icons.logout),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(HRTheme.radiusSM)))),
-        const SizedBox(height: 12),
-        TextFormField(maxLines: 3, decoration: InputDecoration(labelText: 'Reason',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(HRTheme.radiusSM)))),
-        const SizedBox(height: 16),
-        HRPrimaryButton(label: 'Submit Request', icon: Icons.send_rounded,
-            color: HRTheme.attendance,
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Correction request submitted!', style: GoogleFonts.poppins()),
-                backgroundColor: HRTheme.success, behavior: SnackBarBehavior.floating));
-            }),
-      ]),
     );
   }
 }

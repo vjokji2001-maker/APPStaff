@@ -195,21 +195,39 @@ class AttendanceRecord {
   });
 
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
+    print('DEBUG: AttendanceRecord.fromJson called with: $json');
     final empIn = json['empInTime']?.toString() ?? '';
     final empOut = json['empOutTime']?.toString() ?? '';
     final shiftIn = json['shiftInTime']?.toString() ?? '';
     final shiftOut = json['shiftOutTime']?.toString() ?? '';
     final lateMark = (json['lateInMark'] ?? 0).toString();
     final earlyMark = (json['earlyOutMark'] ?? 0).toString();
+    
+    // Map dayType (e.g. ABS, PR, WO) to a readable status
+    String rawDayType = (json['dayType'] ?? json['dayType1'] ?? '').toString().toUpperCase();
+    String mappedStatus = json['status'] ?? 'Unknown';
+    if (rawDayType == 'ABS') mappedStatus = 'Absent';
+    else if (rawDayType == 'PR') mappedStatus = 'Present';
+    else if (rawDayType == 'WO') mappedStatus = 'Holiday';
+    else if (rawDayType == 'HD') mappedStatus = 'Half Day';
+    else if (rawDayType == 'LV') mappedStatus = 'Leave';
+    else if (rawDayType.isNotEmpty) mappedStatus = rawDayType;
+
+    // Use empInTime if valid, do NOT fallback to shiftInTime because that implies they punched in when they didn't
+    final finalPunchIn = (empIn.isNotEmpty && empIn != 'null') ? empIn : '–';
+    final finalPunchOut = (empOut.isNotEmpty && empOut != 'null') ? empOut : '–';
+
+    print('DEBUG: Final mapped values -> punchIn: $finalPunchIn, punchOut: $finalPunchOut, status: $mappedStatus');
+
     return AttendanceRecord(
       date: json['date'] ?? '',
       shiftCode: json['shiftCode'] ?? '',
-      shiftInTime: shiftIn,
-      shiftOutTime: shiftOut,
-      punchIn: empIn.isNotEmpty ? empIn : '–',
-      punchOut: empOut.isNotEmpty ? empOut : '–',
-      status: json['status'] ?? json['dayType'] ?? 'Unknown',
-      dayType: json['dayType1'] ?? json['dayType'] ?? '',
+      shiftInTime: json['shiftInTime']?.toString() ?? '00:00:00',
+      shiftOutTime: json['shiftOutTime']?.toString() ?? '00:00:00',
+      punchIn: finalPunchIn,
+      punchOut: finalPunchOut,
+      status: mappedStatus,
+      dayType: rawDayType,
       workHours: json['totalHours'] ?? '–',
       isLate: double.tryParse(lateMark) != null && double.parse(lateMark) > 0,
       isEarlyExit: double.tryParse(earlyMark) != null && double.parse(earlyMark) > 0,
@@ -278,12 +296,15 @@ class AttendanceSummary {
     final late = records.where((r) => r.isLate).length;
     final earlyExit = records.where((r) => r.isEarlyExit).length;
     final halfDay = records.where((r) => r.status.toLowerCase().contains('half')).length;
-    final holidays = records.where((r) => r.status.toLowerCase() == 'holiday').length;
+    final holidays = records.where((r) => r.status.toLowerCase() == 'holiday' || r.status.toLowerCase() == 'wo').length;
     final leaves = records.where((r) => r.status.toLowerCase() == 'leave').length;
-    final attendancePercentage = total == 0 ? 0.0 : (present / total) * 100;
+    
+    // Only count days that are not holidays/weekends for total working days
+    final workingDays = records.where((r) => r.status.toLowerCase() != 'holiday' && r.status.toLowerCase() != 'wo').length;
+    final attendancePercentage = workingDays == 0 ? 0.0 : (present / workingDays) * 100;
 
     return AttendanceSummary(
-      totalWorkingDays: total,
+      totalWorkingDays: workingDays,
       present: present,
       absent: absent,
       late: late,

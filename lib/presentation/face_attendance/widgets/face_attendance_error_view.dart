@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../theme/hr_theme.dart';
 
 class FaceAttendanceErrorView extends StatefulWidget {
@@ -100,6 +101,7 @@ class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
     final details = _parsedError['details'] ?? '';
     final isJpaError = details.contains('JPA') || details.contains('EntityManager') || widget.rawError.contains('EntityManager');
     final isFaceMismatch = message.toLowerCase().contains('face');
+    final isLocationError = message.toLowerCase().contains('location') || details.toLowerCase().contains('location');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
@@ -166,11 +168,13 @@ class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    isJpaError
-                        ? 'This is a server-side database issue. Please copy the technical details below and share it with your administrator/IT support.'
-                        : isFaceMismatch
-                            ? 'The system was unable to verify your face. Please ensure you are standing in a well-lit area, looking straight at the camera, and not wearing sunglasses or masks.'
-                            : 'An unexpected verification error occurred. Please verify your internet connection and try again.',
+                    isLocationError
+                        ? 'Your device\'s location services or permissions are disabled. Please enable them in your device settings to proceed with attendance.'
+                        : isJpaError
+                            ? 'This is a server-side database issue. Please copy the technical details below and share it with your administrator/IT support.'
+                            : isFaceMismatch
+                                ? 'The system was unable to verify your face. Please ensure you are standing in a well-lit area, looking straight at the camera, and not wearing sunglasses or masks.'
+                                : 'An unexpected verification error occurred. Please verify your internet connection and try again.',
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       height: 1.4,
@@ -305,6 +309,33 @@ class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
           const SizedBox(height: 32),
 
           // Primary and Secondary Buttons
+          if (isLocationError) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await Geolocator.openLocationSettings();
+                },
+                icon: const Icon(Icons.settings),
+                label: Text(
+                  'Open Settings',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueGrey.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Row(
             children: [
               Expanded(

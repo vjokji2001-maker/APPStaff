@@ -48,9 +48,7 @@ class FaceEnrollmentUseCaseImpl implements FaceEnrollmentUseCase {
       "punchDirection": punchDirection,
       "faceEmbedding": faceEmbedding,
       "latitude": latitude,
-      "longitude": longitude,
-      "punchTime": nowIso,
-      "currentTime": nowIso
+      "longitude": longitude
     };
 
     try {

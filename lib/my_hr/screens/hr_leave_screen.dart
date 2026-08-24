@@ -772,11 +772,54 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
     String toDuration = 'FULL_DAY';
     final reasonCtrl = TextEditingController();
     
+    List<LeaveBalance> dialogBalances = [];
+    bool isLoadingBalances = true;
+
+    Future<void> fetchDialogBalances(StateSetter ss, int? yearId) async {
+      ss(() => isLoadingBalances = true);
+      try {
+        final res = await HRApiService.getLeaveBalances(yearId: yearId);
+        List<dynamic> dataList = [];
+        if (res is Map) {
+          final dataMap = res['data'];
+          if (dataMap is List) {
+            dataList = dataMap;
+          } else if (dataMap is Map) {
+            dataList = dataMap['dataList'] ?? dataMap['content'] ?? [];
+          } else {
+            dataList = res['dataList'] ?? res['content'] ?? [];
+          }
+        } else if (res is List) {
+          dataList = res;
+        }
+        if (!mounted) return;
+        ss(() {
+          dialogBalances = dataList.map((e) => LeaveBalance.fromJson(e)).toList();
+          if (selectedBalance != null && !dialogBalances.any((b) => b.leaveNameId == selectedBalance?.leaveNameId)) {
+            selectedBalance = null;
+          }
+          isLoadingBalances = false;
+        });
+      } catch (e) {
+        if (!mounted) return;
+        ss(() {
+          dialogBalances = [];
+          selectedBalance = null;
+          isLoadingBalances = false;
+        });
+      }
+    }
+    
+    bool _init = false;
     showDialog(
       context: context,
       barrierDismissible: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, ss) {
+          if (!_init) {
+            _init = true;
+            fetchDialogBalances(ss, selectedYearId);
+          }
           final isDark = Theme.of(context).brightness == Brightness.dark;
           
           // Auto calculate total days
@@ -836,6 +879,7 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                       // 1. Year Dropdown
                       DropdownButtonFormField<int>(
                         value: selectedYearId,
+                        hint: Text('Select Year', style: GoogleFonts.poppins(fontSize: 13, color: HRTheme.textSecondary)),
                         decoration: InputDecoration(
                           labelText: 'Year *',
                           labelStyle: GoogleFonts.poppins(fontSize: 13),
@@ -852,13 +896,19 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                             style: GoogleFonts.poppins(fontSize: 13),
                           ),
                         )).toList(),
-                        onChanged: (v) => ss(() => selectedYearId = v),
+                        onChanged: (v) {
+                          ss(() => selectedYearId = v);
+                          fetchDialogBalances(ss, v);
+                        },
                       ),
                       const SizedBox(height: 14),
                       
                       // 2. Leave Name Dropdown
-                      DropdownButtonFormField<LeaveBalance>(
+                      isLoadingBalances
+                        ? const Center(child: Padding(padding: EdgeInsets.all(12), child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator())))
+                        : DropdownButtonFormField<LeaveBalance>(
                         value: selectedBalance,
+                        hint: Text('Select Leave Name', style: GoogleFonts.poppins(fontSize: 13, color: HRTheme.textSecondary)),
                         decoration: InputDecoration(
                           labelText: 'Leave Name *',
                           labelStyle: GoogleFonts.poppins(fontSize: 13),
@@ -868,7 +918,7 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
                         dropdownColor: isDark ? HRTheme.bgCardDark : Colors.white,
-                        items: _balances.map((b) => DropdownMenuItem<LeaveBalance>(
+                        items: dialogBalances.map((b) => DropdownMenuItem<LeaveBalance>(
                           value: b,
                           child: Text(
                             b.leaveType,
@@ -1099,11 +1149,9 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                                 return;
                               }
                               
-                              Navigator.pop(ctx); // Close dialog popup
-                              
-                              // Show loading dialog
+                              // Show loading dialog ON TOP of the form dialog
                               showDialog(
-                                context: context,
+                                context: ctx,
                                 barrierDismissible: false,
                                 builder: (ctx2) => const Center(child: CircularProgressIndicator()),
                               );
@@ -1135,7 +1183,8 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                                 final response = await HRApiService.applyLeave(payload);
                                 
                                 if (!mounted) return;
-                                Navigator.pop(context); // Close loading dialog
+                                Navigator.pop(ctx); // Close loading dialog
+                                Navigator.pop(ctx); // Close form dialog
                                 
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                                   content: Text(response['message'] ?? 'Leave request submitted successfully!', style: GoogleFonts.poppins()),
@@ -1146,16 +1195,33 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                                 // Refresh lists
                                 _fetchBalances();
                                 _fetchApplications();
-                              } catch (e) {
-                                if (!mounted) return;
-                                Navigator.pop(context); // Close loading dialog
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text('Error: $e', style: GoogleFonts.poppins()),
-                                  backgroundColor: Colors.red,
-                                  behavior: SnackBarBehavior.floating,
-                                ));
-                              }
-                            },
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  Navigator.pop(ctx); // Close loading dialog ONLY
+                                  
+                                  String errorMessage = e.toString().replaceAll('Exception: ', '');
+                                  try {
+                                    final errorStr = e.toString();
+                                    if (errorStr.contains('{')) {
+                                      final jsonStr = errorStr.substring(errorStr.indexOf('{'));
+                                      final errorJson = jsonDecode(jsonStr);
+                                      if (errorJson['error'] != null && errorJson['error']['cause'] != null) {
+                                        errorMessage = errorJson['error']['cause'];
+                                      } else if (errorJson['message'] != null) {
+                                        errorMessage = errorJson['message'];
+                                      }
+                                    }
+                                  } catch (_) {
+                                    // Ignore parse errors, use default message
+                                  }
+
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                    content: Text(errorMessage, style: GoogleFonts.poppins()),
+                                    backgroundColor: Colors.red,
+                                    behavior: SnackBarBehavior.floating,
+                                  ));
+                                }
+                              },
                             child: Text(
                               'Apply for Leave',
                               style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),

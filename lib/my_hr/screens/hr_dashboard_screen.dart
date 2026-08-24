@@ -83,10 +83,10 @@ String _punchTime = '';
   Future<void> _loadAllData() async {
     _fetchProfile();
     await Future.wait([
-      // _fetchAttendance(),
-      // _fetchLeaveBalances(),
-      // _fetchPayroll(),
-      // _fetchHolidays(),
+      _fetchAttendance(),
+      _fetchLeaveBalances(),
+      _fetchPayroll(),
+      _fetchHolidays(),
       // _fetchAnnouncements(),
       // _fetchBirthdays(),
       // _fetchTrainings(),

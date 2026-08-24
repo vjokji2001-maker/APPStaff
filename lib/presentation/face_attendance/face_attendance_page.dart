@@ -21,12 +21,7 @@ class FaceAttendancePage extends StatelessWidget {
       create: (_) => getIt<FaceAttendanceCubit>()..initialize(punchDirection),
       child: BlocBuilder<FaceAttendanceCubit, FaceAttendanceState>(
         builder: (context, state) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(punchDirection == 'IN' ? 'Check In' : 'Check Out', style: GoogleFonts.poppins()),
-            ),
-            body: _buildBody(state, context),
-          );
+          return _buildBody(state, context);
         },
       ),
     );
@@ -34,24 +29,26 @@ class FaceAttendancePage extends StatelessWidget {
 
   Widget _buildBody(FaceAttendanceState state, BuildContext context) {
     if (state is FaceAttendanceInitial) {
-      return const Center(child: Text('Preparing...'));
+      return const Scaffold(body: Center(child: Text('Preparing...')));
     } else if (state is FaceAttendancePermissionLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     } else if (state is FaceAttendancePermissionDenied) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error, color: Colors.red, size: 48),
-            const SizedBox(height: 12),
-            Text('Permissions required: ${state.missing.join(', ')}',
-                style: GoogleFonts.poppins()),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => context.read<FaceAttendanceCubit>().requestPermissions(),
-              child: const Text('Grant Permissions'),
-            ),
-          ],
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error, color: Colors.red, size: 48),
+              const SizedBox(height: 12),
+              Text('Permissions required: ${state.missing.join(', ')}',
+                  style: GoogleFonts.poppins()),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => context.read<FaceAttendanceCubit>().requestPermissions(),
+                child: const Text('Grant Permissions'),
+              ),
+            ],
+          ),
         ),
       );
     } else if (state is FaceAttendanceReady) {
@@ -61,11 +58,13 @@ class FaceAttendancePage extends StatelessWidget {
     } else if (state is FaceAttendanceSuccess) {
       return AttendanceSuccessScreen(attendance: state.attendance);
     } else if (state is FaceAttendanceError) {
-      return FaceAttendanceErrorView(
-        rawError: state.message,
-        onRetry: () => context.read<FaceAttendanceCubit>().retry(),
+      return Scaffold(
+        body: FaceAttendanceErrorView(
+          rawError: state.message,
+          onRetry: () => context.read<FaceAttendanceCubit>().retry(),
+        )
       );
     }
-    return const SizedBox.shrink();
+    return const Scaffold(body: SizedBox.shrink());
   }
 }

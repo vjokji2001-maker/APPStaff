@@ -7,8 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:screen_protector/screen_protector.dart';
+import 'package:staff_mate/my_hr/theme/hr_theme.dart';
 import 'package:sensors_plus/sensors_plus.dart';
-
 enum LivenessChallengeType { blink, smile }
 
 class CameraView extends StatefulWidget {
@@ -266,7 +266,7 @@ class _CameraViewState extends State<CameraView> with SingleTickerProviderStateM
           children: [
             const CircularProgressIndicator(color: Colors.cyanAccent),
             const SizedBox(height: 16),
-            Text('INITIALIZING AI ENGINE...', style: GoogleFonts.shareTechMono(color: Colors.cyanAccent, fontSize: 16)),
+            Text('Initializing Camera...', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16)),
           ],
         ),
       );
@@ -275,220 +275,201 @@ class _CameraViewState extends State<CameraView> with SingleTickerProviderStateM
     final size = MediaQuery.of(context).size;
     var scale = size.aspectRatio * _controller!.value.aspectRatio;
     if (scale < 1) scale = 1 / scale;
+    
+    final darkBgColor = const Color(0xFF071118);
+    final cyanAccentColor = const Color(0xFF00FFC2);
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Transform.scale(
-          scale: scale,
-          child: Center(
-            child: CameraPreview(_controller!),
-          ),
-        ),
-        // Techy Overlay mask
-        ColorFiltered(
-          colorFilter: const ColorFilter.mode(
-            Colors.black87, // Darker for AI aesthetic
-            BlendMode.srcOut,
-          ),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Container(
-                decoration: const BoxDecoration(
-                  color: Colors.black,
-                  backgroundBlendMode: BlendMode.dstOut,
-                ),
+    return Scaffold(
+      backgroundColor: darkBgColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top Section: Header
+            const SizedBox(height: 20),
+            Icon(Icons.security_rounded, color: cyanAccentColor, size: 36),
+            const SizedBox(height: 8),
+            Text('FACE AUTHENTICATION', style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+            const SizedBox(height: 4),
+            Text('Secure • Fast • Reliable', style: GoogleFonts.poppins(color: cyanAccentColor.withOpacity(0.7), fontSize: 13)),
+            const SizedBox(height: 20),
+            
+            // Liveness Box
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: cyanAccentColor.withOpacity(0.05),
+                border: Border.all(color: cyanAccentColor.withOpacity(0.3)),
+                borderRadius: BorderRadius.circular(12),
               ),
-              Align(
-                alignment: const Alignment(0.0, -0.2),
-                child: Container(
-                  height: 380,
-                  width: 280,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(200),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: cyanAccentColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.check, color: Colors.black, size: 20),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('LIVENESS CHECK REQUIRED', style: GoogleFonts.poppins(color: cyanAccentColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                        Text('Position your face within the frame and stay still', style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
+                      ],
+                    ),
+                  )
+                ],
               ),
-            ],
-          ),
-        ),
-        
-        // AI HUD Grid & Scanner Line
-        Align(
-          alignment: const Alignment(0.0, -0.2),
-          child: SizedBox(
-            height: 380,
-            width: 280,
-            child: Stack(
-              children: [
-                CustomPaint(
-                  size: const Size(280, 380),
-                  painter: ScannerCornersPainter(),
-                ),
-                AnimatedBuilder(
-                  animation: _scanAnimation,
-                  builder: (context, child) {
-                    return Align(
-                      alignment: Alignment(0.0, _scanAnimation.value), 
-                      child: Container(
-                        height: 4,
-                        width: double.infinity,
-                        margin: const EdgeInsets.symmetric(horizontal: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.cyanAccent,
-                          boxShadow: [
-                            BoxShadow(color: Colors.cyanAccent.withOpacity(0.8), blurRadius: 15, spreadRadius: 4),
-                            BoxShadow(color: Colors.blue.withOpacity(0.6), blurRadius: 30, spreadRadius: 8),
-                          ],
-                          borderRadius: BorderRadius.circular(10),
+            ),
+            
+            const Spacer(),
+            
+            // Camera Area
+            SizedBox(
+              height: 320,
+              width: 320,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Camera Feed (Circular)
+                  ClipOval(
+                    child: SizedBox(
+                      width: 300,
+                      height: 300,
+                      child: Transform.scale(
+                        scale: scale,
+                        child: Center(
+                          child: CameraPreview(_controller!),
                         ),
                       ),
-                    );
-                  },
-                ),
-                // Grid overlay
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: 0.15,
-                    child: CustomPaint(painter: GridPainter()),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        
-        // HUD Texts
-        Positioned(
-          top: 50,
-          left: 20,
-          child: AnimatedBuilder(
-            animation: _opacityAnimation,
-            builder: (context, child) {
-              return Opacity(
-                opacity: _opacityAnimation.value,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('SYS // ONLINE', style: GoogleFonts.shareTechMono(color: Colors.cyanAccent, fontSize: 13, letterSpacing: 1.2)),
-                    const SizedBox(height: 4),
-                    Text('AI_MESH // ACTIVE', style: GoogleFonts.shareTechMono(color: Colors.cyanAccent, fontSize: 13, letterSpacing: 1.2)),
-                    const SizedBox(height: 4),
-                    Text('BIOMETRICS // STANDBY', style: GoogleFonts.shareTechMono(color: Colors.cyanAccent, fontSize: 13, letterSpacing: 1.2)),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-        
-        Positioned(
-          top: 50,
-          right: 20,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('LAT: ${(_isDeviceMoving ? 21.1498 + Random().nextDouble() * 0.0001 : 21.1498).toStringAsFixed(4)}', style: GoogleFonts.shareTechMono(color: Colors.greenAccent, fontSize: 12)),
-              Text('LNG: ${(79.0820 + Random().nextDouble() * 0.0001).toStringAsFixed(4)}', style: GoogleFonts.shareTechMono(color: Colors.greenAccent, fontSize: 12)),
-            ],
-          ),
-        ),
-
-        // Warning Banner
-        if (_warningMessage.isNotEmpty)
-          Positioned(
-            top: 100, 
-            left: 20, 
-            right: 20,
-            child: Text(
-              _warningMessage,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.shareTechMono(
-                color: Colors.redAccent, 
-                fontWeight: FontWeight.bold, 
-                fontSize: 16,
-                shadows: [
-                  Shadow(color: Colors.black.withOpacity(0.8), blurRadius: 4, offset: const Offset(1, 1)),
-                  Shadow(color: Colors.black, blurRadius: 8, offset: const Offset(0, 0)),
-                ]
-              ),
-            ),
-          ),
-        
-        // Instructions
-        Positioned(
-          bottom: 230,
-          left: 0, 
-          right: 0,
-          child: Text(
-            'POSITION FACE WITHIN HUD',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.shareTechMono(
-              color: Colors.white70, 
-              fontSize: 14, 
-              letterSpacing: 2.0,
-              shadows: [
-                Shadow(color: Colors.black.withOpacity(0.8), blurRadius: 4, offset: const Offset(1, 1))
-              ]
-            ),
-          ),
-        ),
-        
-        Positioned(
-          bottom: 120,
-          left: 0, right: 0,
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 40),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _challengePassed ? Colors.green.withOpacity(0.85) : Colors.black87,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _challengePassed ? Colors.greenAccent : Colors.cyanAccent, 
-                width: 2
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: _challengePassed ? Colors.greenAccent.withOpacity(0.4) : Colors.cyanAccent.withOpacity(0.3), 
-                  blurRadius: 15, 
-                  spreadRadius: 2
-                )
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _challengePassed 
-                      ? 'IDENTITY VERIFIED'
-                      : 'LIVENESS CHECK REQUIRED',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.shareTechMono(
-                    color: _challengePassed ? Colors.white : Colors.cyanAccent, 
-                    fontSize: 16, 
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                if (!_challengePassed) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    _currentChallenge == LivenessChallengeType.blink 
-                        ? '> EXECUTING: BLINK_PROTOCOL'
-                        : '> EXECUTING: SMILE_PROTOCOL',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.shareTechMono(
-                      color: Colors.white, 
-                      fontSize: 14, 
                     ),
                   ),
-                ]
+                  
+                  // Circular Border
+                  Container(
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: cyanAccentColor, width: 2),
+                      boxShadow: [
+                        BoxShadow(color: cyanAccentColor.withOpacity(0.2), blurRadius: 20, spreadRadius: 5),
+                      ]
+                    ),
+                  ),
+                  
+                  // Grid Overlay (within circle)
+                  ClipOval(
+                    child: SizedBox(
+                      width: 300,
+                      height: 300,
+                      child: Opacity(
+                        opacity: 0.2,
+                        child: CustomPaint(painter: GridPainter()),
+                      ),
+                    ),
+                  ),
+                  
+                  // Scanning Line
+                  AnimatedBuilder(
+                    animation: _scanAnimation,
+                    builder: (context, child) {
+                      return Align(
+                        alignment: Alignment(0.0, _scanAnimation.value),
+                        child: Container(
+                          width: 280,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: cyanAccentColor,
+                            boxShadow: [
+                              BoxShadow(color: cyanAccentColor, blurRadius: 10, spreadRadius: 2),
+                              BoxShadow(color: Colors.white, blurRadius: 4, spreadRadius: 1),
+                            ]
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  
+                  // Corner brackets
+                  CustomPaint(
+                    size: const Size(320, 320),
+                    painter: ScannerCornersPainter(),
+                  ),
+                ],
+              ),
+            ),
+            
+            const Spacer(),
+            
+            // Status Text below camera
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.verified_user_outlined, color: cyanAccentColor, size: 24),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_warningMessage.isNotEmpty ? _warningMessage : 'Scanning Face...', style: GoogleFonts.poppins(color: cyanAccentColor, fontSize: 13, fontWeight: FontWeight.bold)),
+                    if (_warningMessage.isEmpty)
+                      Text('Please do not move', style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
+                  ],
+                ),
               ],
             ),
-          ),
+            
+            const SizedBox(height: 24),
+            
+            // Bottom 4 Icons Panel
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: cyanAccentColor.withOpacity(0.03),
+                border: Border.all(color: cyanAccentColor.withOpacity(0.2)),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildInstructionItem(Icons.person_outline, 'Face in Frame', cyanAccentColor),
+                  _buildInstructionItem(Icons.light_mode_outlined, 'Good Lighting', cyanAccentColor),
+                  _buildInstructionItem(Icons.sentiment_satisfied_outlined, 'Look Straight', cyanAccentColor),
+                  _buildInstructionItem(Icons.mobile_friendly_outlined, 'Hold Steady', cyanAccentColor),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Footer
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.lock_outline, color: Colors.white54, size: 14),
+                const SizedBox(width: 6),
+                Text('Your biometric data is secure and encrypted', style: GoogleFonts.poppins(color: Colors.white54, fontSize: 11)),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInstructionItem(IconData icon, String label, Color color) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 28),
+        const SizedBox(height: 8),
+        Text(label, style: GoogleFonts.poppins(color: Colors.white70, fontSize: 10)),
       ],
     );
   }
