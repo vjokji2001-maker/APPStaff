@@ -106,7 +106,7 @@ class _HRAttendanceScreenState extends State<HRAttendanceScreen> {
           actions: [_searchAction()],
         ),
         HRTabBar(
-          tabs: const ['Today', 'History', 'Summary', 'Report'],
+          tabs: const ['Today', 'History', 'Summary' /*, 'Report'*/],  // TODO: Report tab - baad mein enable karna hai
           selectedIndex: _tab,
           onTabChanged: (i) => setState(() => _tab = i),
           activeColor: HRTheme.attendance,
@@ -121,7 +121,7 @@ class _HRAttendanceScreenState extends State<HRAttendanceScreen> {
                   _buildTodayTab(),
                   _buildHistoryTab(),
                   _buildSummaryTab(),
-                  _buildReportTab(),
+                  // _buildReportTab(),  // TODO: Report tab - baad mein enable karna hai
                 ]),
           ),
         ),

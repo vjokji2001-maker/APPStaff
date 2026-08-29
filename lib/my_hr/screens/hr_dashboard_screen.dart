@@ -95,6 +95,26 @@ String _punchTime = '';
     if (mounted) setState(() => _isLoading = false);
   }
 
+  /// Pull-to-refresh handler — sab data dobara load hoga
+  Future<void> _refreshAllData() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _emp = null;
+        _summary = null;
+        _leaveBalances = [];
+        _salarySlips = [];
+        _holidays = [];
+        announcements = [];
+        todayBirthdays = [];
+        upcomingBirthdays = [];
+        trainings = [];
+        documents = [];
+      });
+    }
+    await _loadAllData();
+  }
+
   Future<void> _fetchAnnouncements() async {
     // TODO: Replace with real API call, e.g., HRApiService.getAnnouncements()
     setState(() {
@@ -222,7 +242,10 @@ String _punchTime = '';
 
   Future<void> _fetchPayroll() async {
     try {
-      final res = await HRApiService.getPayrollSummary();
+      final empId = await HRApiService.getLoggedEmpId();
+      final res = await HRApiService.getPayrollSummary(
+        empId: empId.isNotEmpty ? empId : null,
+      );
       final dataList = (res is Map && res['data'] != null)
           ? res['data'] as List
           : (res is List ? res : []);
@@ -237,7 +260,7 @@ String _punchTime = '';
       final dynamic res = await HRApiService.getHolidays();
       final dataList = (res is Map && res['data'] != null)
           ? res['data'] as List
-          : res as List<dynamic>;
+          : (res is List ? res as List<dynamic> : []);
       if (mounted) {
         setState(() => _holidays = dataList.map((e) => HRHoliday.fromJson(e)).toList());
       }
@@ -290,42 +313,51 @@ Widget build(BuildContext context) {
     backgroundColor: isDark ? HRTheme.bgDark : const Color(0xFFF7F8FA),
     body: FadeTransition(
       opacity: _fadeAnim,
-      child: CustomScrollView(
-        controller: _scrollCtrl,
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(child: _buildHeader(emp, unread, isDark)),
+      child: RefreshIndicator(
+        onRefresh: _refreshAllData,
+        color: HRTheme.primary,
+        backgroundColor: isDark ? HRTheme.bgDark : Colors.white,
+        strokeWidth: 2.5,
+        displacement: 60,
+        child: CustomScrollView(
+          controller: _scrollCtrl,
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          slivers: [
+            SliverToBoxAdapter(child: _buildHeader(emp, unread, isDark)),
 
-          if (!_isLoading) SliverToBoxAdapter(child: _buildPunchCard(isDark)),
+            if (!_isLoading) SliverToBoxAdapter(child: _buildPunchCard(isDark)),
 
-          if (!_isLoading) SliverToBoxAdapter(child: _buildKeyMetrics(summary)),
+            if (!_isLoading) SliverToBoxAdapter(child: _buildKeyMetrics(summary)),
 
-          if (!_isLoading)
-            SliverToBoxAdapter(child: _buildQuickActions(pendingApprovalsCount, unread)),
+            if (!_isLoading)
+              SliverToBoxAdapter(child: _buildQuickActions(pendingApprovalsCount, unread)),
 
-          if (!_isLoading)
-            SliverToBoxAdapter(child: _buildAttendanceSnapshot(summary)),
+            if (!_isLoading)
+              SliverToBoxAdapter(child: _buildAttendanceSnapshot(summary)),
 
-          if (!_isLoading) SliverToBoxAdapter(child: _buildLeaveSection()),
+            if (!_isLoading) SliverToBoxAdapter(child: _buildLeaveSection()),
 
-          if (!_isLoading) SliverToBoxAdapter(child: _buildSalarySummary()),
+            if (!_isLoading) SliverToBoxAdapter(child: _buildSalarySummary()),
 
-          if (!_isLoading) SliverToBoxAdapter(child: _buildUpcomingHolidays()),
+            if (!_isLoading) SliverToBoxAdapter(child: _buildUpcomingHolidays()),
 
-          if (!_isLoading && !_loadingAnnouncements)
-            SliverToBoxAdapter(child: _buildAnnouncements()),
+            if (!_isLoading && !_loadingAnnouncements)
+              SliverToBoxAdapter(child: _buildAnnouncements()),
 
-          if (!_isLoading && !_loadingBirthdays)
-            SliverToBoxAdapter(child: _buildBirthdays(isDark)),
+            if (!_isLoading && !_loadingBirthdays)
+              SliverToBoxAdapter(child: _buildBirthdays(isDark)),
 
-          if (!_isLoading && !_loadingTrainings)
-            SliverToBoxAdapter(child: _buildTrainingReminders()),
+            if (!_isLoading && !_loadingTrainings)
+              SliverToBoxAdapter(child: _buildTrainingReminders()),
 
-          if (!_isLoading && !_loadingDocuments)
-            SliverToBoxAdapter(child: _buildDocExpirySection()),
+            if (!_isLoading && !_loadingDocuments)
+              SliverToBoxAdapter(child: _buildDocExpirySection()),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 40)),
-        ],
+            const SliverToBoxAdapter(child: SizedBox(height: 40)),
+          ],
+        ),
       ),
     ),
   );

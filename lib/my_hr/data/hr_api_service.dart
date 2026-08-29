@@ -313,10 +313,34 @@ class HRApiService {
   }
 
   /// Get Holidays
-  static Future<dynamic> getHolidays() async {
+  /// NOTE: Backend requires POST - auto-sends logged-in user's stored data
+  static Future<dynamic> getHolidays({
+    String name = '',
+    String code = '',
+    String? year,
+  }) async {
     try {
-      final response = await ApiRequest.get(
+      final prefs = await SharedPreferences.getInstance();
+      final currentYear = year ?? DateTime.now().year.toString();
+
+      // Read logged-in user stored data from SharedPreferences
+      final userId   = prefs.getString('userId') ?? '';
+      final empId    = prefs.getString('empId') ?? '';
+      final branchId = prefs.get('branchId')?.toString() ?? '';
+
+      final response = await ApiRequest.post(
         ApiEndpoints.holidays,
+        {
+          'name': name,
+          'code': code,
+          'year': currentYear,
+          // logged-in user info (both camelCase & PascalCase for HRMS compatibility)
+          'userId': userId,
+          'Userid': userId,
+          'empId': empId,
+          'Empid': empId,
+          'branchId': branchId,
+        },
         headers: await _hrHeaders(),
       );
       return response;
@@ -509,10 +533,62 @@ class HRApiService {
   }
 
   /// Get Payroll Summary
-  static Future<dynamic> getPayrollSummary() async {
+  /// NOTE: Backend requires POST - auto-sends logged-in user's stored data
+  static Future<dynamic> getPayrollSummary({
+    int? month,
+    int? year,
+    int pageSize = 10,
+    int currentPage = 1,
+    String name = '',
+    String code = '',
+    String? empId,
+  }) async {
     try {
-      final response = await ApiRequest.get(
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+      final selectedMonth = month ?? now.month;
+      final selectedYear = year ?? now.year;
+      final paddedMonth = selectedMonth.toString().padLeft(2, '0');
+      final monthYear = '$selectedYear-$paddedMonth';
+
+      // Read logged-in user stored data from SharedPreferences
+      final storedEmpId    = empId ?? prefs.getString('empId') ?? '';
+      final storedUserId   = prefs.getString('userId') ?? '';
+      final storedBranchId = prefs.get('branchId')?.toString();
+      final storedFirstName = prefs.getString('firstName') ?? '';
+      final storedLastName  = prefs.getString('lastName') ?? '';
+
+      final response = await ApiRequest.post(
         ApiEndpoints.payrollSummary,
+        {
+          'monthYear': monthYear,
+          'paginationInfo': {
+            'pageSize': pageSize,
+            'currentPage': currentPage,
+            'dataSorting': {
+              'sortingOrder': 'ASC',
+              'byColumn': {
+                'label': 'Name',
+                'field': 'ed.formal_name',
+              },
+            },
+          },
+          'name': name,
+          'code': code,
+          'companyId': null,
+          'branchId': storedBranchId != null ? int.tryParse(storedBranchId) : null,
+          'departmentId': null,
+          'designationId': null,
+          'workLocationId': null,
+          'categoryId': null,
+          'gradeId': null,
+          'empId': storedEmpId.isNotEmpty ? storedEmpId : null,
+          'jobTitle': null,
+          // additional user context
+          'userId': storedUserId,
+          'firstName': storedFirstName,
+          'lastName': storedLastName,
+        },
         headers: await _hrHeaders(),
       );
       return response;

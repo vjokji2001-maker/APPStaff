@@ -28,7 +28,10 @@ class _HRPayrollScreenState extends State<HRPayrollScreen> {
 
   Future<void> _fetchPayroll() async {
     try {
-      final res = await HRApiService.getPayrollSummary();
+      final empId = await HRApiService.getLoggedEmpId();
+      final res = await HRApiService.getPayrollSummary(
+        empId: empId.isNotEmpty ? empId : null,
+      );
       final dataList = (res is Map && res['data'] != null) ? res['data'] as List : (res is List ? res : []);
       setState(() {
         _slips = dataList.map((e) => SalarySlip.fromJson(e)).toList();
