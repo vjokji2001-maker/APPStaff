@@ -80,7 +80,7 @@ class _CameraViewState extends State<CameraView> with SingleTickerProviderStateM
   }
 
   Future<void> _secureScreen() async {
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       await ScreenProtector.protectDataLeakageWithBlur();
       await ScreenProtector.preventScreenshotOn();
     }
@@ -101,23 +101,32 @@ class _CameraViewState extends State<CameraView> with SingleTickerProviderStateM
   }
 
   Future<void> _initializeCamera() async {
-    _cameras = await availableCameras();
-    final frontCamera = _cameras!.firstWhere(
-      (c) => c.lensDirection == CameraLensDirection.front,
-      orElse: () => _cameras!.first,
-    );
-    _controller = CameraController(
-      frontCamera,
-      ResolutionPreset.high,
-      enableAudio: false,
-      imageFormatGroup: Platform.isAndroid 
-          ? ImageFormatGroup.nv21 
-          : ImageFormatGroup.bgra8888,
-    );
-    await _controller!.initialize();
-    if (!mounted) return;
-    setState(() => _isInitialized = true);
-    _startImageStream();
+    try {
+      _cameras = await availableCameras();
+      if (_cameras == null || _cameras!.isEmpty) {
+        _updateWarning('No cameras found on device');
+        return;
+      }
+      final frontCamera = _cameras!.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.front,
+        orElse: () => _cameras!.first,
+      );
+      _controller = CameraController(
+        frontCamera,
+        ResolutionPreset.high,
+        enableAudio: false,
+        imageFormatGroup: (!kIsWeb && Platform.isAndroid) 
+            ? ImageFormatGroup.nv21 
+            : ImageFormatGroup.bgra8888,
+      );
+      await _controller!.initialize();
+      if (!mounted) return;
+      setState(() => _isInitialized = true);
+      _startImageStream();
+    } catch (e) {
+      debugPrint("Camera Init Error: $e");
+      _updateWarning('Failed to open camera: $e');
+    }
   }
 
   void _startImageStream() {
@@ -212,20 +221,22 @@ class _CameraViewState extends State<CameraView> with SingleTickerProviderStateM
     final sensorOrientation = camera.sensorOrientation;
     
     InputImageRotation? rotation;
-    if (Platform.isIOS) {
+    if (!kIsWeb && Platform.isIOS) {
       rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
-    } else if (Platform.isAndroid) {
+    } else if (!kIsWeb && Platform.isAndroid) {
       var rotationCompensation = 0; 
       final int rotationRaw = (sensorOrientation - rotationCompensation + 360) % 360;
       rotation = InputImageRotationValue.fromRawValue(rotationRaw);
+    } else {
+      rotation = InputImageRotationValue.fromRawValue(sensorOrientation);
     }
     
     if (rotation == null) return null;
 
     final format = InputImageFormatValue.fromRawValue(image.format.raw);
     if (format == null ||
-        (Platform.isAndroid && format != InputImageFormat.nv21) ||
-        (Platform.isIOS && format != InputImageFormat.bgra8888)) return null;
+        (!kIsWeb && Platform.isAndroid && format != InputImageFormat.nv21) ||
+        (!kIsWeb && Platform.isIOS && format != InputImageFormat.bgra8888)) return null;
 
     final WriteBuffer allBytes = WriteBuffer();
     for (final Plane plane in image.planes) {
@@ -246,7 +257,7 @@ class _CameraViewState extends State<CameraView> with SingleTickerProviderStateM
 
   @override
   void dispose() {
-    if (Platform.isAndroid || Platform.isIOS) {
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       ScreenProtector.preventScreenshotOff();
     }
     _accelSubscription?.cancel();
@@ -260,14 +271,27 @@ class _CameraViewState extends State<CameraView> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized || _controller == null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(color: Colors.cyanAccent),
-            const SizedBox(height: 16),
-            Text('Initializing Camera...', style: GoogleFonts.poppins(color: Colors.white, fontSize: 16)),
-          ],
+      return Scaffold(
+        backgroundColor: const Color(0xFF071118),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_warningMessage.isEmpty)
+                const CircularProgressIndicator(color: Colors.cyanAccent)
+              else
+                const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                _warningMessage.isEmpty ? 'Initializing Camera...' : _warningMessage,
+                style: GoogleFonts.poppins(
+                  color: _warningMessage.isEmpty ? Colors.white : Colors.redAccent,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -282,8 +306,14 @@ class _CameraViewState extends State<CameraView> with SingleTickerProviderStateM
     return Scaffold(
       backgroundColor: darkBgColor,
       body: SafeArea(
-        child: Column(
-          children: [
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
             // Top Section: Header
             const SizedBox(height: 20),
             Icon(Icons.security_rounded, color: cyanAccentColor, size: 36),
@@ -458,6 +488,11 @@ class _CameraViewState extends State<CameraView> with SingleTickerProviderStateM
             ),
             const SizedBox(height: 16),
           ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

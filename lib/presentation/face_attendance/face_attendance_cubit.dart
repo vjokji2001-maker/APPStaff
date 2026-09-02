@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safe_device/safe_device.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,7 +39,6 @@ class FaceAttendanceCubit extends Cubit<FaceAttendanceState> {
     final prefs = await SharedPreferences.getInstance();
     _empId = prefs.getString('empId');
     if (_empId == null || _empId!.isEmpty) {
-      // Fallback to userId if empId is not found (some APIs use userId)
       _empId = prefs.getString('userId');
     }
     
@@ -48,7 +49,6 @@ class FaceAttendanceCubit extends Cubit<FaceAttendanceState> {
 
     List<String> missing = await _checkPermissions();
     if (missing.isNotEmpty) {
-      // Only request the specific permissions that are missing
       List<Permission> toRequest = [];
       if (missing.contains('Camera')) toRequest.add(Permission.camera);
       if (missing.contains('Location')) toRequest.add(Permission.location);
@@ -92,16 +92,19 @@ class FaceAttendanceCubit extends Cubit<FaceAttendanceState> {
 
   Future<void> _checkLocationAndProceed() async {
     try {
-      // 1. Emulator / Root Detection (Anti-Cheat)
-      bool isJailBroken = await SafeDevice.isJailBroken;
-      bool isRealDevice = await SafeDevice.isRealDevice;
-      
-      if (isJailBroken || !isRealDevice) {
-        emit(FaceAttendanceError(message: 'Security Alert: Emulator or Rooted device detected. Attendance blocked.'));
-        return;
+      if (!kIsWeb && !kDebugMode) {
+        final isJailBroken = await SafeDevice.isJailBroken;
+        final isRealDevice = await SafeDevice.isRealDevice;
+
+        if (isJailBroken || !isRealDevice) {
+          emit(FaceAttendanceError(
+            message:
+                'Security Alert: Emulator or Rooted device detected. Attendance blocked.',
+          ));
+          return;
+        }
       }
 
-      // 2. Location Services Check
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         emit(FaceAttendanceError(message: 'Please enable Location Services.'));
@@ -120,13 +123,28 @@ class FaceAttendanceCubit extends Cubit<FaceAttendanceState> {
       _currentLat = position.latitude;
       _currentLng = position.longitude;
 
-      // 3. Mock Location Detection (Anti-Cheat)
       if (position.isMocked) {
         emit(FaceAttendanceError(message: 'Security Alert: Fake GPS / Mock Location detected. Attendance blocked.'));
         return;
       }
 
-      // Backend handles distance validation, so we just capture location and proceed.
+      double distanceInMeters = Geolocator.distanceBetween(
+        _currentLat!,
+        _currentLng!,
+        hospitalLat,
+        hospitalLng,
+      );
+
+      if (distanceInMeters > maxAllowedDistanceMeters) {
+        if (kDebugMode) {
+          debugPrint('Debug mode: Bypassing distance check (Distance: ${distanceInMeters}m)');
+        } else {
+          emit(FaceAttendanceError(
+              message: 'You are too far from the hospital (${distanceInMeters.toStringAsFixed(1)}m away). You must be within ${maxAllowedDistanceMeters}m to punch in/out.'));
+          return;
+        }
+      }
+
       emit(FaceAttendanceReady());
     } catch (e) {
       emit(FaceAttendanceError(message: 'Location error: $e'));
@@ -142,11 +160,19 @@ class FaceAttendanceCubit extends Cubit<FaceAttendanceState> {
         emit(FaceAttendanceError(message: 'Liveness verification failed. Please try again.'));
         return;
       }
+      
+      final embeddingStr = jsonEncode(embedding);
+      
+      debugPrint('--- DEBUG PAYLOAD INFO ---');
+      debugPrint('Raw embedding from ML Kit/Fallback: $embedding');
+      debugPrint('Encoded embedding string for backend: $embeddingStr');
+      debugPrint('EmpId: $_empId');
+      
       final attendance = await enrollmentUseCase.recordAttendance(
         empId: _empId!,
-        punchType: 'MANUAL', // or 'FACE' if biometric
+        punchType: 'MANUAL',
         punchDirection: _punchDirection ?? 'IN',
-        faceEmbedding: embedding.toString(),
+        faceEmbedding: embeddingStr,
         latitude: _currentLat ?? 0.0,
         longitude: _currentLng ?? 0.0,
       );
@@ -168,4 +194,3 @@ class FaceAttendanceCubit extends Cubit<FaceAttendanceState> {
     }
   }
 }
-

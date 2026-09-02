@@ -315,7 +315,7 @@ Widget build(BuildContext context) {
       opacity: _fadeAnim,
       child: RefreshIndicator(
         onRefresh: _refreshAllData,
-        color: HRTheme.primary,
+        color: HRTheme.primaryDark,
         backgroundColor: isDark ? HRTheme.bgDark : Colors.white,
         strokeWidth: 2.5,
         displacement: 60,
