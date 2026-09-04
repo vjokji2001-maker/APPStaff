@@ -82,141 +82,124 @@ class _CaptureVitalsSheetState extends State<CaptureVitalsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Material( // ✅ Fix: Wrap with Material
-      child: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 8,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-          ),
-          child: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Drag handle
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-
-                  // Header
-                  Row(
+    // resizeToAvoidBottomInset: true (default) automatically pushes content
+    // up when keyboard appears — no manual viewInsets needed.
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(
+        title: Text(widget.patientName.toUpperCase()),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Scrollable form content  
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          widget.patientName.toUpperCase(),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18,
-                          ),
-                        ),
+                      const Text(
+                        'Vitals',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
+                      const SizedBox(height: 8),
 
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Vitals',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Date + Time Row
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: InkWell(
-                          onTap: _pickDate,
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Date',
-                              border: OutlineInputBorder(),
-                            ),
-                            child: Text(
-                              "${_date.day.toString().padLeft(2, '0')}-${_date.month.toString().padLeft(2, '0')}-${_date.year}",
+                      // Date + Time Row
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: InkWell(
+                              onTap: _pickDate,
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'Date',
+                                  border: OutlineInputBorder(),
+                                ),
+                                child: Text(
+                                  "${_date.day.toString().padLeft(2, '0')}-${_date.month.toString().padLeft(2, '0')}-${_date.year}",
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<int>(
+                              value: _hh,
+                              decoration: const InputDecoration(
+                                labelText: 'HH',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: List.generate(
+                                24,
+                                (i) => DropdownMenuItem(value: i, child: Text('$i')),
+                              ),
+                              onChanged: (v) => setState(() => _hh = v ?? _hh),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DropdownButtonFormField<int>(
+                              value: _mm,
+                              decoration: const InputDecoration(
+                                labelText: 'MM',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: List.generate(
+                                60,
+                                (i) => DropdownMenuItem(value: i, child: Text('$i')),
+                              ),
+                              onChanged: (v) => setState(() => _mm = v ?? _mm),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          value: _hh,
-                          decoration: const InputDecoration(
-                            labelText: 'HH',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: List.generate(
-                            24,
-                            (i) => DropdownMenuItem(value: i, child: Text('$i')),
-                          ),
-                          onChanged: (v) => setState(() => _hh = v ?? _hh),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          value: _mm,
-                          decoration: const InputDecoration(
-                            labelText: 'MM',
-                            border: OutlineInputBorder(),
-                          ),
-                          items: List.generate(
-                            60,
-                            (i) => DropdownMenuItem(value: i, child: Text('$i')),
-                          ),
-                          onChanged: (v) => setState(() => _mm = v ?? _mm),
-                        ),
-                      ),
+                      const SizedBox(height: 12),
+
+                      // Vitals Fields
+                      _VitalsField(controller: _tempCtl, label: 'Temperature (°F)', helper: 'Normal: 97 - 99'),
+                      _VitalsField(controller: _hrCtl,   label: 'Heart Rate (bpm)',    helper: 'Normal: 60 - 100'),
+                      _VitalsField(controller: _rrCtl,   label: 'Respiratory Rate',    helper: 'Normal: 12 - 20'),
+                      _VitalsField(controller: _sysBpCtl, label: 'Systolic BP',        helper: 'Normal: 120 - 140'),
+                      _VitalsField(controller: _diaBpCtl, label: 'Diastolic BP',       helper: 'Normal: 80 - 90'),
+                      _VitalsField(controller: _rbsCtl,  label: 'Random Blood Sugar',  helper: 'Normal: < 140'),
+                      _VitalsField(controller: _spo2Ctl, label: 'SpO₂ (%)',            helper: 'Normal: > 95'),
                     ],
                   ),
-                  const SizedBox(height: 12),
-
-                  // Fields
-                  _VitalsField(controller: _tempCtl, label: 'Temperature (°F)', helper: 'Normal: 97 - 99'),
-                  _VitalsField(controller: _hrCtl, label: 'Heart Rate (bpm)', helper: 'Normal: 60 - 100'),
-                  _VitalsField(controller: _rrCtl, label: 'Respiratory Rate', helper: 'Normal: 12 - 20'),
-                  _VitalsField(controller: _sysBpCtl, label: 'Systolic BP', helper: 'Normal: 120 - 140'),
-                  _VitalsField(controller: _diaBpCtl, label: 'Diastolic BP', helper: 'Normal: 80 - 90'),
-                  _VitalsField(controller: _rbsCtl, label: 'Random Blood Sugar', helper: 'Normal: < 140'),
-                  _VitalsField(controller: _spo2Ctl, label: 'SpO₂ (%)', helper: 'Normal: > 95'),
-
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('Save Vitals'),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
+
+            // ── Save button pinned above keyboard ──
+            // Padding only adds safe-area bottom when keyboard is closed;
+            // when keyboard opens, Scaffold's resizeToAvoidBottomInset
+            // shrinks the body so the button sits right on top of the keyboard.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('Save Vitals'),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -247,9 +230,9 @@ class _VitalsField extends StatelessWidget {
           TextFormField(
             controller: controller,
             keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'Required';

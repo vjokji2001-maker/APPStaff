@@ -58,7 +58,7 @@ dependencies:
   mobile_scanner: ^5.2.3
   sensors_plus: ^5.0.1
   safe_device: ^1.1.5
-  screen_protector: ^1.5.3
+  # screen_protector: ^1.5.3  # Temporarily removed due to Android build issues
 
 dev_dependencies:
   flutter_test:

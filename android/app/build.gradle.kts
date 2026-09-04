@@ -47,6 +47,16 @@ android {
         multiDexEnabled = true
     }
 
+    lint {
+        // Suppress warnings about compileSdk version mismatches in dependencies
+        disable.addAll(listOf(
+            "GradleCompatible",
+            "MissingDimensionActivityCreator",
+            "MissingDimensionBuildType",
+            "MissingDimensionFlavor"
+        ))
+    }
+
   signingConfigs {
     if (hasReleaseSigning) {
         create("release") {

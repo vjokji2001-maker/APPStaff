@@ -6,7 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:screen_protector/screen_protector.dart';
+// import 'package:screen_protector/screen_protector.dart'; // Temporarily disabled due to Kotlin migration issues
 import 'package:staff_mate/my_hr/theme/hr_theme.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 enum LivenessChallengeType { blink, smile }
@@ -80,10 +80,11 @@ class _CameraViewState extends State<CameraView> with SingleTickerProviderStateM
   }
 
   Future<void> _secureScreen() async {
-    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-      await ScreenProtector.protectDataLeakageWithBlur();
-      await ScreenProtector.preventScreenshotOn();
-    }
+    // Screen protection temporarily disabled due to screen_protector plugin Kotlin migration issues
+    // if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    //   await ScreenProtector.protectDataLeakageWithBlur();
+    //   await ScreenProtector.preventScreenshotOn();
+    // }
   }
 
   void _startMotionSensor() {
@@ -257,9 +258,10 @@ class _CameraViewState extends State<CameraView> with SingleTickerProviderStateM
 
   @override
   void dispose() {
-    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-      ScreenProtector.preventScreenshotOff();
-    }
+    // Screen protection cleanup disabled
+    // if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    //   ScreenProtector.preventScreenshotOff();
+    // }
     _accelSubscription?.cancel();
     _controller?.stopImageStream();
     _controller?.dispose();
@@ -437,23 +439,55 @@ class _CameraViewState extends State<CameraView> with SingleTickerProviderStateM
             const Spacer(),
             
             // Status Text below camera
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.verified_user_outlined, color: cyanAccentColor, size: 24),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_warningMessage.isNotEmpty ? _warningMessage : 'Scanning Face...', style: GoogleFonts.poppins(color: cyanAccentColor, fontSize: 13, fontWeight: FontWeight.bold)),
-                    if (_warningMessage.isEmpty)
-                      Text('Please do not move', style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
-                  ],
-                ),
-              ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.verified_user_outlined, color: cyanAccentColor, size: 24),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_warningMessage.isNotEmpty ? _warningMessage : 'Scanning Face...', style: GoogleFonts.poppins(color: cyanAccentColor, fontSize: 13, fontWeight: FontWeight.bold)),
+                        if (_warningMessage.isEmpty)
+                          Text('Please do not move', style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            
+            // Manual Capture Button
+            ElevatedButton.icon(
+              onPressed: () async {
+                if (_controller != null && _controller!.value.isInitialized) {
+                  try {
+                    if (_controller!.value.isStreamingImages) {
+                      await _controller!.stopImageStream();
+                    }
+                    final file = await _controller!.takePicture();
+                    widget.onFaceDetected(file);
+                  } catch (e) {
+                    debugPrint("Manual capture error: $e");
+                  }
+                }
+              },
+              icon: const Icon(Icons.camera_alt),
+              label: Text('Capture Manually', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: cyanAccentColor,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              ),
+            ),
+            
+            const SizedBox(height: 16),
             
             // Bottom 4 Icons Panel
             Container(
