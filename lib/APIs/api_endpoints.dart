@@ -145,6 +145,15 @@ class ApiEndpoints {
   static String get treatmentRecords => '${ApiHost.sclyteBaseUrl}/patientTreatmentRecords';
   static String get sclyteLogin => '${ApiHost.sclyteBaseUrl}/login';
 
+  // ============ FROM IPD Dashboard ============
+  static String ipdPatientPrescriptions(String admissionId) => '${ApiHost.ipdBaseUrl}/patient/getNotification/priscription/$admissionId';
+  static String ipdPatientInvestigations(String admissionId) => '${ApiHost.ipdBaseUrl}/patient/getNotification/investigation/$admissionId';
+  static String ipdPatientNursing(String admissionId) => '${ApiHost.ipdBaseUrl}/nursingplan/getNotification/nursing/$admissionId';
+  static String ipdPatientVitals(String patientId) => '${ApiHost.smartcareMainBaseUrl}/opd/appointment/fetch/vitals/$patientId';
+  static String ipdPatientDayToDayNotes() => '${ApiHost.ipdBaseUrl}/patient/daytodaynotes/fetch';
+
+
+
   // ============ FROM MY HR ============
   // Profile
   static String employeeProfile(String empId) => '${ApiHost.hrBaseUrl}/hr/employee/get/by/$empId';

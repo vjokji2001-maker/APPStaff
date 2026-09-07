@@ -1,7 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:staff_mate/models/patient.dart'; // Ensure this path is correct
+import 'package:staff_mate/models/patient.dart';
+import 'package:staff_mate/api/api_service.dart';
+import 'package:staff_mate/APIs/api_endpoints.dart';
+
+import 'package:staff_mate/pages/treatment_record_pdf.dart';
 
 class TreatmentRecordPage extends StatefulWidget {
   final Patient patient;
@@ -25,12 +30,137 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
   final Color darkBlue = const Color(0xFF1A237E);
   final Color bgGrey = const Color(0xFFF5F7FA);
 
+  // Dynamic Data States
+  bool _isLoading = true;
+  List<List<String>> _medicinesList = [];
+  List<List<String>> _nursingCareList = [];
+  List<List<String>> _dietaryCareList = [];
+  List<List<String>> _carePlanList = [];
+  List<List<String>> _medicationChartList = [];
+  List<List<String>> _consultantVisitsList = [];
+  List<List<String>> _requestTimeList = [];
+  List<List<String>> _transferAdviceList = [];
+  List<List<String>> _dayToDayNotesList = [];
+  
+  // Vitals & Investigations
+  List<Map<String, dynamic>> _vitalsData = [];
+  List<Map<String, dynamic>> _investigationsData = [];
+
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
     _fromDateController.text = DateFormat('yyyy-MM-dd').format(now);
     _toDateController.text = DateFormat('yyyy-MM-dd').format(now);
+    _initData();
+  }
+
+  Future<void> _initData() async {
+    setState(() => _isLoading = true);
+    try {
+      final admissionId = widget.patient.admissionId;
+      final patientId = widget.patient.patientid;
+      
+      // Fetch Prescriptions (Medicine Care)
+      final presRes = await ApiService.authenticatedRequest(
+        ApiEndpoints.ipdPatientPrescriptions(admissionId),
+      );
+      if (presRes != null && presRes.statusCode == 200) {
+        final data = jsonDecode(presRes.body);
+        final list = (data is Map && data['data'] != null) ? data['data'] : (data is List ? data : []);
+        _medicinesList = [];
+        for (var item in list) {
+          if (item is Map) {
+             String name = item['priscriptiontimeName']?.toString() ?? '-';
+             List dosages = item['dosageList'] ?? [];
+             String details = dosages.map((d) => "${d['brandName'] ?? ''} - ${d['dosage'] ?? ''} - ${d['meal'] ?? ''}").join("\n");
+             _medicinesList.add([name, item['globalProductId']?.toString() ?? '-', details, item['status']?.toString() ?? '-']);
+          }
+        }
+      }
+
+      // Fetch Nursing Care
+      final nursRes = await ApiService.authenticatedRequest(
+        ApiEndpoints.ipdPatientNursing(admissionId),
+      );
+      if (nursRes != null && nursRes.statusCode == 200) {
+        final data = jsonDecode(nursRes.body);
+        final list = (data is Map && data['data'] != null) ? data['data'] : (data is List ? data : []);
+        _nursingCareList = [];
+        for (var item in list) {
+          if (item is Map) {
+             String task = item['taskName']?.toString() ?? '-';
+             String category = item['category']?.toString() ?? '-';
+             List dosages = item['dosageList'] ?? [];
+             String dosageDetails = dosages.map((d) => "${d['time'] ?? ''}").where((s) => s.isNotEmpty).join(", ");
+             _nursingCareList.add([task, category, dosageDetails.isEmpty ? '-' : dosageDetails, item['status']?.toString() ?? '-']);
+          }
+        }
+      }
+
+      // Fetch Vitals
+      final vitalsRes = await ApiService.authenticatedRequest(
+        ApiEndpoints.ipdPatientVitals(patientId),
+      );
+      if (vitalsRes != null && vitalsRes.statusCode == 200) {
+        final data = jsonDecode(vitalsRes.body);
+        if (data is Map && data['data'] != null) {
+          _vitalsData = List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+
+      // Fetch Investigations
+      final invRes = await ApiService.authenticatedRequest(
+        ApiEndpoints.ipdPatientInvestigations(admissionId),
+      );
+      if (invRes != null && invRes.statusCode == 200) {
+        final data = jsonDecode(invRes.body);
+        if (data is Map && data['data'] != null) {
+          _investigationsData = List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+      
+      // Fetch Day to Day Notes
+      final notesRes = await ApiService.authenticatedRequest(
+        ApiEndpoints.ipdPatientDayToDayNotes(), 
+        method: 'POST', 
+        body: { 
+          "admissiondate": widget.patient.admissionDate,
+          "ipdid": admissionId 
+        }
+      );
+      if (notesRes != null && notesRes.statusCode == 200) {
+        final data = jsonDecode(notesRes.body);
+        if (data is Map && data['day_to_day_note_list'] != null) {
+          _dayToDayNotesList = _parseGenericList(data['day_to_day_note_list'], ['date', 'notes', 'createdByUserId']);
+        } else {
+          _dayToDayNotesList = _parseGenericList(data, ['date', 'notes', 'createdByUserId']);
+        }
+      }
+
+    } catch (e) {
+      debugPrint('Error fetching IPD data: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  List<List<String>> _parseGenericList(dynamic jsonResponse, List<String> fields) {
+    List<List<String>> result = [];
+    if (jsonResponse is Map && jsonResponse['data'] != null) {
+      for (var item in jsonResponse['data']) {
+        if (item is Map) {
+          result.add(fields.map((f) => (item[f] ?? '-').toString()).toList());
+        }
+      }
+    } else if (jsonResponse is List) {
+       for (var item in jsonResponse) {
+        if (item is Map) {
+          result.add(fields.map((f) => (item[f] ?? '-').toString()).toList());
+        }
+      }
+    }
+    return result;
   }
 
   @override
@@ -50,7 +180,9 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
 
           // 3. Scrollable Content Area
           Expanded(
-            child: SingleChildScrollView(
+            child: _isLoading 
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 30),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,9 +195,8 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
                     title: "Medicine Care",
                     icon: Icons.medication,
                     child: _buildCardList(
-                      // Example Data Structure
-                      items: [], 
-                      labels: ["Medicine", "Qty", "Freq", "Instruction", "Time"],
+                      items: _medicinesList, 
+                      labels: ["Medicine", "Barcode ID", "Dosages", "Status"],
                       emptyMessage: "No Medicine Records"
                     ),
                   ),
@@ -80,8 +211,8 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
                     title: "Nursing Care",
                     icon: Icons.local_hospital,
                     child: _buildCardList(
-                      items: [],
-                      labels: ["Care Type", "Notes"],
+                      items: _nursingCareList,
+                      labels: ["Task", "Category", "Times", "Status"],
                       emptyMessage: "No Nursing Care Records"
                     ),
                   ),
@@ -102,7 +233,7 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
                     title: "Nursing Care Plan",
                     icon: Icons.assignment,
                     child: _buildCardList(
-                      items: [],
+                      items: _carePlanList,
                       labels: ["Subjective", "Objective", "Diagnosis", "Plan"],
                       emptyMessage: "No Care Plan"
                     ),
@@ -112,7 +243,7 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
                     title: "Medication Chart",
                     icon: Icons.list_alt,
                     child: _buildCardList(
-                      items: [],
+                      items: _medicationChartList,
                       labels: ["Medicine", "Freq", "Route", "Given By"],
                       emptyMessage: "No Chart Data"
                     ),
@@ -126,7 +257,7 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
                     title: "Consultant Visited",
                     icon: Icons.person_pin,
                     child: _buildCardList(
-                      items: [],
+                      items: _consultantVisitsList,
                       labels: ["Doctor", "Time", "Fees", "Status"],
                       emptyMessage: "No Visits"
                     ),
@@ -136,7 +267,7 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
                     title: "Request Time",
                     icon: Icons.access_time,
                     child: _buildCardList(
-                      items: [],
+                      items: _requestTimeList,
                       labels: ["Group", "Unit", "Allotted"],
                       emptyMessage: "No Request Data"
                     ),
@@ -146,7 +277,7 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
                     title: "Transfer Advice",
                     icon: Icons.move_up,
                     child: _buildCardList(
-                      items: [],
+                      items: _transferAdviceList,
                       labels: ["To Ward/Bed", "From", "To"],
                       emptyMessage: "No Transfers"
                     ),
@@ -164,7 +295,7 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
                     icon: Icons.note_alt,
                     isExpanded: true, // Auto open notes
                     child: _buildCardList(
-                      items: [],
+                      items: _dayToDayNotesList,
                       labels: ["Date", "Note", "By"],
                       emptyMessage: "No Day Notes found."
                     ),
@@ -292,7 +423,24 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
               const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    if (_isLoading) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TreatmentRecordPdfPreview(
+                          patient: widget.patient,
+                          medicinesList: _medicinesList,
+                          nursingCareList: _nursingCareList,
+                          investigationsData: _investigationsData,
+                          vitalsData: _vitalsData,
+                          dayToDayNotesList: _dayToDayNotesList,
+                          fromDate: _fromDateController.text,
+                          toDate: _toDateController.text,
+                        ),
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.print, size: 16),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: darkBlue,
@@ -445,9 +593,43 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
   // --- 3. SPECIALIZED VIEWS ---
 
   Widget _buildVitalsView() {
-    // Vitals are a matrix (Time vs Field). Best viewed as a horizontal scrollable card on mobile.
-    List<String> timeHeaders = ["10:00", "14:00", "18:00", "22:00"];
+    if (_vitalsData.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        width: double.infinity,
+        decoration: BoxDecoration(color: bgGrey, borderRadius: BorderRadius.circular(8)),
+        child: Column(
+          children: [
+            Icon(Icons.monitor_heart, color: Colors.grey[400], size: 30),
+            const SizedBox(height: 8),
+            Text("No Vitals Logged", style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 12)),
+          ],
+        ),
+      );
+    }
     
+    // Extract unique time headers
+    List<String> timeHeaders = _vitalsData
+        .map((e) => (e['time'] ?? '').toString())
+        .toSet()
+        .toList();
+        
+    // Assuming data has 'name' and 'value'
+    Map<String, List<String>> vitalMap = {};
+    for (var vital in _vitalsData) {
+       String vName = vital['name'] ?? 'Unknown';
+       String vTime = vital['time'] ?? '';
+       String vValue = vital['value'] ?? '-';
+       
+       if (!vitalMap.containsKey(vName)) {
+         vitalMap[vName] = List.filled(timeHeaders.length, '-');
+       }
+       int tIndex = timeHeaders.indexOf(vTime);
+       if (tIndex != -1) {
+         vitalMap[vName]![tIndex] = vValue;
+       }
+    }
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Container(
@@ -462,12 +644,7 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
              DataColumn(label: Text("Vital", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 12))),
              ...timeHeaders.map((e) => DataColumn(label: Text(e, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 12)))),
           ],
-          rows: [
-            // Example Rows
-            _buildVitalRow("Temp", ["98.6", "99.1", "-", "-"]),
-            _buildVitalRow("BP", ["120/80", "118/78", "-", "-"]),
-            _buildVitalRow("Pulse", ["72", "75", "-", "-"]),
-          ],
+          rows: vitalMap.entries.map((e) => _buildVitalRow(e.key, e.value)).toList(),
         ),
       ),
     );
@@ -494,18 +671,33 @@ class _TreatmentRecordPageState extends State<TreatmentRecordPage> {
   }
 
   Widget _buildInvestigationView() {
+    if (_investigationsData.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        width: double.infinity,
+        decoration: BoxDecoration(color: bgGrey, borderRadius: BorderRadius.circular(8)),
+        child: Column(
+          children: [
+            Icon(Icons.biotech, color: Colors.grey[400], size: 30),
+            const SizedBox(height: 8),
+            Text("No Investigations Found", style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 12)),
+          ],
+        ),
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildTag("Pathology", Colors.orange),
-        const SizedBox(height: 5),
-        _buildDetailRow("CBC", "Pending"),
-        _buildDetailRow("Lipid Profile", "Completed"),
-        const SizedBox(height: 10),
-        _buildTag("Radiology", Colors.blue),
-        const SizedBox(height: 5),
-        _buildDetailRow("X-Ray Chest", "Completed"),
-      ],
+      children: _investigationsData.map((inv) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTag(inv['category'] ?? "Test", Colors.orange),
+            const SizedBox(height: 5),
+            _buildDetailRow(inv['test_name'] ?? inv['testName'] ?? "Unknown Test", inv['formatedDate'] ?? inv['status'] ?? "-"),
+            const SizedBox(height: 10),
+          ],
+        );
+      }).toList(),
     );
   }
 

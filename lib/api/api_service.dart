@@ -360,6 +360,8 @@ class ApiService {
         return null;
       }
 
+      final sessionData = await SessionManager.getSession();
+      
       final authHeader = (_tokenPrefix?.isNotEmpty == true
               ? _tokenPrefix!
               : _defaultTokenPrefix) +
@@ -369,6 +371,10 @@ class ApiService {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': authHeader,
+        'clinicid': sessionData['clinicId']?.toString() ?? '',
+        'zoneid': sessionData['zoneid']?.toString() ?? '',
+        'userid': sessionData['userId']?.toString() ?? '',
+        'branchId': sessionData['branchId']?.toString() ?? '',
         if (headers != null) ...headers,
       };
 
