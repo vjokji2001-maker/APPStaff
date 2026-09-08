@@ -618,13 +618,13 @@ void _showPatientQuickActionSheet(Patient patient) {
       Navigator.pop(context);
       _openVitalsEntry(patient);
     }},
-    {'icon': Icons.card_giftcard, 'label': 'Packages', 'color': Colors.pink, 'onTap': () {
-      Navigator.pop(context);
-      showDialog(
-        context: context,
-        builder: (context) => ApplyPackageDialog(patient: patient),
-      ).then((_) => _refreshDashboardData());
-    }},
+    // {'icon': Icons.card_giftcard, 'label': 'Packages', 'color': Colors.pink, 'onTap': () {
+    //   Navigator.pop(context);
+    //   showDialog(
+    //     context: context,
+    //     builder: (context) => ApplyPackageDialog(patient: patient),
+    //   ).then((_) => _refreshDashboardData());
+    // }},
     {'icon': Icons.notifications_none, 'label': 'Notifications', 'color': Colors.purple, 'onTap': () {
       Navigator.pop(context);
       Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationDetailsPage(patientName: patient.patientname, patientId: patient.ipdNo, admissionId: patient.admissionId))).then((_) => _refreshDashboardData());

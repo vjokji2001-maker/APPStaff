@@ -198,8 +198,22 @@ class ApiEndpoints {
   static String shiftTemplateView(String id) => '${ApiHost.hrBaseUrl}/hr/master/attendance/shift/get/by/$id';
   static String shiftTemplateDelete(String id) => '${ApiHost.hrBaseUrl}/hr/master/attendance/shift/delete/$id';
 
-  // Payroll
+  // ============ FROM PayrollService ============
   static String get payrollSummary => '${ApiHost.hrBaseUrl}/hr/payroll/emp/payroll/summary/get/dashboard';
   static String bankAccount(String empId) => '${ApiHost.hrBaseUrl}/hr/payroll/emp/bank/account/get/$empId';
+
+  // ============ FROM Event Management ============
+  static String get createEvent => '${ApiHost.masterBaseUrl}/eventmanagement/create';
+  static String updateEvent(String id) => '${ApiHost.masterBaseUrl}/eventmanagement/update/$id';
+  static String getEvent(String id) => '${ApiHost.masterBaseUrl}/eventmanagement/get/$id';
+  static String get getAllEvents => '${ApiHost.masterBaseUrl}/eventmanagement/getall';
+  static String deleteEvent(String id) => '${ApiHost.masterBaseUrl}/eventmanagement/delete/$id';
+  
+  static String get createEventTask => '${ApiHost.masterBaseUrl}/eventtask/create';
+  static String eventTasks(String eventCode) => '${ApiHost.masterBaseUrl}/eventtask/event/$eventCode';
+  static String updateEventTask(String id) => '${ApiHost.masterBaseUrl}/eventtask/update/$id';
+  static String completeEventTask(String id) => '${ApiHost.masterBaseUrl}/eventtask/complete/$id';
+  
+  static String get eventCategories => '${ApiHost.masterBaseUrl}/eventcategory/getall';
 
 }

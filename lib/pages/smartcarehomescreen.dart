@@ -27,6 +27,7 @@ import 'package:staff_mate/ai/chat_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:staff_mate/api/api_service.dart';
 import 'package:staff_mate/presentation/face_attendance/face_attendance_page.dart';
+import 'package:staff_mate/pages/event_management_screen.dart';
 
 class AppColors {
   static const Color primaryDarkBlue = Color(0xFF1A237E);
@@ -1185,6 +1186,20 @@ return;
                                       color: AppColors.pink,
                                       context: context,
                                       onTap: _showBirthdayDetails,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    _buildCompactEventCard(
+                                      title: "Events",
+                                      count: 4, // Mock count
+                                      icon: Icons.event,
+                                      color: AppColors.infoBlue,
+                                      context: context,
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => const EventManagementPortalScreen()),
+                                        );
+                                      },
                                     ),
                                     const SizedBox(width: 10),
                                     _buildCompactEventCard(
