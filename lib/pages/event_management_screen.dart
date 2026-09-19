@@ -1168,21 +1168,84 @@ class _CreateNewHospitalEventDialogState
   final _emergencyProtocolController = TextEditingController();
 
   bool _isSaving = false;
+  bool _categoriesLoading = false;
+  List<Map<String, dynamic>> _loadedCategories = [];
+  String? _errorMessage; // ← Error banner message
 
   @override
   void initState() {
     super.initState();
-    // Default mock values for testing
+    // Default values
     _startDateController.text = "2026-08-25";
     _endDateController.text = "2026-08-25";
     _startTimeController.text = "10:00:00";
     _endTimeController.text = "16:00:00";
+
+    // If parent passed categories, use them; else load fresh from API
+    if (widget.categories.isNotEmpty) {
+      _loadedCategories = widget.categories;
+    } else {
+      _fetchCategoriesInDialog();
+    }
+  }
+
+  /// Load event categories directly inside the dialog
+  Future<void> _fetchCategoriesInDialog() async {
+    setState(() {
+      _categoriesLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final response = await EventApiService.getEventCategories();
+      debugPrint('EVENT CATEGORIES RAW RESPONSE: $response');
+      List<dynamic> list = [];
+
+      if (response is List) {
+        list = response;
+      } else if (response is Map) {
+        final data = response['data'];
+        if (data is List) {
+          list = data;
+        } else if (data is Map) {
+          list = (data['list'] ?? data['content'] ?? data['records'] ?? []) as List;
+        }
+      }
+
+      if (list.isEmpty && response != null) {
+        debugPrint('EVENT CATEGORIES: Parsed empty list. Response: $response');
+      }
+
+      final mapped = list.map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        // Normalise field names — API may return different key names
+        return {
+          'eventCategoryId': m['eventCategoryId'] ?? m['id'] ?? m['categoryId'],
+          'categoryName'   : m['categoryName'] ?? m['name'] ?? m['category'] ?? 'Unknown',
+          ...m,
+        };
+      }).toList();
+
+      setState(() {
+        _loadedCategories = mapped;
+        _categoriesLoading = false;
+        if (mapped.isEmpty) {
+          _errorMessage = 'No event categories found. Please add categories first.';
+        }
+      });
+    } catch (e) {
+      debugPrint('Error loading categories in dialog: $e');
+      setState(() {
+        _categoriesLoading = false;
+        _errorMessage = 'Could not load event categories: ${e.toString()}';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Build deduplicated list from loaded categories
     final uniqueCategories = <String, Map<String, dynamic>>{};
-    for (final category in widget.categories) {
+    for (final category in _loadedCategories) {
       final name = category['categoryName']?.toString() ?? 'Other';
       uniqueCategories[name] = category;
     }
@@ -1200,7 +1263,7 @@ class _CreateNewHospitalEventDialogState
         ),
         child: Column(
           children: [
-            // Header
+            // ── Header ──────────────────────────────────────
             Container(
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
@@ -1229,7 +1292,43 @@ class _CreateNewHospitalEventDialogState
               ),
             ),
 
-            // Form Body
+            // ── Error / Warning Banner (form ke upar) ───────
+            if (_errorMessage != null)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3CD),
+                  border: Border.all(color: const Color(0xFFFFCA2C), width: 1.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.warning_amber_rounded,
+                        color: Color(0xFFB45309), size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: const Color(0xFF92400E),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => setState(() => _errorMessage = null),
+                      child: const Icon(Icons.close,
+                          color: Color(0xFFB45309), size: 16),
+                    ),
+                  ],
+                ),
+              ),
+
+            // ── Form Body ───────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
@@ -1260,34 +1359,88 @@ class _CreateNewHospitalEventDialogState
                       maxLines: 3,
                     ),
                     const SizedBox(height: 16),
-                    DropdownButtonFormField<Map<String, dynamic>>(
-                      decoration: InputDecoration(
-                        labelText: 'Event Category *',
-                        prefixIcon: const Icon(
-                          Icons.category,
-                          color: Color(0xFF182875),
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                      ),
-                      value: _selectedCategory,
-                      items: categoriesList.map((category) {
-                        return DropdownMenuItem<Map<String, dynamic>>(
-                          value: category,
-                          child: Text(
-                            category['categoryName']?.toString() ?? 'Other',
-                            style: GoogleFonts.poppins(fontSize: 14),
+
+                    // ── Event Category Dropdown ─────────────
+                    _categoriesLoading
+                        ? Container(
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Row(
+                              children: [
+                                const SizedBox(width: 16),
+                                const SizedBox(
+                                  height: 18,
+                                  width: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFF182875),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Loading categories...',
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      color: const Color(0xFF94A3B8)),
+                                ),
+                              ],
+                            ),
+                          )
+                        : DropdownButtonFormField<Map<String, dynamic>>(
+                            decoration: InputDecoration(
+                              labelText: 'Event Category *',
+                              prefixIcon: const Icon(
+                                Icons.category,
+                                color: Color(0xFF182875),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              // Retry hint if empty
+                              suffixIcon: categoriesList.isEmpty
+                                  ? IconButton(
+                                      icon: const Icon(
+                                          Icons.refresh,
+                                          color: Color(0xFF182875)),
+                                      tooltip: 'Retry loading categories',
+                                      onPressed: _fetchCategoriesInDialog,
+                                    )
+                                  : null,
+                            ),
+                            value: _selectedCategory,
+                            hint: Text(
+                              categoriesList.isEmpty
+                                  ? 'No categories available — tap ↻ to retry'
+                                  : 'Select a category',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  color: const Color(0xFF94A3B8)),
+                            ),
+                            items: categoriesList.map((category) {
+                              return DropdownMenuItem<Map<String, dynamic>>(
+                                value: category,
+                                child: Text(
+                                  category['categoryName']?.toString() ?? 'Other',
+                                  style: GoogleFonts.poppins(fontSize: 14),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: categoriesList.isEmpty
+                                ? null
+                                : (value) => setState(
+                                    () => _selectedCategory = value),
                           ),
-                        );
-                      }).toList(),
-                      onChanged: (value) =>
-                          setState(() => _selectedCategory = value),
-                    ),
                     const SizedBox(height: 32),
 
                     _buildSectionHeader(Icons.schedule, 'Timing'),
@@ -1660,17 +1813,28 @@ class _CreateNewHospitalEventDialogState
 }
 
   Future<void> _saveEvent() async {
-    if (_titleController.text.isEmpty || _selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required (*) fields')),
-      );
+    // ── Validation: show errors in banner at top of form ──
+    if (_titleController.text.trim().isEmpty) {
+      setState(() => _errorMessage = '⚠ Event Title is required.');
+      return;
+    }
+    if (_selectedCategory == null) {
+      setState(() => _errorMessage = '⚠ Please select an Event Category before creating.');
+      return;
+    }
+    if (_startDateController.text.trim().isEmpty || _endDateController.text.trim().isEmpty) {
+      setState(() => _errorMessage = '⚠ Start Date and End Date are required.');
       return;
     }
 
-    setState(() => _isSaving = true);
+    // Clear any previous error
+    setState(() {
+      _errorMessage = null;
+      _isSaving = true;
+    });
 
     final payload = {
-      "eventTitle": _titleController.text,
+      "eventTitle": _titleController.text.trim(),
       "subtitle": _subtitleController.text,
       "eventCategoryId": _selectedCategory!['eventCategoryId'],
       "status": "UPCOMING",
@@ -1684,7 +1848,7 @@ class _CreateNewHospitalEventDialogState
       "organizerName": _organizerNameController.text,
       "organizerContact": _organizerContactController.text,
       "budgetEstimate": int.tryParse(_budgetController.text) ?? 0,
-      "eventManagerId": 101, // Mock manager ID
+      "eventManagerId": 101,
       "managerName": _managerNameController.text.isEmpty
           ? "System User"
           : _managerNameController.text,
@@ -1696,31 +1860,29 @@ class _CreateNewHospitalEventDialogState
     };
 
     final res = await EventApiService.createEvent(payload);
-
     setState(() => _isSaving = false);
 
     if (res != null &&
-        (res['status_code'] == 200 || res['status_code'] == 201)) {
+        (res['statusCode'] == 200 ||
+            res['statusCode'] == 201 ||
+            res['status_code'] == 200 ||
+            res['status_code'] == 201)) {
       widget.onEventCreated();
       if (mounted) Navigator.pop(context);
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              'Event Created Successfully',
-              style: TextStyle(color: Colors.white),
-            ),
+            content: Text('Event Created Successfully',
+                style: TextStyle(color: Colors.white)),
             backgroundColor: Colors.green,
           ),
         );
     } else {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to create event'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      // Show error in banner
+      final msg = res?['message']?.toString() ??
+          res?['error']?.toString() ??
+          'Failed to create event. Please try again.';
+      setState(() => _errorMessage = '❌ $msg');
     }
   }
 }

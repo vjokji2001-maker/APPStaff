@@ -346,13 +346,13 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
 
   String _getBiometricInstruction() {
     if (_hasFaceId && _hasFingerprint) {
-      return 'Use Face or Fingerprint to Open SmartMate';
+      return 'Use Face or Fingerprint to Open SmartBuddy';
     } else if (_hasFaceId) {
-      return 'Use Face ID to Open SmartMate';
+      return 'Use Face ID to Open SmartBuddy';
     } else if (_hasFingerprint) {
-      return 'Use Fingerprint to Open SmartMate';
+      return 'Use Fingerprint to Open SmartBuddy';
     } else {
-      return 'Use Biometric to Open SmartMate';
+      return 'Use Biometric to Open SmartBuddy';
     }
   }
 

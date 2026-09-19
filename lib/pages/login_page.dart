@@ -486,7 +486,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                               Text(
-                                "Login to SmartMate",
+                                "Login to SmartBuddy",
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.poppins(
                                   fontSize: size.width * 0.06,

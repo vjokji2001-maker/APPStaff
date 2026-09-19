@@ -191,7 +191,7 @@ textStyle: const TextStyle(fontSize: 16),        ),
           valueListenable: fontSizeNotifier,
           builder: (context, fontSize, _) {
           return MaterialApp(
-  title: 'Smart Mate',
+              title: 'SmartBuddy APP',
   debugShowCheckedModeBanner: false,
   themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
   theme: _buildTheme(false, fontSize),

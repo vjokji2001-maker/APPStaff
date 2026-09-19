@@ -6,7 +6,6 @@ import '../theme/hr_theme.dart';
 import '../data/hr_api_service.dart';
 import '../models/hr_models.dart';
 import '../widgets/hr_widgets.dart';
-import '../../models/global_user_data.dart';
 
 class HRShiftScreen extends StatefulWidget {
   const HRShiftScreen({super.key});
@@ -88,17 +87,15 @@ class _HRShiftScreenState extends State<HRShiftScreen> {
       _error = null;
     });
 
+    // ── Resolve current user's employee code from SharedPreferences ──
     try {
-      final userData = GlobalUserData().userData;
-      if (userData != null) {
-        _currentUserEmployeeCode =
-            userData['userId']?.toString() ??
-            userData['empId']?.toString() ??
-            'EMP001';
-        print(
-          'SHIFT ROSTER - Resolved profile employeeCode: $_currentUserEmployeeCode (Code: $_currentUserEmployeeCode)',
-        );
-      }
+      final prefs = await SharedPreferences.getInstance();
+      _currentUserEmployeeCode =
+          prefs.getString('empCode') ??
+          prefs.getString('userId') ??
+          prefs.getString('empId') ??
+          'EMP001';
+      debugPrint('SHIFT ROSTER - Resolved employeeCode: $_currentUserEmployeeCode');
     } catch (e) {
       debugPrint('Failed to resolve employee code: $e');
     }
@@ -108,28 +105,26 @@ class _HRShiftScreenState extends State<HRShiftScreen> {
       final monday = _currentWeekStart;
       final sunday = _currentWeekStart.add(const Duration(days: 6));
 
-      print(
-        'SHIFT ROSTER - Requesting dates: ${_formatDate(monday)} to ${_formatDate(sunday)}',
-      );
+      debugPrint('SHIFT ROSTER - Requesting: ${_formatDate(monday)} to ${_formatDate(sunday)}');
+
       final response = await HRApiService.getShiftRoster(
         fromDate: _formatDate(monday),
         toDate: _formatDate(sunday),
         pageSize: 100,
       );
 
-      print('SHIFT ROSTER - Raw API Response: $response');
+      debugPrint('SHIFT ROSTER - Raw Response type: ${response.runtimeType}');
 
+      // ── Parse API response: { data: { columns: [], dataList: [[]], pagination: {} } } ──
       final data = _asMap(
-        response is Map ? response['data'] ?? response : null,
+        response is Map ? (response['data'] ?? response) : null,
       );
       final columns = _asList(data['columns'] ?? data['columnList']);
-      final dataList = _asList(
-        data['dataList'] ?? data['content'] ?? data['records'],
-      );
+      final dataList = _asList(data['dataList'] ?? data['content'] ?? data['records']);
 
-      print('SHIFT ROSTER - dataList length: ${dataList.length}');
+      debugPrint('SHIFT ROSTER - columns: ${columns.length}, dataList rows: ${dataList.length}');
 
-      // Flatten dataList in case it contains nested lists (e.g. [[row1, row2]])
+      // Flatten dataList — API returns [[row1, row2, ...]] (nested list)
       final List<dynamic> flatList = [];
       for (final item in dataList) {
         if (item is List) {
@@ -139,117 +134,128 @@ class _HRShiftScreenState extends State<HRShiftScreen> {
         }
       }
 
-      print('SHIFT ROSTER - flatList length: ${flatList.length}');
+      debugPrint('SHIFT ROSTER - flatList length: ${flatList.length}');
       if (flatList.isNotEmpty) {
-        print('SHIFT ROSTER - first flatList row: ${flatList.first}');
+        debugPrint('SHIFT ROSTER - First row keys: ${flatList.first?.keys?.toList()}');
+        debugPrint('SHIFT ROSTER - First row: ${flatList.first}');
       }
 
-      if (columns.isEmpty || flatList.isEmpty) {
-        print(
-          'SHIFT ROSTER - columns or flatList is empty! Building empty week schedule...',
-        );
+      if (flatList.isEmpty) {
+        debugPrint('SHIFT ROSTER - Empty data. Building empty week schedule...');
         _buildEmptyWeekSchedule();
         setState(() {
-          if (now.isAfter(monday.subtract(const Duration(days: 1))) &&
-              now.isBefore(sunday.add(const Duration(days: 1)))) {
-            _selectedDate = now;
-          } else {
-            _selectedDate = monday;
-          }
+          _selectedDate = now.isAfter(monday.subtract(const Duration(days: 1))) &&
+                  now.isBefore(sunday.add(const Duration(days: 1)))
+              ? now
+              : monday;
           _isLoading = false;
         });
         return;
       }
 
-      // Safe lookup for row matching logged-in user code
-      final dynamic foundRow = flatList.firstWhere((r) {
+      // ── Find the logged-in user's row by employeeCode or employeeId ──
+      final prefs = await SharedPreferences.getInstance();
+      final storedEmpId = prefs.getString('empId') ?? '';
+      final storedEmpCode = prefs.getString('empCode') ?? prefs.getString('userId') ?? '';
+
+      dynamic foundRow = flatList.firstWhere((r) {
         if (r is! Map) return false;
-        final code = r['employeeCode']?.toString().toLowerCase() ?? '';
-        return code.isNotEmpty &&
-            code == _currentUserEmployeeCode?.toLowerCase();
+        // Match by employeeId (UUID) — most reliable
+        final empId = r['employeeId']?.toString() ?? '';
+        if (storedEmpId.isNotEmpty && empId == storedEmpId) return true;
+        // Match by employeeCode
+        final empCode = r['employeeCode']?.toString().toLowerCase() ?? '';
+        return empCode.isNotEmpty && empCode == storedEmpCode.toLowerCase();
       }, orElse: () => flatList.first);
 
       final rowMap = foundRow is Map
           ? Map<String, dynamic>.from(foundRow)
           : <String, dynamic>{};
-      final List<dynamic> empShiftList = _asList(rowMap['empShiftList']);
 
+      debugPrint('SHIFT ROSTER - Using row: employeeId=${rowMap['employeeId']}, '
+          'empCode=${rowMap['employeeCode']}, name=${rowMap['employeeName']}');
+
+      // ── empShiftList: list of shifts for the employee ──
+      final List<dynamic> empShiftList = _asList(rowMap['empShiftList']);
+      debugPrint('SHIFT ROSTER - empShiftList count: ${empShiftList.length}');
+
+      // ── Build 7-day schedule ──
       final schedule = <ShiftSchedule>[];
       final weekDates = List.generate(7, (i) => monday.add(Duration(days: i)));
 
       for (final date in weekDates) {
-        final dateStr = _formatDate(date);
+        // API date format in empShiftList is "DD-MM-YYYY"
         final dateKeyStr =
             '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}';
+        // Also check column field format "DD-MM-YYYY"
+        final colFieldStr =
+            '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}';
 
-        // Find matching shift in employee shift list
-        final dynamic matchedShift = empShiftList.firstWhere((s) {
+        // Find shift for this date in empShiftList
+        dynamic matchedShift = empShiftList.firstWhere((s) {
           if (s is! Map) return false;
           final sDate = s['date']?.toString() ?? '';
-          return sDate == dateKeyStr;
+          return sDate == dateKeyStr || sDate == colFieldStr;
         }, orElse: () => null);
 
+        // Also check columns for date field mapping (fallback from column-based response)
+        if (matchedShift == null) {
+          final colValue = rowMap[colFieldStr];
+          if (colValue != null && colValue.toString().isNotEmpty) {
+            matchedShift = {'shiftName': colValue.toString()};
+          }
+        }
+
         final details = _asMap(matchedShift);
-        final shiftName =
-            details['shiftName']?.toString() ??
+        final shiftName = details['shiftName']?.toString() ??
             details['name']?.toString() ??
             details['shiftCode']?.toString() ??
-            matchedShift?.toString() ??
             '';
 
-        schedule.add(
-          ShiftSchedule(
-            date: dateStr,
-            day: _weekdayShort(date.weekday),
-            shiftName: shiftName,
-            startTime:
-                details['inTime']?.toString() ??
-                details['startTime']?.toString() ??
-                '',
-            endTime:
-                details['outTime']?.toString() ??
-                details['endTime']?.toString() ??
-                '',
-            ward:
-                details['ward']?.toString() ??
-                details['location']?.toString() ??
-                '',
-            type: details['type']?.toString() ?? 'Regular',
-            isToday:
-                date.year == now.year &&
-                date.month == now.month &&
-                date.day == now.day,
-          ),
-        );
+        schedule.add(ShiftSchedule(
+          date: _formatDate(date),
+          day: _weekdayShort(date.weekday),
+          shiftName: shiftName,
+          startTime: details['inTime']?.toString() ??
+              details['startTime']?.toString() ??
+              '',
+          endTime: details['outTime']?.toString() ??
+              details['endTime']?.toString() ??
+              '',
+          ward: details['ward']?.toString() ??
+              details['location']?.toString() ??
+              '',
+          type: details['type']?.toString() ?? 'Regular',
+          isToday: date.year == now.year &&
+              date.month == now.month &&
+              date.day == now.day,
+        ));
       }
 
       setState(() {
         _weekSchedule = schedule;
-        if (now.isAfter(monday.subtract(const Duration(days: 1))) &&
-            now.isBefore(sunday.add(const Duration(days: 1)))) {
-          _selectedDate = now;
-        } else {
-          _selectedDate = monday;
-        }
+        _selectedDate = now.isAfter(monday.subtract(const Duration(days: 1))) &&
+                now.isBefore(sunday.add(const Duration(days: 1)))
+            ? now
+            : monday;
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading roster: $e');
+      debugPrint('Error loading shift roster: $e');
       _buildEmptyWeekSchedule();
       setState(() {
         final now = DateTime.now();
         final monday = _currentWeekStart;
         final sunday = _currentWeekStart.add(const Duration(days: 6));
-        if (now.isAfter(monday.subtract(const Duration(days: 1))) &&
-            now.isBefore(sunday.add(const Duration(days: 1)))) {
-          _selectedDate = now;
-        } else {
-          _selectedDate = monday;
-        }
+        _selectedDate = now.isAfter(monday.subtract(const Duration(days: 1))) &&
+                now.isBefore(sunday.add(const Duration(days: 1)))
+            ? now
+            : monday;
         _isLoading = false;
       });
     }
   }
+
 
   void _buildEmptyWeekSchedule() {
     final monday = _currentWeekStart;

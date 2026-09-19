@@ -62,6 +62,7 @@ class ApiHost {
     'LOCAL_DEV_8': '192.168.1.38',
     'LOCAL_DEV_9': '192.168.1.14',
     'LOCAL_DEV_10': '192.168.1.19',
+    'LOCAL_DEV_11': '192.168.1.7',
   };
 
   // ─────────────────────────────────────────────────────────
@@ -69,7 +70,7 @@ class ApiHost {
   // ─────────────────────────────────────────────────────────
   //
   //  Main app server key  → change to your server key
-  static const String CURRENT_KEY = 'SM_222';
+  static const String CURRENT_KEY = 'LOCAL_DEV_11';
   //
   //  HR module server key → change to your HR server key
   static const String CURRENT_KEY_HR = 'HRMS';
@@ -81,7 +82,7 @@ class ApiHost {
   static const int SAM_PORT = 9091;
   static const int APP_PORT = 8443;
   static const int LOGIN_PORT = 443;
-  static const int SMART_CARE_PORT = 80;
+  static const int SMART_CARE_PORT = 9090;
 
   // ─────────────────────────────────────────────────────────
   //  Computed Hosts (do not edit)

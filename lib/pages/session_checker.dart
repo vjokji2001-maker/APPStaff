@@ -149,7 +149,7 @@ class _SessionCheckerState extends State<SessionChecker>
             ),
             const SizedBox(height: 20),
             Text(
-              "SmartMate",
+              "SmartBuddy",
               style: GoogleFonts.poppins(
                 color: Colors.white,
                 fontSize: 24,

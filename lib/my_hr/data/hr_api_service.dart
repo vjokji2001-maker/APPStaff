@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:staff_mate/APIs/api_endpoints.dart';
 import 'package:staff_mate/APIs/api_headers.dart';
@@ -8,7 +9,7 @@ class HRApiService {
   static Future<Map<String, String>> _hrHeaders() {
     return ApiHeaders.getHeaders(isHrRequest: true);
   }
-  static Future<String> getLoggedEmpId() async {
+  static Future<String> getLoggedEmpId({DateTime? referenceDate}) async {
     final prefs = await SharedPreferences.getInstance();
     String empId = prefs.getString('empId') ?? '';
     
@@ -18,7 +19,7 @@ class HRApiService {
       final userId = prefs.getString('userId') ?? '';
       final firstName = prefs.getString('firstName') ?? '';
       if (userId.isNotEmpty) {
-        final resolved = await resolveAndSaveEmpIdFromRoster(userId, firstName: firstName);
+        final resolved = await resolveAndSaveEmpIdFromRoster(userId, firstName: firstName, referenceDate: referenceDate);
         if (resolved != null && resolved.isNotEmpty) {
           empId = resolved;
         }
@@ -28,7 +29,8 @@ class HRApiService {
   }
 
   /// Resolve and save employee ID by querying the shift roster
-  static Future<String?> resolveAndSaveEmpIdFromRoster(String userId, {String? firstName}) async {
+  static Future<String?> resolveAndSaveEmpIdFromRoster(String userId, {String? firstName, DateTime? referenceDate}) async {
+    // Always use current date to resolve empId to maximize chance of finding the active shift
     final now = DateTime.now();
     final fromDate = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     
@@ -135,11 +137,11 @@ class HRApiService {
     return null;
   }
 
-  static Future<String> _getEffectiveEmpId(String? empId) async {
+  static Future<String> _getEffectiveEmpId(String? empId, {DateTime? referenceDate}) async {
     if (empId != null && empId.isNotEmpty) {
       return empId;
     }
-    return await getLoggedEmpId();
+    return await getLoggedEmpId(referenceDate: referenceDate);
   }
 
   /// Get Employee Profile
@@ -299,12 +301,24 @@ class HRApiService {
   /// Get My Attendance
   static Future<Map<String, dynamic>> getMyAttendance({String? empId, required String monthYear}) async {
     try {
-      final id = await _getEffectiveEmpId(empId);
+      print('DEBUG: getMyAttendance called with empId: $empId, monthYear: $monthYear');
+      final parts = monthYear.split('-');
+      DateTime? refDate;
+      if (parts.length == 2) {
+        refDate = DateTime(int.tryParse(parts[1]) ?? DateTime.now().year, int.tryParse(parts[0]) ?? DateTime.now().month, 1);
+      }
+      print('DEBUG: refDate parsed as: $refDate');
+      final id = await _getEffectiveEmpId(empId, referenceDate: refDate);
+      print('DEBUG: effective empId resolved as: $id');
       if (id.isEmpty) throw Exception('Employee ID is missing');
+      
+      final url = ApiEndpoints.myAttendance(id, monthYear);
+      print('DEBUG: making GET request to: $url');
       final response = await ApiRequest.get(
-        ApiEndpoints.myAttendance(id, monthYear),
+        url,
         headers: await _hrHeaders(),
       );
+      print('DEBUG: getMyAttendance response received');
       return response as Map<String, dynamic>;
     } catch (e) {
       print('Error fetching attendance: $e');
@@ -362,42 +376,68 @@ class HRApiService {
     String designationId = '',
     int page = 1,
     int pageSize = 10,
-    String sortingField = 'employeeName',
+    String sortingField = 'ed.formal_name',
     String sortingLabel = 'EmployeeName',
     String sortingOrder = 'ASC',
     String? empId,
     String? jobTitle,
   }) async {
     try {
-      final resolvedEmpId = empId ?? await getLoggedEmpId();
       final prefs = await SharedPreferences.getInstance();
-      final resolvedJobTitle = jobTitle ?? prefs.getString('jobtitle') ?? prefs.getString('UserJobtitle') ?? '';
+
+      // ── Resolve empId: use passed value → stored empId → stored userId ──
+      final resolvedEmpId = (empId != null && empId.isNotEmpty)
+          ? empId
+          : (prefs.getString('empId') ?? prefs.getString('userId') ?? '');
+
+      // ── Resolve jobTitle from preferences ──
+      final resolvedJobTitle = jobTitle ??
+          prefs.getString('jobtitle') ??
+          prefs.getString('UserJobtitle') ??
+          prefs.getString('jobTitle') ??
+          'admin';
+
+      // ── Resolve employee name for search filter ──
+      final resolvedName = searchName.trim().isNotEmpty
+          ? searchName.trim()
+          : (prefs.getString('firstName') != null
+              ? '${prefs.getString('firstName') ?? ''} ${prefs.getString('lastName') ?? ''}'.trim()
+              : '');
+
+      final body = {
+        'paginationInfo': {
+          'pageSize': pageSize,
+          'currentPage': page,
+          'dataSorting': {
+            'sortingOrder': sortingOrder,
+            'byColumn': {
+              'label': sortingLabel,
+              'field': sortingField,   // must be 'ed.formal_name' per API
+            },
+          },
+        },
+        'branchId': branchId.isNotEmpty ? branchId : (prefs.get('branchId')?.toString() ?? ''),
+        'code': searchCode.trim(),
+        'companyId': companyId,
+        'departmentId': departmentId,
+        'designationId': designationId,
+        '#empId': resolvedEmpId,     // field name with # as per actual API payload
+        'empId': resolvedEmpId,      // also send without # for compatibility
+        'fromDate': fromDate,
+        'jobTitle': resolvedJobTitle,
+        'name': resolvedName,
+        'toDate': toDate,
+      };
+
+      debugPrint('=== SHIFT ROSTER PAYLOAD ===');
+      debugPrint('URL: ${ApiEndpoints.shiftRosterFetch}');
+      debugPrint('empId: $resolvedEmpId');
+      debugPrint('fromDate: $fromDate | toDate: $toDate');
+      debugPrint('jobTitle: $resolvedJobTitle');
 
       final response = await ApiRequest.post(
         ApiEndpoints.shiftRosterFetch,
-        {
-          'paginationInfo': {
-            'pageSize': pageSize,
-            'currentPage': page,
-            'dataSorting': {
-              'sortingOrder': sortingOrder,
-              'byColumn': {
-                'label': sortingLabel,
-                'field': sortingField,
-              },
-            },
-          },
-          'fromDate': fromDate,
-          'toDate': toDate,
-          'name': searchName.trim(),
-          'code': searchCode.trim(),
-          'companyId': companyId,
-          'branchId': branchId,
-          'designationId': designationId,
-          'departmentId': departmentId,
-          'empId': resolvedEmpId,
-          'jobTitle': resolvedJobTitle,
-        },
+        body,
         headers: await _hrHeaders(),
       );
       return response;
@@ -406,6 +446,7 @@ class HRApiService {
       rethrow;
     }
   }
+
 
   // --- Leave CRUD ---
   static Future<dynamic> getLeaveRequestById(String id) async {

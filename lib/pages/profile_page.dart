@@ -979,7 +979,7 @@ class _ProfilePageState extends State<ProfilePage> {
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Text(
-                "SmartMate v1.0.0",
+                "SmartBuddy v1.0.0",
                 style: GoogleFonts.nunito(color: Colors.grey, fontSize: 12),
               ),
             ),

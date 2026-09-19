@@ -203,7 +203,7 @@ class BiometricAuthService {
   // ─── Authentication ──────────────────────────────────────────────────────
 
   static Future<BiometricResult> authenticateSecure({
-    String reason = 'Authenticate to access SmartMate',
+    String reason = 'Authenticate to access SmartBuddy',
   }) async {
     try {
       if (await _hasEnrollmentChanged()) {
@@ -231,7 +231,7 @@ class BiometricAuthService {
   }
 
   static Future<bool> authenticate({
-    String reason = 'Authenticate to access SmartMate',
+    String reason = 'Authenticate to access SmartBuddy',
   }) async {
     final result = await authenticateSecure(reason: reason);
     return result == BiometricResult.success;

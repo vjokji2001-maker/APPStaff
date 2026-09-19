@@ -26,6 +26,7 @@ import 'package:staff_mate/ai/chat_screen.dart';
 import 'package:staff_mate/ai/chat_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:staff_mate/api/api_service.dart';
+import 'package:staff_mate/api/event_api_service.dart';
 import 'package:staff_mate/presentation/face_attendance/face_attendance_page.dart';
 import 'package:staff_mate/pages/event_management_screen.dart';
 
@@ -86,6 +87,7 @@ class SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
   bool _loadingBirthdays = true;
   bool _loadingShifts = true;
   String currentDate = '';
+  int _eventsCount = 0; // Dynamic events count — default 0
 
   List<StaffDOB> todayBirthdays = [];
   List<Birthday> upcomingBirthdays = [];
@@ -106,6 +108,36 @@ class SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
     _loadTodayBirthdays();
     _loadDynamicTasks();
     _loadDynamicRotaShifts();
+    _loadEventsCount(); // Load real events count from API
+  }
+
+  /// Fetch events count dynamically from API
+  Future<void> _loadEventsCount() async {
+    try {
+      final response = await EventApiService.getAllEvents();
+      if (response != null) {
+        List<dynamic> eventList = [];
+        if (response is List) {
+          eventList = response;
+        } else if (response is Map) {
+          final data = response['data'];
+          if (data is List) {
+            eventList = data;
+          } else if (data is Map) {
+            eventList = (data['list'] ?? data['content'] ?? data['records'] ?? []) as List;
+          }
+        }
+        if (mounted) {
+          setState(() {
+            _eventsCount = eventList.length;
+          });
+        }
+        debugPrint('HOME - Events count loaded: $_eventsCount');
+      }
+    } catch (e) {
+      debugPrint('Error loading events count: $e');
+      // Keep default 0 on error
+    }
   }
 
   void _scrollToTop() {
@@ -1250,7 +1282,7 @@ class SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
                                     const SizedBox(width: 10),
                                     _buildCompactEventCard(
                                       title: "Events",
-                                      count: 4, // Mock count
+                                      count: _eventsCount, // Dynamic from API
                                       icon: Icons.event,
                                       color: AppColors.infoBlue,
                                       context: context,
@@ -1261,7 +1293,7 @@ class SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
                                             builder: (context) =>
                                                 const EventManagementPortalScreen(),
                                           ),
-                                        );
+                                        ).then((_) => _loadEventsCount()); // Refresh on return
                                       },
                                     ),
                                     const SizedBox(width: 10),
@@ -2914,7 +2946,7 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
-                                    "Version 1.0 • SmartMate © 2026",
+                                    "Version 1.0 • SmartBuddy © 2026",
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.poppins(
