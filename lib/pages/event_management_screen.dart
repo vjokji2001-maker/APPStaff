@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:staff_mate/api/event_api_service.dart';
 import 'package:staff_mate/pages/smartcarehomescreen.dart'; // For AppColors if needed, though they hardcoded colors
-
+import 'package:flutter/services.dart';
 class EventManagementPortalScreen extends StatefulWidget {
   const EventManagementPortalScreen({super.key});
 
@@ -11,7 +11,8 @@ class EventManagementPortalScreen extends StatefulWidget {
       _EventManagementPortalScreenState();
 }
 
-class _EventManagementPortalScreenState extends State<EventManagementPortalScreen> {
+class _EventManagementPortalScreenState
+    extends State<EventManagementPortalScreen> {
   String selectedFilter = 'all';
   String searchQuery = '';
 
@@ -45,8 +46,8 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
       // Assuming you might add this to EventApiService later, for now we mock it or if you have it:
       // final tasks = await EventApiService.getEventTasks(eventId.toString());
       // For now, let's just show an empty list or a mock since getEventTasks wasn't in EventApiService
-      final tasks = <Map<String, dynamic>>[]; 
-      
+      final tasks = <Map<String, dynamic>>[];
+
       if (!mounted) return;
       setState(() {
         _eventTasks = tasks;
@@ -54,7 +55,9 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
     } catch (e) {
       debugPrint('ERROR LOADING EVENT TASKS: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load event tasks: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load event tasks: $e')));
     } finally {
       if (!mounted) return;
       setState(() {
@@ -72,7 +75,7 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
 
     try {
       final response = await EventApiService.getAllEvents();
-      
+
       if (response != null) {
         List? list;
         if (response is List) {
@@ -80,7 +83,8 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
         } else if (response is Map && response['data'] != null) {
           if (response['data'] is List) {
             list = response['data'] as List;
-          } else if (response['data'] is Map && response['data']['list'] != null) {
+          } else if (response['data'] is Map &&
+              response['data']['list'] != null) {
             list = response['data']['list'] as List;
           }
         }
@@ -93,14 +97,25 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
               final item = Map<String, dynamic>.from(rawItem as Map);
               return {
                 'id': item['id']?.toString() ?? '',
-                'name': item['eventTitle'] ?? item['eventName'] ?? item['name'] ?? '',
+                'name':
+                    item['eventTitle'] ??
+                    item['eventName'] ??
+                    item['name'] ??
+                    '',
                 'tagline': item['subtitle'] ?? item['description'] ?? '',
-                'type': item['eventCategoryName'] ?? item['categoryName'] ?? item['type'] ?? 'Other',
+                'type':
+                    item['eventCategoryName'] ??
+                    item['categoryName'] ??
+                    item['type'] ??
+                    'Other',
                 'date': item['startDate'] ?? item['date'] ?? '',
                 'time': '${item['startTime'] ?? ''} – ${item['endTime'] ?? ''}',
                 'location': item['location'] ?? item['venue'] ?? '',
-                'manager': item['managerName'] ?? item['eventManagerName'] ?? '',
-                'status': (item['status'] ?? 'upcoming').toString().toLowerCase(),
+                'manager':
+                    item['managerName'] ?? item['eventManagerName'] ?? '',
+                'status': (item['status'] ?? 'upcoming')
+                    .toString()
+                    .toLowerCase(),
                 'raw': item,
               };
             }).toList();
@@ -132,7 +147,8 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
         } else if (response is Map && response['data'] != null) {
           if (response['data'] is List) {
             list = response['data'] as List;
-          } else if (response['data'] is Map && response['data']['list'] != null) {
+          } else if (response['data'] is Map &&
+              response['data']['list'] != null) {
             list = response['data']['list'] as List;
           }
         }
@@ -140,7 +156,9 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
         if (list != null) {
           if (!mounted) return;
           setState(() {
-            _eventCategories = list!.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+            _eventCategories = list!
+                .map((e) => Map<String, dynamic>.from(e as Map))
+                .toList();
           });
         }
       }
@@ -163,7 +181,8 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
           return false;
         }
       }
-      if (selectedFilter == 'today') return e['status'] == 'ongoing' || e['status'] == 'today';
+      if (selectedFilter == 'today')
+        return e['status'] == 'ongoing' || e['status'] == 'today';
       if (selectedFilter == 'upcoming') return e['status'] == 'upcoming';
       if (selectedFilter == 'completed') return e['status'] == 'completed';
       return true;
@@ -173,7 +192,9 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
   @override
   Widget build(BuildContext context) {
     final total = events.length;
-    final live = events.where((e) => e['status'] == 'ongoing' || e['status'] == 'today').length;
+    final live = events
+        .where((e) => e['status'] == 'ongoing' || e['status'] == 'today')
+        .length;
     final up = events.where((e) => e['status'] == 'upcoming').length;
     final comp = events.where((e) => e['status'] == 'completed').length;
 
@@ -192,244 +213,411 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                   Row(
-                    children: [
-                      InkWell(
-                        onTap: () => Navigator.pop(context),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
+                    Row(
+                      children: [
+                        InkWell(
+                          onTap: () => Navigator.pop(context),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        // Title takes available space
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'STAFFMATE OPERATIONS',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFC7D2FE),
+                                ),
+                              ),
+                              Text(
+                                'Event Management',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Create button
+                        ElevatedButton(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => CreateNewHospitalEventDialog(
+                                categories: _eventCategories,
+                                onEventCreated: _loadAllEvents,
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
                           ),
                           child: const Icon(
-                            Icons.arrow_back,
-                            color: Colors.white,
+                            Icons.add,
                             size: 18,
+                            color: Color(0xFF182875),
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Coordinate health camps, clinical training, and emergency code blue drills.',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: const Color(0xFFCBD5E1),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Stat Cards Row
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: [
+                      _buildStatCard(
+                        'TOTAL',
+                        total,
+                        'All events',
+                        Icons.calendar_today,
+                        const Color(0xFF182875),
+                        'all',
                       ),
                       const SizedBox(width: 10),
-                      // Title takes available space
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'STAFFMATE OPERATIONS',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.poppins(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFFC7D2FE),
-                              ),
+                      _buildStatCard(
+                        'TODAY / LIVE',
+                        live,
+                        'Active today',
+                        Icons.circle,
+                        const Color(0xFFD97706),
+                        'today',
+                        isLiveDot: true,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildStatCard(
+                        'UPCOMING',
+                        up,
+                        'Next 15 days',
+                        Icons.access_time,
+                        const Color(0xFF0284C7),
+                        'upcoming',
+                      ),
+                      const SizedBox(width: 10),
+                      _buildStatCard(
+                        'COMPLETED',
+                        comp,
+                        'Past 15 days',
+                        Icons.check_circle_outline,
+                        const Color(0xFF059669),
+                        'completed',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Search & Filter
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      TextField(
+                        onChanged: (v) => setState(() => searchQuery = v),
+                        style: GoogleFonts.poppins(fontSize: 12),
+                        decoration: InputDecoration(
+                          hintText: 'Search event name or location...',
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            size: 16,
+                            color: Color(0xFF94A3B8),
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE2E8F0),
                             ),
-                            Text(
-                              'Event Management',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFE2E8F0),
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      // Create button
-                      ElevatedButton(
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (ctx) => CreateNewHospitalEventDialog(
-                              categories: _eventCategories,
-                              onEventCreated: _loadAllEvents,
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Icon(
-                          Icons.add,
-                          size: 18,
-                          color: Color(0xFF182875),
+                      const SizedBox(height: 10),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildPillTab('All ($total)', 'all'),
+                            const SizedBox(width: 6),
+                            _buildPillTab('Live ($live)', 'today'),
+                            const SizedBox(width: 6),
+                            _buildPillTab('Upcoming ($up)', 'upcoming'),
+                            const SizedBox(width: 6),
+                            _buildPillTab('Completed ($comp)', 'completed'),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Coordinate health camps, clinical training, and emergency code blue drills.',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: const Color(0xFFCBD5E1),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Stat Cards Row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: [
-                    _buildStatCard(
-                      'TOTAL',
-                      total,
-                      'All events',
-                      Icons.calendar_today,
-                      const Color(0xFF182875),
-                      'all',
-                    ),
-                    const SizedBox(width: 10),
-                    _buildStatCard(
-                      'TODAY / LIVE',
-                      live,
-                      'Active today',
-                      Icons.circle,
-                      const Color(0xFFD97706),
-                      'today',
-                      isLiveDot: true,
-                    ),
-                    const SizedBox(width: 10),
-                    _buildStatCard(
-                      'UPCOMING',
-                      up,
-                      'Next 15 days',
-                      Icons.access_time,
-                      const Color(0xFF0284C7),
-                      'upcoming',
-                    ),
-                    const SizedBox(width: 10),
-                    _buildStatCard(
-                      'COMPLETED',
-                      comp,
-                      'Past 15 days',
-                      Icons.check_circle_outline,
-                      const Color(0xFF059669),
-                      'completed',
-                    ),
-                  ],
                 ),
               ),
-            ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Search & Filter
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Column(
-                  children: [
-                    TextField(
-                      onChanged: (v) => setState(() => searchQuery = v),
-                      style: GoogleFonts.poppins(fontSize: 12),
-                      decoration: InputDecoration(
-                        hintText: 'Search event name or location...',
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          size: 16,
-                          color: Color(0xFF94A3B8),
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE2E8F0),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE2E8F0),
-                          ),
-                        ),
+              // Event List
+              if (_loadingEvents)
+                const Padding(
+                  padding: EdgeInsets.all(30),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (filteredEvents.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(30),
+                  child: Center(
+                    child: Text(
+                      'No events found',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: const Color(0xFF64748B),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
+                  ),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filteredEvents.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (ctx, i) {
+                    final ev = filteredEvents[i];
+
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildPillTab('All ($total)', 'all'),
-                          const SizedBox(width: 6),
-                          _buildPillTab('Live ($live)', 'today'),
-                          const SizedBox(width: 6),
-                          _buildPillTab('Upcoming ($up)', 'upcoming'),
-                          const SizedBox(width: 6),
-                          _buildPillTab('Completed ($comp)', 'completed'),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEEF2FF),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  ev['type'].toString().toUpperCase(),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF182875),
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: ev['status'] == 'completed'
+                                      ? const Color(0xFFDCFCE7)
+                                      : const Color(0xFFE0F2FE),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  ev['status'].toString().toUpperCase(),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    color: ev['status'] == 'completed'
+                                        ? const Color(0xFF15803D)
+                                        : const Color(0xFF0369A1),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          Text(
+                            ev['name'].toString(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+
+                          const SizedBox(height: 4),
+
+                          Text(
+                            ev['tagline'].toString(),
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today,
+                                size: 12,
+                                color: Color(0xFF182875),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  '${ev['date']} (${ev['time']})',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10,
+                                    color: const Color(0xFF475569),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          if (ev['location'].toString().isNotEmpty)
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.location_on_outlined,
+                                  size: 13,
+                                  color: Color(0xFF64748B),
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    ev['location'].toString(),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      color: const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                          if (ev['manager'].toString().isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.person_outline,
+                                  size: 13,
+                                  color: Color(0xFF64748B),
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    ev['manager'].toString(),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      color: const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  _showEventDetailsPopup(ev);
+                                },
+                                icon: const Icon(Icons.info_outline, size: 16),
+                                label: const Text('View Details'),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
-                    )
-                  ],
+                    );
+                  },
                 ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Event List
-            if (_loadingEvents)
-              const Padding(
-                padding: EdgeInsets.all(30),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (filteredEvents.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(30),
-                child: Center(
-                  child: Text(
-                    'No events found',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-              )
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: filteredEvents.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (ctx, i) {
-                  final ev = filteredEvents[i];
-
-                  return Container(
+              if (_selectedEventId != null) ...[
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -439,293 +627,138 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEEF2FF),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                ev['type'].toString().toUpperCase(),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF182875),
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: ev['status'] == 'completed'
-                                    ? const Color(0xFFDCFCE7)
-                                    : const Color(0xFFE0F2FE),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                ev['status'].toString().toUpperCase(),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w700,
-                                  color: ev['status'] == 'completed'
-                                      ? const Color(0xFF15803D)
-                                      : const Color(0xFF0369A1),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 8),
-
                         Text(
-                          ev['name'].toString(),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          'Event Tasks',
                           style: GoogleFonts.poppins(
-                            fontSize: 14,
+                            fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF0F172A),
                           ),
                         ),
-
-                        const SizedBox(height: 4),
-
-                        Text(
-                          ev['tagline'].toString(),
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.calendar_today,
-                              size: 12,
-                              color: Color(0xFF182875),
+                        const SizedBox(height: 12),
+                        if (_loadingEventTasks)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20),
+                              child: CircularProgressIndicator(),
                             ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                '${ev['date']} (${ev['time']})',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10,
-                                  color: const Color(0xFF475569),
-                                ),
-                              ),
+                          )
+                        else if (_eventTasks.isEmpty)
+                          Text(
+                            'No tasks found for this event.',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: const Color(0xFF64748B),
                             ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        if (ev['location'].toString().isNotEmpty)
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.location_on_outlined,
-                                size: 13,
-                                color: Color(0xFF64748B),
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  ev['location'].toString(),
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 10,
-                                    color: const Color(0xFF475569),
+                          )
+                        else
+                          Column(
+                            children: _eventTasks.map((task) {
+                              return Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFFE2E8F0),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-
-                        if (ev['manager'].toString().isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.person_outline,
-                                size: 13,
-                                color: Color(0xFF64748B),
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  ev['manager'].toString(),
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 10,
-                                    color: const Color(0xFF475569),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                _showEventDetailsPopup(ev);
-                              },
-                              icon: const Icon(Icons.info_outline, size: 16),
-                              label: const Text('View Details'),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  );
-                },
-              ),
-            if (_selectedEventId != null) ...[
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Event Tasks',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      if (_loadingEventTasks)
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(20),
-                            child: CircularProgressIndicator(),
-                          ),
-                        )
-                      else if (_eventTasks.isEmpty)
-                        Text(
-                          'No tasks found for this event.',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: const Color(0xFF64748B),
-                          ),
-                        )
-                      else
-                        Column(
-                          children: _eventTasks.map((task) {
-                            return Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFFE2E8F0),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    task['taskDescription']?.toString() ?? '',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF0F172A),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      task['taskDescription']?.toString() ?? '',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF0F172A),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Assigned to: ${task['assignedPerson']}',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 10,
-                                      color: const Color(0xFF475569),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'Assigned to: ${task['assignedPerson']}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 10,
+                                        color: const Color(0xFF475569),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          (task['priority']?.toString() ?? '')
+                                              .toUpperCase(),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFFD97706),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                (task['status']?.toString() ??
+                                                            '')
+                                                        .toUpperCase() ==
+                                                    'COMPLETED'
+                                                ? const Color(0xFFDCFCE7)
+                                                : const Color(0xFFE0F2FE),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            (task['status']?.toString() ?? '')
+                                                .toUpperCase(),
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w700,
+                                              color:
+                                                  (task['status']?.toString() ??
+                                                              '')
+                                                          .toUpperCase() ==
+                                                      'COMPLETED'
+                                                  ? const Color(0xFF15803D)
+                                                  : const Color(0xFF0369A1),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (task['dueDate'] != null) ...[
+                                      const SizedBox(height: 5),
                                       Text(
-                                        (task['priority']?.toString() ?? '').toUpperCase(),
+                                        'Due: ${task['dueDate']}',
                                         style: GoogleFonts.poppins(
                                           fontSize: 9,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFFD97706),
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: (task['status']?.toString() ?? '').toUpperCase() == 'COMPLETED'
-                                              ? const Color(0xFFDCFCE7)
-                                              : const Color(0xFFE0F2FE),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          (task['status']?.toString() ?? '').toUpperCase(),
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 8,
-                                            fontWeight: FontWeight.w700,
-                                            color: (task['status']?.toString() ?? '').toUpperCase() == 'COMPLETED'
-                                                ? const Color(0xFF15803D)
-                                                : const Color(0xFF0369A1),
-                                          ),
+                                          color: const Color(0xFF64748B),
                                         ),
                                       ),
                                     ],
-                                  ),
-                                  if (task['dueDate'] != null) ...[
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      'Due: ${task['dueDate']}',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 9,
-                                        color: const Color(0xFF64748B),
-                                      ),
-                                    ),
                                   ],
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                    ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
+              const SizedBox(height: 30),
             ],
-            const SizedBox(height: 30),
-          ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildStatCard(
     String title,
@@ -826,7 +859,7 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
 
   void _showEventDetailsPopup(Map<String, dynamic> event) {
     final raw = event['raw'] as Map<String, dynamic>? ?? {};
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -842,7 +875,10 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
             children: [
               // Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: const BoxDecoration(
                   color: Color(0xFF182875),
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -864,11 +900,11 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
                     IconButton(
                       icon: const Icon(Icons.close, color: Colors.white),
                       onPressed: () => Navigator.pop(ctx),
-                    )
+                    ),
                   ],
                 ),
               ),
-              
+
               // Content
               Expanded(
                 child: SingleChildScrollView(
@@ -882,57 +918,123 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFE0F2FE),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              raw['status']?.toString().toUpperCase() ?? 'UPCOMING',
-                              style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF0369A1)),
+                              raw['status']?.toString().toUpperCase() ??
+                                  'UPCOMING',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF0369A1),
+                              ),
                             ),
                           ),
                           Text(
                             raw['eventCode'] ?? '',
-                            style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF64748B), fontWeight: FontWeight.w600),
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: const Color(0xFF64748B),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Titles
                       Text(
                         raw['eventTitle'] ?? 'No Title',
-                        style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+                        style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF0F172A),
+                        ),
                       ),
-                      if (raw['subtitle'] != null && raw['subtitle'].toString().isNotEmpty) ...[
+                      if (raw['subtitle'] != null &&
+                          raw['subtitle'].toString().isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
                           raw['subtitle'],
-                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF64748B)),
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: const Color(0xFF64748B),
+                          ),
                         ),
                       ],
                       const SizedBox(height: 24),
 
-                      _buildDetailSection('Description', raw['description'], Icons.description),
-                      _buildDetailRow('Date & Time', '${raw['startDate'] ?? ''} (${raw['startTime'] ?? ''} - ${raw['endTime'] ?? ''})', Icons.schedule),
-                      _buildDetailRow('Location', '${raw['location'] ?? ''}, ${raw['venue'] ?? ''}', Icons.place),
-                      _buildDetailRow('Attendees & Budget', 'Attendees: ${raw['expectedAttendees'] ?? 'N/A'} | Budget: ₹${raw['budgetEstimate'] ?? 'N/A'}', Icons.groups),
-                      
-                      const Divider(height: 32),
-                      
-                      Text('Management', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
-                      const SizedBox(height: 12),
-                      _buildDetailRow('Organizer', '${raw['organizerName'] ?? 'N/A'} (${raw['organizerContact'] ?? '-'})', Icons.business),
-                      _buildDetailRow('Manager', '${raw['managerName'] ?? 'N/A'} - ${raw['managerDesignation'] ?? ''} (${raw['managerContact'] ?? '-'})', Icons.person),
-                      
+                      _buildDetailSection(
+                        'Description',
+                        raw['description'],
+                        Icons.description,
+                      ),
+                      _buildDetailRow(
+                        'Date & Time',
+                        '${raw['startDate'] ?? ''} (${raw['startTime'] ?? ''} - ${raw['endTime'] ?? ''})',
+                        Icons.schedule,
+                      ),
+                      _buildDetailRow(
+                        'Location',
+                        '${raw['location'] ?? ''}, ${raw['venue'] ?? ''}',
+                        Icons.place,
+                      ),
+                      _buildDetailRow(
+                        'Attendees & Budget',
+                        'Attendees: ${raw['expectedAttendees'] ?? 'N/A'} | Budget: ₹${raw['budgetEstimate'] ?? 'N/A'}',
+                        Icons.groups,
+                      ),
+
                       const Divider(height: 32),
 
-                      Text('Medical & Operations', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A))),
+                      Text(
+                        'Management',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
                       const SizedBox(height: 12),
-                      _buildDetailSection('Clinical Directives', raw['clinicalDirectives'], Icons.medical_services),
-                      _buildDetailSection('Emergency Protocol', raw['emergencyProtocol'], Icons.warning),
-                      
+                      _buildDetailRow(
+                        'Organizer',
+                        '${raw['organizerName'] ?? 'N/A'} (${raw['organizerContact'] ?? '-'})',
+                        Icons.business,
+                      ),
+                      _buildDetailRow(
+                        'Manager',
+                        '${raw['managerName'] ?? 'N/A'} - ${raw['managerDesignation'] ?? ''} (${raw['managerContact'] ?? '-'})',
+                        Icons.person,
+                      ),
+
+                      const Divider(height: 32),
+
+                      Text(
+                        'Medical & Operations',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDetailSection(
+                        'Clinical Directives',
+                        raw['clinicalDirectives'],
+                        Icons.medical_services,
+                      ),
+                      _buildDetailSection(
+                        'Emergency Protocol',
+                        raw['emergencyProtocol'],
+                        Icons.warning,
+                      ),
+
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -941,12 +1043,15 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
             ],
           ),
         );
-      }
+      },
     );
   }
 
   Widget _buildDetailRow(String label, String value, IconData icon) {
-    if (value.trim().isEmpty || value.trim() == '()' || value.trim() == ' -  ()') return const SizedBox();
+    if (value.trim().isEmpty ||
+        value.trim() == '()' ||
+        value.trim() == ' -  ()')
+      return const SizedBox();
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -958,8 +1063,21 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B))),
-                Text(value, style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF1E293B), fontWeight: FontWeight.w500)),
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: const Color(0xFF1E293B),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
           ),
@@ -980,33 +1098,55 @@ class _EventManagementPortalScreenState extends State<EventManagementPortalScree
             children: [
               Icon(icon, size: 16, color: const Color(0xFF94A3B8)),
               const SizedBox(width: 8),
-              Text(label, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF64748B),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(8)),
-            child: Text(text, style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF334155))),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              text,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: const Color(0xFF334155),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 }
+
 class CreateNewHospitalEventDialog extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
   final VoidCallback onEventCreated;
 
-  const CreateNewHospitalEventDialog({Key? key, required this.categories, required this.onEventCreated})
-    : super(key: key);
+  const CreateNewHospitalEventDialog({
+    Key? key,
+    required this.categories,
+    required this.onEventCreated,
+  }) : super(key: key);
 
   @override
-  State<CreateNewHospitalEventDialog> createState() => _CreateNewHospitalEventDialogState();
+  State<CreateNewHospitalEventDialog> createState() =>
+      _CreateNewHospitalEventDialogState();
 }
 
-class _CreateNewHospitalEventDialogState extends State<CreateNewHospitalEventDialog> {
+class _CreateNewHospitalEventDialogState
+    extends State<CreateNewHospitalEventDialog> {
   Map<String, dynamic>? _selectedCategory;
   final _titleController = TextEditingController();
   final _subtitleController = TextEditingController();
@@ -1088,7 +1228,7 @@ class _CreateNewHospitalEventDialogState extends State<CreateNewHospitalEventDia
                 ],
               ),
             ),
-            
+
             // Form Body
             Expanded(
               child: SingleChildScrollView(
@@ -1097,99 +1237,279 @@ class _CreateNewHospitalEventDialogState extends State<CreateNewHospitalEventDia
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader(Icons.info_outline, 'Basic Information'),
-                    _buildTextField(_titleController, 'Event Title *', Icons.title),
+                    _buildSectionHeader(
+                      Icons.info_outline,
+                      'Basic Information',
+                    ),
+                    _buildTextField(
+                      _titleController,
+                      'Event Title *',
+                      Icons.title,
+                    ),
                     const SizedBox(height: 16),
-                    _buildTextField(_subtitleController, 'Subtitle', Icons.subtitles),
+                    _buildTextField(
+                      _subtitleController,
+                      'Subtitle',
+                      Icons.subtitles,
+                    ),
                     const SizedBox(height: 16),
-                    _buildTextField(_descriptionController, 'Description', Icons.description, maxLines: 3),
+                    _buildTextField(
+                      _descriptionController,
+                      'Description',
+                      Icons.description,
+                      maxLines: 3,
+                    ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<Map<String, dynamic>>(
                       decoration: InputDecoration(
                         labelText: 'Event Category *',
-                        prefixIcon: const Icon(Icons.category, color: Color(0xFF182875)),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        prefixIcon: const Icon(
+                          Icons.category,
+                          color: Color(0xFF182875),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                       value: _selectedCategory,
                       items: categoriesList.map((category) {
                         return DropdownMenuItem<Map<String, dynamic>>(
                           value: category,
-                          child: Text(category['categoryName']?.toString() ?? 'Other', style: GoogleFonts.poppins(fontSize: 14)),
+                          child: Text(
+                            category['categoryName']?.toString() ?? 'Other',
+                            style: GoogleFonts.poppins(fontSize: 14),
+                          ),
                         );
                       }).toList(),
-                      onChanged: (value) => setState(() => _selectedCategory = value),
+                      onChanged: (value) =>
+                          setState(() => _selectedCategory = value),
                     ),
                     const SizedBox(height: 32),
-                    
+
                     _buildSectionHeader(Icons.schedule, 'Timing'),
                     Row(
                       children: [
-                        Expanded(child: _buildTextField(_startDateController, 'Start Date *', Icons.calendar_today)),
+                        Expanded(
+                          child: _buildTextField(
+                            _startDateController,
+                            'Start Date *',
+                            Icons.calendar_today,
+                          ),
+                        ),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildTextField(_endDateController, 'End Date *', Icons.event)),
+                        Expanded(
+                          child: _buildTextField(
+                            _endDateController,
+                            'End Date *',
+                            Icons.event,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: _buildTextField(_startTimeController, 'Start Time *', Icons.access_time)),
+                        Expanded(
+                          child: _buildTextField(
+                            _startTimeController,
+                            'Start Time *',
+                            Icons.access_time,
+                          ),
+                        ),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildTextField(_endTimeController, 'End Time *', Icons.access_time_filled)),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    _buildSectionHeader(Icons.location_on, 'Location & Details'),
-                    Row(
-                      children: [
-                        Expanded(child: _buildTextField(_locationController, 'Location', Icons.place)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildTextField(_venueController, 'Venue', Icons.business)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(child: _buildTextField(_expectedAttendeesController, 'Expected Attendees', Icons.groups, isNumber: true)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildTextField(_budgetController, 'Budget Estimate', Icons.attach_money, isNumber: true)),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    
-                    _buildSectionHeader(Icons.person, 'Management'),
-                    _buildTextField(_organizerNameController, 'Organizer Name', Icons.account_circle),
-                    const SizedBox(height: 16),
-                    _buildTextField(_organizerContactController, 'Organizer Contact', Icons.phone, isNumber: true),
-                    const SizedBox(height: 16),
-                    _buildTextField(_managerNameController, 'Manager Name', Icons.manage_accounts),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(child: _buildTextField(_managerDesignationController, 'Manager Designation', Icons.badge)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildTextField(_managerContactController, 'Manager Contact', Icons.phone_android, isNumber: true)),
+                        Expanded(
+                          child: _buildTextField(
+                            _endTimeController,
+                            'End Time *',
+                            Icons.access_time_filled,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 32),
 
-                    _buildSectionHeader(Icons.local_hospital, 'Medical & Safety'),
-                    _buildTextField(_clinicalDirectivesController, 'Clinical Directives', Icons.medical_services, maxLines: 2),
+                    _buildSectionHeader(
+                      Icons.location_on,
+                      'Location & Details',
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            _locationController,
+                            'Location',
+                            Icons.place,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildTextField(
+                            _venueController,
+                            'Venue',
+                            Icons.business,
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 16),
-                    _buildTextField(_emergencyProtocolController, 'Emergency Protocol', Icons.warning, maxLines: 2),
+                  LayoutBuilder(
+  builder: (context, constraints) {
+    final isMobile = constraints.maxWidth < 500;
+
+    if (isMobile) {
+      return Column(
+        children: [
+          _buildTextField(
+            _expectedAttendeesController,
+            'Expected Attendees',
+            Icons.groups,
+            isNumber: true,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            _budgetController,
+            'Budget Estimate',
+            Icons.attach_money,
+            isNumber: true,
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildTextField(
+            _expectedAttendeesController,
+            'Expected Attendees',
+            Icons.groups,
+            isNumber: true,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildTextField(
+            _budgetController,
+            'Budget Estimate',
+            Icons.attach_money,
+            isNumber: true,
+          ),
+        ),
+      ],
+    );
+  },
+),
+                    const SizedBox(height: 32),
+
+                    _buildSectionHeader(Icons.person, 'Management'),
+                    _buildTextField(
+                      _organizerNameController,
+                      'Organizer Name',
+                      Icons.account_circle,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      _organizerContactController,
+                      'Organizer Contact',
+                      Icons.phone,
+                      isNumber: true,
+                      
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      _managerNameController,
+                      'Manager Name',
+                      Icons.manage_accounts,
+                    ),
+                    const SizedBox(height: 16),
+                   LayoutBuilder(
+  builder: (context, constraints) {
+    final isMobile = constraints.maxWidth < 500;
+
+    if (isMobile) {
+      return Column(
+        children: [
+          _buildTextField(
+            _managerDesignationController,
+            'Manager Designation',
+            Icons.badge,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            _managerContactController,
+            'Manager Contact',
+            Icons.phone_android,
+            isNumber: true,
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildTextField(
+            _managerDesignationController,
+            'Manager Designation',
+            Icons.badge,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildTextField(
+            _managerContactController,
+            'Manager Contact',
+            Icons.phone_android,
+            isNumber: true,
+          ),
+        ),
+      ],
+    );
+  },
+),
+                    const SizedBox(height: 32),
+
+                    _buildSectionHeader(
+                      Icons.local_hospital,
+                      'Medical & Safety',
+                    ),
+                    _buildTextField(
+                      _clinicalDirectivesController,
+                      'Clinical Directives',
+                      Icons.medical_services,
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      _emergencyProtocolController,
+                      'Emergency Protocol',
+                      Icons.warning,
+                      maxLines: 2,
+                    ),
                   ],
                 ),
               ),
             ),
-            
+
             // Footer
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(24),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
@@ -1198,10 +1518,18 @@ class _CreateNewHospitalEventDialogState extends State<CreateNewHospitalEventDia
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         side: const BorderSide(color: Color(0xFF182875)),
                       ),
-                      child: Text('Cancel', style: GoogleFonts.poppins(color: const Color(0xFF182875), fontWeight: FontWeight.bold)),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF182875),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -1211,12 +1539,27 @@ class _CreateNewHospitalEventDialogState extends State<CreateNewHospitalEventDia
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF182875),
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         elevation: 0,
                       ),
-                      child: _isSaving 
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text('Create Event', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: _isSaving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              'Create Event',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                 ],
@@ -1235,46 +1578,97 @@ class _CreateNewHospitalEventDialogState extends State<CreateNewHospitalEventDia
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEEF2FF),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Icon(icon, color: const Color(0xFF182875), size: 20),
           ),
           const SizedBox(width: 12),
           Text(
             title,
-            style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF0F172A)),
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF0F172A),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {int maxLines = 1, bool isNumber = false}) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A)),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: GoogleFonts.poppins(color: const Color(0xFF64748B), fontSize: 13),
-        prefixIcon: Icon(icon, color: const Color(0xFF94A3B8), size: 20),
-        filled: true,
-        fillColor: const Color(0xFFF8FAFC),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF182875), width: 1.5)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+ Widget _buildTextField(
+  TextEditingController controller,
+  String label,
+  IconData icon, {
+  int maxLines = 1,
+  bool isNumber = false,
+}) {
+  return TextField(
+    controller: controller,
+    maxLines: maxLines,
+
+    // Keyboard
+    keyboardType: isNumber
+        ? TextInputType.phone
+        : TextInputType.text,
+
+    // Restrict number fields to digits and maximum 10 digits
+    inputFormatters: isNumber
+        ? [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
+          ]
+        : null,
+
+    style: GoogleFonts.poppins(
+      fontSize: 13,
+      color: const Color(0xFF0F172A),
+    ),
+
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.poppins(
+        color: const Color(0xFF64748B),
+        fontSize: 13,
       ),
-    );
-  }
+      prefixIcon: Icon(
+        icon,
+        color: const Color(0xFF94A3B8),
+        size: 20,
+      ),
+      filled: true,
+      fillColor: const Color(0xFFF8FAFC),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(
+          color: Color(0xFF182875),
+          width: 1.5,
+        ),
+      ),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 12,
+      ),
+    ),
+  );
+}
 
   Future<void> _saveEvent() async {
     if (_titleController.text.isEmpty || _selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all required (*) fields')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required (*) fields')),
+      );
       return;
     }
-    
+
     setState(() => _isSaving = true);
-    
+
     final payload = {
       "eventTitle": _titleController.text,
       "subtitle": _subtitleController.text,
@@ -1291,24 +1685,42 @@ class _CreateNewHospitalEventDialogState extends State<CreateNewHospitalEventDia
       "organizerContact": _organizerContactController.text,
       "budgetEstimate": int.tryParse(_budgetController.text) ?? 0,
       "eventManagerId": 101, // Mock manager ID
-      "managerName": _managerNameController.text.isEmpty ? "System User" : _managerNameController.text,
+      "managerName": _managerNameController.text.isEmpty
+          ? "System User"
+          : _managerNameController.text,
       "managerDesignation": _managerDesignationController.text,
       "managerContact": _managerContactController.text,
       "description": _descriptionController.text,
       "clinicalDirectives": _clinicalDirectivesController.text,
-      "emergencyProtocol": _emergencyProtocolController.text
+      "emergencyProtocol": _emergencyProtocolController.text,
     };
 
     final res = await EventApiService.createEvent(payload);
-    
+
     setState(() => _isSaving = false);
 
-    if (res != null && (res['status_code'] == 200 || res['status_code'] == 201)) {
+    if (res != null &&
+        (res['status_code'] == 200 || res['status_code'] == 201)) {
       widget.onEventCreated();
       if (mounted) Navigator.pop(context);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Event Created Successfully', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Event Created Successfully',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
     } else {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to create event'), backgroundColor: Colors.red));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to create event'),
+            backgroundColor: Colors.red,
+          ),
+        );
     }
   }
 }

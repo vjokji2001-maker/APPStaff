@@ -1,31 +1,54 @@
 // chat_screen.dart - Complete version with FAQ support
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:staff_mate/ai/chat_screen.dart' as _descriptionController;
+
 import 'package:staff_mate/ai/ticket_model.dart';
 import 'package:staff_mate/ai/ticket_screen.dart';
 import 'package:staff_mate/services/support_service.dart';
+
 import 'chat_provider.dart';
 import 'message_model.dart';
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ticket ID Extension
+// ─────────────────────────────────────────────────────────────────────────────
+
 extension TicketIdExtension on String {
   String get displayId {
-    if (length >= 6) return '#${substring(0, 6)}';
+    if (length >= 6) {
+      return '#${substring(0, 6)}';
+    }
+
     return '#$this';
   }
 }
 
-// ── Helper: prefer queryType over title ──────────────────────────────────────
-String _ticketDisplayName(TicketModel ticket) =>
-    (ticket.queryType?.isNotEmpty == true ? ticket.queryType! : ticket.title)
-        .trim();
 
-// ─── ChatScreen root ──────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: Prefer queryType over title
+// ─────────────────────────────────────────────────────────────────────────────
+
+String _ticketDisplayName(TicketModel ticket) {
+  return (
+    ticket.queryType?.isNotEmpty == true
+        ? ticket.queryType!
+        : ticket.title
+  ).trim();
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ChatScreen Root
+// ─────────────────────────────────────────────────────────────────────────────
+
 class ChatScreen extends StatelessWidget {
   const ChatScreen({super.key});
 
@@ -33,39 +56,76 @@ class ChatScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => ChatProvider(),
-      child: const Scaffold(body: _ChatBody()),
+      child: const Scaffold(
+        body: _ChatBody(),
+      ),
     );
   }
 }
 
-// ─── Fullscreen Image Viewer ──────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fullscreen Image Viewer
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _FullscreenImageViewer extends StatelessWidget {
   final Uint8List imageData;
   final String label;
 
-  const _FullscreenImageViewer({required this.imageData, required this.label});
+  const _FullscreenImageViewer({
+    required this.imageData,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+
       appBar: AppBar(
         backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ),
+
+        title: Text(
+          label,
+          textScaler: TextScaler.noScaling,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+          ),
+        ),
       ),
+
       body: Center(
         child: InteractiveViewer(
           minScale: 0.5,
           maxScale: 5.0,
-          child: Image.memory(imageData, fit: BoxFit.contain),
+          child: Image.memory(
+            imageData,
+            fit: BoxFit.contain,
+          ),
         ),
       ),
     );
   }
 }
 
-// ─── Inline Ticket Image (auto-fetch, expand/collapse, fullscreen on tap) ─────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Inline Ticket Image
+//
+// Features:
+// • Automatically fetches image
+// • Loading state
+// • Error state
+// • Expand / collapse
+// • Fullscreen image viewer
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _InlineTicketImage extends StatefulWidget {
   final int ticketId;
   final String fileType;
@@ -81,17 +141,26 @@ class _InlineTicketImage extends StatefulWidget {
   State<_InlineTicketImage> createState() => _InlineTicketImageState();
 }
 
+
 class _InlineTicketImageState extends State<_InlineTicketImage> {
   Uint8List? _imageData;
+
   bool _loading = true;
   bool _hasError = false;
   bool _expanded = false;
 
+
   @override
   void initState() {
     super.initState();
+
     _fetchImage();
   }
+
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Fetch Image
+  // ───────────────────────────────────────────────────────────────────────────
 
   Future<void> _fetchImage() async {
     try {
@@ -99,141 +168,318 @@ class _InlineTicketImageState extends State<_InlineTicketImage> {
         ticketId: widget.ticketId,
         fileType: widget.fileType.toUpperCase(),
       );
-      if (!mounted) return;
+
+      if (!mounted) {
+        return;
+      }
 
       if (result['success'] == true && result['data'] != null) {
-        final raw = result['data']['imageBase64']?.toString() ?? '';
+        final raw =
+            result['data']['imageBase64']?.toString() ?? '';
+
         if (raw.isNotEmpty) {
-          final pure = raw.contains(',') ? raw.split(',').last : raw;
+          final pure =
+              raw.contains(',') ? raw.split(',').last : raw;
+
           final bytes = base64Decode(pure);
+
           setState(() {
             _imageData = bytes;
             _loading = false;
+            _hasError = false;
           });
+
           return;
         }
       }
+
       setState(() {
         _loading = false;
         _hasError = true;
       });
     } catch (_) {
-      if (mounted) setState(() { _loading = false; _hasError = true; });
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _loading = false;
+        _hasError = true;
+      });
     }
   }
 
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Open Fullscreen
+  // ───────────────────────────────────────────────────────────────────────────
+
   void _openFullscreen() {
-    if (_imageData == null) return;
+    if (_imageData == null) {
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => _FullscreenImageViewer(
           imageData: _imageData!,
-          label: '${widget.label} — Ticket #${widget.ticketId}',
+          label:
+              '${widget.label} — Ticket #${widget.ticketId}',
         ),
       ),
     );
   }
 
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Build
+  // ───────────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    // ─────────────────────────────────────────────────────────────────────────
+    // Loading
+    // ─────────────────────────────────────────────────────────────────────────
+
     if (_loading) {
       return Container(
         height: 70,
+
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(8),
         ),
+
         child: const Center(
           child: SizedBox(
-              width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+            ),
+          ),
         ),
       );
     }
 
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Error / No Image
+    // ─────────────────────────────────────────────────────────────────────────
+
     if (_hasError || _imageData == null) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        width: double.infinity,
+
+        padding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 8,
+        ),
+
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(
+            color: Colors.grey.shade200,
+          ),
         ),
+
         child: Row(
           children: [
-            Icon(Icons.image_not_supported, size: 13, color: Colors.grey.shade400),
+            Icon(
+              Icons.image_not_supported,
+              size: 13,
+              color: Colors.grey.shade400,
+            ),
+
             const SizedBox(width: 6),
-            Text('No ${widget.label} image',
-                style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+
+            Expanded(
+              child: Text(
+                'No ${widget.label} image',
+
+                // Prevent tiny status text from becoming huge
+                // when the application's global font size is increased.
+                textScaler: TextScaler.noScaling,
+
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ),
           ],
         ),
       );
     }
 
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Image
+    // ─────────────────────────────────────────────────────────────────────────
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+
+      mainAxisSize: MainAxisSize.min,
+
       children: [
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Expand / Collapse Header
+        // ─────────────────────────────────────────────────────────────────────
+
         GestureDetector(
-          onTap: () => setState(() => _expanded = !_expanded),
+          onTap: () {
+            setState(() {
+              _expanded = !_expanded;
+            });
+          },
+
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            width: double.infinity,
+
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 7,
+            ),
+
             decoration: BoxDecoration(
               color: Colors.blue.shade50,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade100),
+              border: Border.all(
+                color: Colors.blue.shade100,
+              ),
             ),
+
             child: Row(
               children: [
-                Icon(Icons.image, size: 13, color: Colors.blue.shade700),
+
+                Icon(
+                  Icons.image,
+                  size: 13,
+                  color: Colors.blue.shade700,
+                ),
+
                 const SizedBox(width: 6),
+
+                // Important:
+                // Expanded prevents long image labels from causing
+                // horizontal overflow.
                 Expanded(
                   child: Text(
                     widget.label,
+
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+
                     style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.blue.shade700,
-                        fontWeight: FontWeight.w600),
+                      fontSize: 11,
+                      color: Colors.blue.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
+
+                const SizedBox(width: 6),
+
                 Icon(
-                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  _expanded
+                      ? Icons.expand_less
+                      : Icons.expand_more,
+
                   size: 16,
+
                   color: Colors.blue.shade700,
                 ),
               ],
             ),
           ),
         ),
+
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Expanded Image
+        // ─────────────────────────────────────────────────────────────────────
+
         if (_expanded) ...[
           const SizedBox(height: 6),
+
           GestureDetector(
             onTap: _openFullscreen,
+
             child: Stack(
               alignment: Alignment.bottomRight,
+
               children: [
+
+                // ─────────────────────────────────────────────────────────────
+                // Image
+                // ─────────────────────────────────────────────────────────────
+
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
+
                   child: Image.memory(
                     _imageData!,
+
                     width: double.infinity,
+
+                    // Keep image height fixed.
+                    // This is not the source of your IPD overflow.
                     height: 180,
+
                     fit: BoxFit.cover,
                   ),
                 ),
+
+
+                // ─────────────────────────────────────────────────────────────
+                // "Tap to expand" Overlay
+                // ─────────────────────────────────────────────────────────────
+
                 Container(
                   margin: const EdgeInsets.all(6),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+
                   decoration: BoxDecoration(
                     color: Colors.black54,
                     borderRadius: BorderRadius.circular(12),
                   ),
+
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
+
                     children: [
-                      Icon(Icons.fullscreen, size: 12, color: Colors.white),
+
+                      Icon(
+                        Icons.fullscreen,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+
                       SizedBox(width: 3),
-                      Text('Tap to expand',
-                          style: TextStyle(color: Colors.white, fontSize: 9)),
+
+                      Text(
+                        'Tap to expand',
+
+                        // Prevent global font scaling from making
+                        // this small overlay too large.
+                        textScaler: TextScaler.noScaling,
+
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -245,6 +491,16 @@ class _InlineTicketImageState extends State<_InlineTicketImage> {
     );
   }
 }
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Chat Body
+//
+// Keep your existing _ChatBody implementation below this point if your
+// current file already contains it.
+//
+// The classes/functions above are the corrected image-related portion.
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Modern Gradient App Bar ──────────────────────────────────────────────────
 class _ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -296,38 +552,60 @@ class _ModernAppBar extends StatelessWidget implements PreferredSizeWidget {
                 );
               },
             ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Support Assistant',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white)),
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade400,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.green.shade400.withValues(alpha: 0.5),
-                              blurRadius: 4,
-                              spreadRadius: 1)
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text('Online • Ready to help',
-                        style: TextStyle(fontSize: 12, color: Colors.white70)),
-                  ],
+        const SizedBox(width: 12),
+
+Expanded(
+  child: Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Support Assistant',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+
+      Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.green.shade400,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.green.shade400.withValues(alpha: 0.5),
+                  blurRadius: 4,
+                  spreadRadius: 1,
                 ),
               ],
             ),
+          ),
+
+          const SizedBox(width: 6),
+
+          const Expanded(
+            child: Text(
+              'Online • Ready to help',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white70,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ],
+  ),
+),
           ],
         ),
         actions: [

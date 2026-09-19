@@ -55,18 +55,36 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
   String _selectedStatus = 'Open';
   String _selectedTicketType = 'Open Tickets';
   String _selectedTicketView = 'Create Ticket';
-  
+
   File? _selectedImage;
   List<String> _comments = [];
   List<Map<String, dynamic>> _openTickets = [];
   List<Map<String, dynamic>> _closedTickets = [];
   List<Map<String, dynamic>> _allTickets = [];
 
-  final List<String> _categories = ['IT Issue', 'System Issue', 'Billing Error', 'Hardware', 'Software', 'Network', 'Other'];
+  final List<String> _categories = [
+    'IT Issue',
+    'System Issue',
+    'Billing Error',
+    'Hardware',
+    'Software',
+    'Network',
+    'Other',
+  ];
   final List<String> _priorities = ['Low', 'Medium', 'High', 'Urgent'];
-  final List<String> _languages = ['English', 'Hindi', 'Marathi', 'Gujarati', 'Tamil'];
+  final List<String> _languages = [
+    'English',
+    'Hindi',
+    'Marathi',
+    'Gujarati',
+    'Tamil',
+  ];
   final List<String> _statuses = ['Open', 'In Progress', 'Resolved', 'Closed'];
-  final List<String> _ticketViews = ['Create Ticket', 'Ticket List', 'Ticket Details'];
+  final List<String> _ticketViews = [
+    'Create Ticket',
+    'Ticket List',
+    'Ticket Details',
+  ];
 
   late stt.SpeechToText _speech;
   bool _isListening = false;
@@ -159,7 +177,9 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
   }
 
   Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final pickedFile = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+    );
     if (pickedFile != null) {
       setState(() => _selectedImage = File(pickedFile.path));
     }
@@ -171,7 +191,8 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
       if (available) {
         setState(() => _isListening = true);
         _speech.listen(
-          onResult: (val) => setState(() => _descController.text = val.recognizedWords),
+          onResult: (val) =>
+              setState(() => _descController.text = val.recognizedWords),
         );
       }
     } else {
@@ -183,7 +204,9 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
   void _addComment() {
     if (_commentController.text.isNotEmpty) {
       setState(() {
-        _comments.add('${DateTime.now().hour}:${DateTime.now().minute} - ${_commentController.text}');
+        _comments.add(
+          '${DateTime.now().hour}:${DateTime.now().minute} - ${_commentController.text}',
+        );
         _commentController.clear();
       });
     }
@@ -223,7 +246,7 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      
+
       _titleController.clear();
       _descController.clear();
       setState(() => _selectedImage = null);
@@ -243,9 +266,11 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
         _selectedTicketType = 'Closed Tickets';
         _selectedTicketView = 'Ticket List';
         _resolutionController.clear();
-        _comments.add('Ticket resolved on ${DateTime.now().toString().split(' ')[0]}');
+        _comments.add(
+          'Ticket resolved on ${DateTime.now().toString().split(' ')[0]}',
+        );
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Ticket ${ticket['id']} resolved successfully!"),
@@ -340,7 +365,7 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 6,
                   offset: const Offset(0, 1),
                 ),
@@ -361,10 +386,14 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primaryDarkBlue : Colors.transparent,
+                        color: isSelected
+                            ? AppColors.primaryDarkBlue
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isSelected ? AppColors.primaryDarkBlue : Colors.transparent,
+                          color: isSelected
+                              ? AppColors.primaryDarkBlue
+                              : Colors.transparent,
                           width: 1.2,
                         ),
                       ),
@@ -373,8 +402,12 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                           view,
                           style: GoogleFonts.poppins(
                             fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                            color: isSelected ? Colors.white : AppColors.textDark,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            color: isSelected
+                                ? Colors.white
+                                : AppColors.textDark,
                           ),
                         ),
                       ),
@@ -436,7 +469,8 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
               label: 'Ticket Title',
               icon: Icons.title_rounded,
               hintText: 'Enter ticket title',
-              validator: (value) => value!.isEmpty ? 'Please enter ticket title' : null,
+              validator: (value) =>
+                  value!.isEmpty ? 'Please enter ticket title' : null,
             ),
             const SizedBox(height: 12),
 
@@ -449,7 +483,8 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                     label: 'Category',
                     value: _selectedCategory,
                     items: _categories,
-                    onChanged: (value) => setState(() => _selectedCategory = value!),
+                    onChanged: (value) =>
+                        setState(() => _selectedCategory = value!),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -458,7 +493,8 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                     label: 'Priority',
                     value: _selectedPriority,
                     items: _priorities,
-                    onChanged: (value) => setState(() => _selectedPriority = value!),
+                    onChanged: (value) =>
+                        setState(() => _selectedPriority = value!),
                     showColorIndicator: true,
                     getColor: _getPriorityColor,
                   ),
@@ -481,7 +517,8 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
               controller: _descController,
               label: 'Description',
               hintText: 'Describe your issue in detail...',
-              validator: (value) => value!.isEmpty ? 'Please enter description' : null,
+              validator: (value) =>
+                  value!.isEmpty ? 'Please enter description' : null,
               isListening: _isListening,
               onMicPressed: _listen,
             ),
@@ -547,7 +584,7 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 6,
                 offset: const Offset(0, 1),
               ),
@@ -556,10 +593,16 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
           child: Row(
             children: [
               Expanded(
-                child: _buildCompactTabButton('Open Tickets', _selectedTicketType == 'Open Tickets'),
+                child: _buildCompactTabButton(
+                  'Open Tickets',
+                  _selectedTicketType == 'Open Tickets',
+                ),
               ),
               Expanded(
-                child: _buildCompactTabButton('Closed Tickets', _selectedTicketType == 'Closed Tickets'),
+                child: _buildCompactTabButton(
+                  'Closed Tickets',
+                  _selectedTicketType == 'Closed Tickets',
+                ),
               ),
             ],
           ),
@@ -574,7 +617,7 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
             borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 4,
                 offset: const Offset(0, 1),
               ),
@@ -583,10 +626,32 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildCompactCountCard('Total', _allTickets.length.toString(), AppColors.primaryDarkBlue),
-              _buildCompactCountCard('Open', _openTickets.length.toString(), AppColors.openStatusColor),
-              _buildCompactCountCard('Progress', _openTickets.where((t) => t['status'] == 'In Progress').length.toString(), AppColors.inProgressColor),
-              _buildCompactCountCard('Resolved', _closedTickets.where((t) => t['status'] == 'Resolved').length.toString(), AppColors.resolvedColor),
+              _buildCompactCountCard(
+                'Total',
+                _allTickets.length.toString(),
+                AppColors.primaryDarkBlue,
+              ),
+              _buildCompactCountCard(
+                'Open',
+                _openTickets.length.toString(),
+                AppColors.openStatusColor,
+              ),
+              _buildCompactCountCard(
+                'Progress',
+                _openTickets
+                    .where((t) => t['status'] == 'In Progress')
+                    .length
+                    .toString(),
+                AppColors.inProgressColor,
+              ),
+              _buildCompactCountCard(
+                'Resolved',
+                _closedTickets
+                    .where((t) => t['status'] == 'Resolved')
+                    .length
+                    .toString(),
+                AppColors.resolvedColor,
+              ),
             ],
           ),
         ),
@@ -599,7 +664,11 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.receipt_long_outlined, color: AppColors.grey400, size: 50),
+                      Icon(
+                        Icons.receipt_long_outlined,
+                        color: AppColors.grey400,
+                        size: 50,
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'No tickets found',
@@ -613,11 +682,17 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                   ),
                 )
               : ListView.builder(
-                  itemCount: _selectedTicketType == 'Open Tickets' ? _openTickets.length : _closedTickets.length,
+                  itemCount: _selectedTicketType == 'Open Tickets'
+                      ? _openTickets.length
+                      : _closedTickets.length,
                   itemBuilder: (context, index) {
-                    final ticket = _selectedTicketType == 'Open Tickets' ? _openTickets[index] : _closedTickets[index];
-                    final isSelected = _selectedTicketIndex == index && _selectedTicketView == 'Ticket Details';
-                    
+                    final ticket = _selectedTicketType == 'Open Tickets'
+                        ? _openTickets[index]
+                        : _closedTickets[index];
+                    final isSelected =
+                        _selectedTicketIndex == index &&
+                        _selectedTicketView == 'Ticket Details';
+
                     return GestureDetector(
                       onTap: () {
                         setState(() {
@@ -628,8 +703,9 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                             'Ticket created on ${ticket['date']}',
                             'Priority: ${ticket['priority']}',
                             'Category: ${ticket['category']}',
-                            if (_selectedTicketType == 'Closed Tickets' && ticket['resolution'] != null)
-                              'Resolution: ${ticket['resolution']}'
+                            if (_selectedTicketType == 'Closed Tickets' &&
+                                ticket['resolution'] != null)
+                              'Resolution: ${ticket['resolution']}',
                           ];
                         });
                       },
@@ -637,15 +713,21 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: isSelected ? AppColors.primaryDarkBlue.withOpacity(0.05) : Colors.white,
+                          color: isSelected
+                              ? AppColors.primaryDarkBlue.withValues(
+                                  alpha: 0.05,
+                                )
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: isSelected ? AppColors.primaryDarkBlue : AppColors.grey200,
+                            color: isSelected
+                                ? AppColors.primaryDarkBlue
+                                : AppColors.grey200,
                             width: isSelected ? 1.2 : 0.8,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.02),
+                              color: Colors.black.withValues(alpha: 0.02),
                               blurRadius: 4,
                               offset: const Offset(0, 1),
                             ),
@@ -671,18 +753,29 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: _getPriorityColor(ticket['priority']).withOpacity(0.1),
+                                    color: _getPriorityColor(
+                                      ticket['priority'],
+                                    ).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: _getPriorityColor(ticket['priority']).withOpacity(0.3)),
+                                    border: Border.all(
+                                      color: _getPriorityColor(
+                                        ticket['priority'],
+                                      ).withValues(alpha: 0.3),
+                                    ),
                                   ),
                                   child: Text(
                                     ticket['priority'],
                                     style: GoogleFonts.poppins(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w600,
-                                      color: _getPriorityColor(ticket['priority']),
+                                      color: _getPriorityColor(
+                                        ticket['priority'],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -703,9 +796,14 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                                 ),
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: _getStatusColor(ticket['status']).withOpacity(0.1),
+                                    color: _getStatusColor(
+                                      ticket['status'],
+                                    ).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Row(
@@ -713,7 +811,9 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                                       Icon(
                                         _getStatusIcon(ticket['status']),
                                         size: 10,
-                                        color: _getStatusColor(ticket['status']),
+                                        color: _getStatusColor(
+                                          ticket['status'],
+                                        ),
                                       ),
                                       const SizedBox(width: 3),
                                       Text(
@@ -721,7 +821,9 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                                         style: GoogleFonts.poppins(
                                           fontSize: 9,
                                           fontWeight: FontWeight.w600,
-                                          color: _getStatusColor(ticket['status']),
+                                          color: _getStatusColor(
+                                            ticket['status'],
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -742,7 +844,11 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                             // Category
                             Row(
                               children: [
-                                Icon(Icons.category_outlined, size: 12, color: AppColors.textBodyColor),
+                                Icon(
+                                  Icons.category_outlined,
+                                  size: 12,
+                                  color: AppColors.textBodyColor,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   ticket['category'],
@@ -771,7 +877,11 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.info_outline_rounded, color: AppColors.grey400, size: 50),
+            Icon(
+              Icons.info_outline_rounded,
+              color: AppColors.grey400,
+              size: 50,
+            ),
             const SizedBox(height: 12),
             Text(
               'Select a ticket to view details',
@@ -786,7 +896,9 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
       );
     }
 
-    final ticketList = _selectedTicketType == 'Open Tickets' ? _openTickets : _closedTickets;
+    final ticketList = _selectedTicketType == 'Open Tickets'
+        ? _openTickets
+        : _closedTickets;
     if (_selectedTicketIndex >= ticketList.length) {
       return Center(
         child: Text(
@@ -824,7 +936,7 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 6,
                   offset: const Offset(0, 1),
                 ),
@@ -857,15 +969,28 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(ticket['status']).withOpacity(0.1),
+                        color: _getStatusColor(
+                          ticket['status'],
+                        ).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: _getStatusColor(ticket['status']).withOpacity(0.3)),
+                        border: Border.all(
+                          color: _getStatusColor(
+                            ticket['status'],
+                          ).withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          Icon(_getStatusIcon(ticket['status']), size: 12, color: _getStatusColor(ticket['status'])),
+                          Icon(
+                            _getStatusIcon(ticket['status']),
+                            size: 12,
+                            color: _getStatusColor(ticket['status']),
+                          ),
                           const SizedBox(width: 5),
                           Text(
                             ticket['status'],
@@ -887,10 +1012,26 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _buildCompactDetailItem('Category', ticket['category'], Icons.category_rounded),
-                    _buildCompactDetailItem('Priority', ticket['priority'], Icons.priority_high_rounded),
-                    _buildCompactDetailItem('Language', ticket['language'], Icons.language_rounded),
-                    _buildCompactDetailItem('Date', ticket['date'], Icons.calendar_today_rounded),
+                    _buildCompactDetailItem(
+                      'Category',
+                      ticket['category'],
+                      Icons.category_rounded,
+                    ),
+                    _buildCompactDetailItem(
+                      'Priority',
+                      ticket['priority'],
+                      Icons.priority_high_rounded,
+                    ),
+                    _buildCompactDetailItem(
+                      'Language',
+                      ticket['language'],
+                      Icons.language_rounded,
+                    ),
+                    _buildCompactDetailItem(
+                      'Date',
+                      ticket['date'],
+                      Icons.calendar_today_rounded,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -932,7 +1073,7 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 6,
                   offset: const Offset(0, 1),
                 ),
@@ -943,7 +1084,11 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.comment_rounded, color: AppColors.primaryDarkBlue, size: 20),
+                    Icon(
+                      Icons.comment_rounded,
+                      color: AppColors.primaryDarkBlue,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'Comments',
@@ -973,7 +1118,10 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                           style: GoogleFonts.poppins(fontSize: 13),
                           decoration: InputDecoration(
                             hintText: 'Add a comment...',
-                            hintStyle: GoogleFonts.poppins(color: AppColors.grey500, fontSize: 13),
+                            hintStyle: GoogleFonts.poppins(
+                              color: AppColors.grey500,
+                              fontSize: 13,
+                            ),
                             border: InputBorder.none,
                           ),
                         ),
@@ -988,7 +1136,11 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                           color: AppColors.primaryDarkBlue,
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                        child: const Icon(
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ),
                     ),
                   ],
@@ -1056,7 +1208,7 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: Colors.black.withValues(alpha: 0.03),
                     blurRadius: 6,
                     offset: const Offset(0, 1),
                   ),
@@ -1067,7 +1219,11 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.task_alt_rounded, color: AppColors.successGreen, size: 20),
+                      Icon(
+                        Icons.task_alt_rounded,
+                        color: AppColors.successGreen,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Add Resolution',
@@ -1086,7 +1242,10 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                     style: GoogleFonts.poppins(fontSize: 13),
                     decoration: InputDecoration(
                       hintText: 'Enter resolution details...',
-                      hintStyle: GoogleFonts.poppins(color: AppColors.grey500, fontSize: 13),
+                      hintStyle: GoogleFonts.poppins(
+                        color: AppColors.grey500,
+                        fontSize: 13,
+                      ),
                       filled: true,
                       fillColor: AppColors.grey100,
                       border: OutlineInputBorder(
@@ -1112,7 +1271,10 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                       ),
                       child: Text(
                         'Mark as Resolved',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ),
@@ -1127,7 +1289,7 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: Colors.black.withValues(alpha: 0.03),
                     blurRadius: 6,
                     offset: const Offset(0, 1),
                   ),
@@ -1138,7 +1300,11 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.check_circle_rounded, color: AppColors.successGreen, size: 20),
+                      Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.successGreen,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Resolution',
@@ -1154,9 +1320,11 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.successGreen.withOpacity(0.1),
+                      color: AppColors.successGreen.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppColors.successGreen.withOpacity(0.3)),
+                      border: Border.all(
+                        color: AppColors.successGreen.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Text(
                       ticket['resolution']!,
@@ -1210,10 +1378,20 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
             maxLines: maxLines,
             decoration: InputDecoration(
               hintText: hintText,
-              hintStyle: GoogleFonts.poppins(color: AppColors.grey500, fontSize: 13),
-              prefixIcon: Icon(icon, color: AppColors.primaryDarkBlue, size: 18),
+              hintStyle: GoogleFonts.poppins(
+                color: AppColors.grey500,
+                fontSize: 13,
+              ),
+              prefixIcon: Icon(
+                icon,
+                color: AppColors.primaryDarkBlue,
+                size: 18,
+              ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
             ),
             validator: validator,
           ),
@@ -1249,7 +1427,9 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
               onPressed: onMicPressed,
               icon: Icon(
                 isListening ? Icons.mic_off : Icons.mic,
-                color: isListening ? AppColors.errorRed : AppColors.primaryDarkBlue,
+                color: isListening
+                    ? AppColors.errorRed
+                    : AppColors.primaryDarkBlue,
                 size: 18,
               ),
               padding: EdgeInsets.zero,
@@ -1270,7 +1450,10 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
             maxLines: maxLines,
             decoration: InputDecoration(
               hintText: hintText,
-              hintStyle: GoogleFonts.poppins(color: AppColors.grey500, fontSize: 13),
+              hintStyle: GoogleFonts.poppins(
+                color: AppColors.grey500,
+                fontSize: 13,
+              ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(12),
             ),
@@ -1342,7 +1525,11 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                     ),
                   ),
                 ),
-                Icon(Icons.arrow_drop_down_rounded, color: AppColors.grey500, size: 20),
+                Icon(
+                  Icons.arrow_drop_down_rounded,
+                  color: AppColors.grey500,
+                  size: 20,
+                ),
               ],
             ),
           ),
@@ -1376,16 +1563,27 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
             child: _selectedImage != null
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(6),
-                    child: Image.file(_selectedImage!, fit: BoxFit.cover, width: double.infinity),
+                    child: Image.file(
+                      _selectedImage!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                    ),
                   )
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_photo_alternate_outlined, color: AppColors.grey400, size: 32),
+                      Icon(
+                        Icons.add_photo_alternate_outlined,
+                        color: AppColors.grey400,
+                        size: 32,
+                      ),
                       const SizedBox(height: 6),
                       Text(
                         'Tap to add screenshot',
-                        style: GoogleFonts.poppins(color: AppColors.grey500, fontSize: 12),
+                        style: GoogleFonts.poppins(
+                          color: AppColors.grey500,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -1546,16 +1744,28 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                             Navigator.pop(context);
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 16,
+                            ),
                             decoration: BoxDecoration(
-                              color: currentValue == item ? AppColors.primaryDarkBlue.withOpacity(0.05) : Colors.transparent,
+                              color: currentValue == item
+                                  ? AppColors.primaryDarkBlue.withValues(
+                                      alpha: 0.05,
+                                    )
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: currentValue == item ? AppColors.primaryDarkBlue : Colors.transparent,
+                                color: currentValue == item
+                                    ? AppColors.primaryDarkBlue
+                                    : Colors.transparent,
                                 width: 1.2,
                               ),
                             ),
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
                             child: Row(
                               children: [
                                 if (showColorIndicator && getColor != null)
@@ -1574,12 +1784,18 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                                     style: GoogleFonts.poppins(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
-                                      color: currentValue == item ? AppColors.primaryDarkBlue : AppColors.textDark,
+                                      color: currentValue == item
+                                          ? AppColors.primaryDarkBlue
+                                          : AppColors.textDark,
                                     ),
                                   ),
                                 ),
                                 if (currentValue == item)
-                                  Icon(Icons.check_rounded, color: AppColors.primaryDarkBlue, size: 18),
+                                  Icon(
+                                    Icons.check_rounded,
+                                    color: AppColors.primaryDarkBlue,
+                                    size: 18,
+                                  ),
                               ],
                             ),
                           ),
@@ -1591,7 +1807,10 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
               ),
               const SizedBox(height: 12),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -1607,7 +1826,10 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
                     ),
                     child: Text(
                       'Cancel',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ),

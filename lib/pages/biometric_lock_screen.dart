@@ -45,9 +45,10 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
-    _pulseAnim = Tween<double>(begin: 0.93, end: 1.07).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulseAnim = Tween<double>(
+      begin: 0.93,
+      end: 1.07,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
   }
 
   Future<void> _init() async {
@@ -56,7 +57,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
     final username = await SessionManager.getLastUsername();
     final hasFaceId = await BiometricAuthService.isFaceIdAvailable();
     final hasFingerprint = await BiometricAuthService.isFingerprintAvailable();
-    
+
     if (mounted) {
       setState(() {
         _biometricLabel = label;
@@ -102,7 +103,9 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
 
       case BiometricResult.keyInvalidated:
         setState(() => _isAuthenticating = false);
-        _forceFullLogin(reason: 'Your session has expired. Please login again.');
+        _forceFullLogin(
+          reason: 'Your session has expired. Please login again.',
+        );
         break;
 
       case BiometricResult.failed:
@@ -133,7 +136,9 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
       if (!refreshed) {
         final isValid = await SessionManager.hasValidSession();
         if (!isValid) {
-          _forceFullLogin(reason: 'Your session has expired. Please login again.');
+          _forceFullLogin(
+            reason: 'Your session has expired. Please login again.',
+          );
           return;
         }
       }
@@ -141,7 +146,9 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
       debugPrint("Token refresh error: $e — checking local session");
       final isValid = await SessionManager.hasValidSession();
       if (!isValid) {
-        _forceFullLogin(reason: 'Your session has expired. Please login again.');
+        _forceFullLogin(
+          reason: 'Your session has expired. Please login again.',
+        );
         return;
       }
     }
@@ -162,7 +169,11 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
-            const Icon(Icons.security_rounded, color: Color(0xFFFFB300), size: 26),
+            const Icon(
+              Icons.security_rounded,
+              color: Color(0xFFFFB300),
+              size: 26,
+            ),
             const SizedBox(width: 10),
             Text(
               'Security Alert',
@@ -188,12 +199,14 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1565C0),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () {
               Navigator.of(ctx).pop();
               _forceFullLogin(
-                reason: 'Please login with your password to re-verify after biometric change.',
+                reason:
+                    'Please login with your password to re-verify after biometric change.',
               );
             },
             child: Text(
@@ -240,7 +253,8 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1565C0),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () {
               Navigator.of(ctx).pop();
@@ -265,7 +279,11 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
-            const Icon(Icons.devices_rounded, color: Color(0xFFFFB300), size: 26),
+            const Icon(
+              Icons.devices_rounded,
+              color: Color(0xFFFFB300),
+              size: 26,
+            ),
             const SizedBox(width: 10),
             Text(
               'Biometric Not Available',
@@ -290,7 +308,8 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1565C0),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () {
               Navigator.of(ctx).pop();
@@ -313,8 +332,9 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
 
     if (!mounted) return;
 
-    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false,
-        arguments: reason);
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil('/login', (route) => false, arguments: reason);
   }
 
   void _usePasswordFallback() async {
@@ -348,7 +368,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        if(widget.isFromSettings) {
+        if (widget.isFromSettings) {
           Navigator.of(context).pop();
         } else {
           widget.onContinue();
@@ -379,7 +399,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
                     size: 30,
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
 
                 // Greeting
@@ -433,15 +453,22 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: _authFailed
-                              ? [const Color(0xFFB71C1C), const Color(0xFFE53935)]
-                              : [const Color(0xFF1565C0), const Color(0xFF00BCD4)],
+                              ? [
+                                  const Color(0xFFB71C1C),
+                                  const Color(0xFFE53935),
+                                ]
+                              : [
+                                  const Color(0xFF1565C0),
+                                  const Color(0xFF00BCD4),
+                                ],
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: (_authFailed
-                                    ? const Color(0xFFE53935)
-                                    : const Color(0xFF1565C0))
-                                .withOpacity(0.5),
+                            color:
+                                (_authFailed
+                                        ? const Color(0xFFE53935)
+                                        : const Color(0xFF1565C0))
+                                    .withValues(alpha: 0.5),
                             blurRadius: 40,
                             spreadRadius: 8,
                           ),
@@ -453,8 +480,8 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
                                 width: 36,
                                 height: 36,
                                 child: CircularProgressIndicator(
-                                  color: Colors.white, 
-                                  strokeWidth: 3
+                                  color: Colors.white,
+                                  strokeWidth: 3,
                                 ),
                               ),
                             )
@@ -491,20 +518,20 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
                           ],
                         )
                       : _isAuthenticating
-                          ? Column(
-                              key: const ValueKey('verifying'),
-                              children: [
-                                Text(
-                                  'Verifying...',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white70,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : const SizedBox.shrink(),
+                      ? Column(
+                          key: const ValueKey('verifying'),
+                          children: [
+                            Text(
+                              'Verifying...',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white70,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
                 ),
 
                 const Spacer(flex: 2),
@@ -523,7 +550,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                         side: BorderSide(
-                          color: const Color(0xFF40C4FF).withOpacity(0.5),
+                          color: const Color(0xFF40C4FF).withValues(alpha: 0.5),
                           width: 1.5,
                         ),
                       ),

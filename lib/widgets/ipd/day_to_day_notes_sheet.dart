@@ -17,7 +17,7 @@ class DayToDayNotesSheet extends StatefulWidget {
 class _DayToDayNotesSheetState extends State<DayToDayNotesSheet> {
   final IpdService _ipdService = IpdService();
   final TextEditingController _notesController = TextEditingController();
-  
+
   bool _isLoading = true;
   bool _isSaving = false;
   List<dynamic> _notesList = [];
@@ -37,8 +37,8 @@ class _DayToDayNotesSheetState extends State<DayToDayNotesSheet> {
   Future<void> _fetchNotes() async {
     setState(() => _isLoading = true);
     try {
-      final admissionDate = widget.patient.admissionDate.isNotEmpty 
-          ? widget.patient.admissionDate 
+      final admissionDate = widget.patient.admissionDate.isNotEmpty
+          ? widget.patient.admissionDate
           : DateFormat('yyyy-MM-dd').format(DateTime.now());
 
       final result = await _ipdService.fetchDayToDayNotes(
@@ -53,7 +53,9 @@ class _DayToDayNotesSheetState extends State<DayToDayNotesSheet> {
             _notesList = result['data'] ?? [];
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(result['message'] ?? 'Failed to load notes')),
+              SnackBar(
+                content: Text(result['message'] ?? 'Failed to load notes'),
+              ),
             );
           }
         });
@@ -61,9 +63,9 @@ class _DayToDayNotesSheetState extends State<DayToDayNotesSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading notes: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading notes: $e')));
       }
     }
   }
@@ -71,9 +73,9 @@ class _DayToDayNotesSheetState extends State<DayToDayNotesSheet> {
   Future<void> _saveNote() async {
     final noteText = _notesController.text.trim();
     if (noteText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a note.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a note.')));
       return;
     }
 
@@ -82,12 +84,12 @@ class _DayToDayNotesSheetState extends State<DayToDayNotesSheet> {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('userId') ?? '0';
 
-      final admissionDate = widget.patient.admissionDate.isNotEmpty 
-          ? widget.patient.admissionDate 
+      final admissionDate = widget.patient.admissionDate.isNotEmpty
+          ? widget.patient.admissionDate
           : DateFormat('yyyy-MM-dd').format(DateTime.now());
-          
+
       // Typically 'day' is calculated based on admission date. Defaulting to 1.
-      final int day = 1; 
+      final int day = 1;
 
       final result = await _ipdService.saveDayToDayNote(
         ipdid: widget.patient.admissionId,
@@ -115,9 +117,9 @@ class _DayToDayNotesSheetState extends State<DayToDayNotesSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving note: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving note: $e')));
       }
     }
   }
@@ -126,9 +128,9 @@ class _DayToDayNotesSheetState extends State<DayToDayNotesSheet> {
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
-      padding: const EdgeInsets.all(20).copyWith(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
+      padding: const EdgeInsets.all(
+        20,
+      ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 20),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -158,18 +160,22 @@ class _DayToDayNotesSheetState extends State<DayToDayNotesSheet> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.05),
+              color: Colors.orange.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange.withOpacity(0.2)),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Patient: ${widget.patient.patientname}',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+                Text(
+                  'Patient: ${widget.patient.patientname}',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                ),
                 const SizedBox(height: 4),
-                Text('Admn Date: ${widget.patient.admissionDate}',
-                    style: GoogleFonts.inter(color: Colors.grey[700])),
+                Text(
+                  'Admn Date: ${widget.patient.admissionDate}',
+                  style: GoogleFonts.inter(color: Colors.grey[700]),
+                ),
               ],
             ),
           ),
@@ -178,30 +184,33 @@ class _DayToDayNotesSheetState extends State<DayToDayNotesSheet> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _notesList.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No notes found.',
-                          style: GoogleFonts.inter(color: Colors.grey),
+                ? Center(
+                    child: Text(
+                      'No notes found.',
+                      style: GoogleFonts.inter(color: Colors.grey),
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: _notesList.length,
+                    separatorBuilder: (_, __) => const Divider(),
+                    itemBuilder: (context, index) {
+                      final note = _notesList[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          note['notes']?.toString() ?? '',
+                          style: GoogleFonts.inter(fontSize: 14),
                         ),
-                      )
-                    : ListView.separated(
-                        itemCount: _notesList.length,
-                        separatorBuilder: (_, __) => const Divider(),
-                        itemBuilder: (context, index) {
-                          final note = _notesList[index];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              note['notes']?.toString() ?? '',
-                              style: GoogleFonts.inter(fontSize: 14),
-                            ),
-                            subtitle: Text(
-                              'Day ${note['day']} - Date: ${note['date'] ?? 'N/A'}',
-                              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
-                            ),
-                          );
-                        },
-                      ),
+                        subtitle: Text(
+                          'Day ${note['day']} - Date: ${note['date'] ?? 'N/A'}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -235,7 +244,10 @@ class _DayToDayNotesSheetState extends State<DayToDayNotesSheet> {
                       ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
                         )
                       : const Icon(Icons.send, color: Colors.white),
                 ),

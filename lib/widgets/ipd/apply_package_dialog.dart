@@ -34,7 +34,7 @@ class _ApplyPackageDialogState extends State<ApplyPackageDialog> {
 
   Future<void> _fetchPackages() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final existingPackage = await _packageService.checkPackageExists(
         int.tryParse(widget.patient.admissionId) ?? 0,
@@ -48,18 +48,24 @@ class _ApplyPackageDialogState extends State<ApplyPackageDialog> {
           _isLoading = false;
         });
 
-        if (existingPackage['success'] && existingPackage['data'] != null && existingPackage['data'].isNotEmpty) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Note: This patient already has an active package.')),
-           );
+        if (existingPackage['success'] &&
+            existingPackage['data'] != null &&
+            existingPackage['data'].isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Note: This patient already has an active package.',
+              ),
+            ),
+          );
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading packages: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading packages: $e')));
       }
     }
   }
@@ -83,7 +89,9 @@ class _ApplyPackageDialogState extends State<ApplyPackageDialog> {
   Future<void> _applyPackage() async {
     if (_selectedParentPackageId == null || _selectedChildPackageId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select both a parent and a child package.')),
+        const SnackBar(
+          content: Text('Please select both a parent and a child package.'),
+        ),
       );
       return;
     }
@@ -112,16 +120,18 @@ class _ApplyPackageDialogState extends State<ApplyPackageDialog> {
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'] ?? 'Failed to apply package')),
+            SnackBar(
+              content: Text(result['message'] ?? 'Failed to apply package'),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isApplying = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error applying package: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error applying package: $e')));
       }
     }
   }
@@ -156,7 +166,7 @@ class _ApplyPackageDialogState extends State<ApplyPackageDialog> {
                 ],
               ),
               const Divider(height: 24),
-              
+
               // Patient Info Card
               Container(
                 width: double.infinity,
@@ -169,16 +179,26 @@ class _ApplyPackageDialogState extends State<ApplyPackageDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Patient: ${widget.patient.patientname}',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
+                    Text(
+                      'Patient: ${widget.patient.patientname}',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text('Admn No: ${widget.patient.ipdNo}',
-                        style: GoogleFonts.inter(color: Colors.grey[600], fontSize: 12)),
+                    Text(
+                      'Admn No: ${widget.patient.ipdNo}',
+                      style: GoogleFonts.inter(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               // Form content
               if (_isLoading)
                 const Padding(
@@ -188,21 +208,36 @@ class _ApplyPackageDialogState extends State<ApplyPackageDialog> {
               else ...[
                 Text(
                   'Parent Package',
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[700]),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
                 ),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                     isDense: true,
                   ),
-                  hint: const Text('Select Parent Package', style: TextStyle(fontSize: 13)),
+                  hint: const Text(
+                    'Select Parent Package',
+                    style: TextStyle(fontSize: 13),
+                  ),
                   value: _selectedParentPackageId,
                   items: _parentPackages.map((pkg) {
                     return DropdownMenuItem<String>(
                       value: pkg['id']?.toString(),
-                      child: Text(pkg['packageName']?.toString() ?? 'Unknown', style: const TextStyle(fontSize: 13)),
+                      child: Text(
+                        pkg['packageName']?.toString() ?? 'Unknown',
+                        style: const TextStyle(fontSize: 13),
+                      ),
                     );
                   }).toList(),
                   onChanged: (value) {
@@ -214,25 +249,40 @@ class _ApplyPackageDialogState extends State<ApplyPackageDialog> {
                     }
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
                 Text(
                   'Child Package',
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[700]),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
                 ),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                     isDense: true,
                   ),
-                  hint: const Text('Select Sub Package', style: TextStyle(fontSize: 13)),
+                  hint: const Text(
+                    'Select Sub Package',
+                    style: TextStyle(fontSize: 13),
+                  ),
                   value: _selectedChildPackageId,
                   items: _childPackages.map((childPkg) {
                     return DropdownMenuItem<String>(
                       value: childPkg['id']?.toString(),
-                      child: Text(childPkg['packageName']?.toString() ?? 'Unknown', style: const TextStyle(fontSize: 13)),
+                      child: Text(
+                        childPkg['packageName']?.toString() ?? 'Unknown',
+                        style: const TextStyle(fontSize: 13),
+                      ),
                     );
                   }).toList(),
                   onChanged: _selectedParentPackageId == null
@@ -240,34 +290,59 @@ class _ApplyPackageDialogState extends State<ApplyPackageDialog> {
                       : (value) {
                           setState(() {
                             _selectedChildPackageId = value;
-                            final selectedChild = _childPackages.firstWhere((p) => p['id']?.toString() == value);
-                            _packageAmount = double.tryParse(selectedChild['amount']?.toString() ?? '0') ?? 0.0;
-                            _validity = int.tryParse(selectedChild['validityDays']?.toString() ?? '0') ?? 0;
+                            final selectedChild = _childPackages.firstWhere(
+                              (p) => p['id']?.toString() == value,
+                            );
+                            _packageAmount =
+                                double.tryParse(
+                                  selectedChild['amount']?.toString() ?? '0',
+                                ) ??
+                                0.0;
+                            _validity =
+                                int.tryParse(
+                                  selectedChild['validityDays']?.toString() ??
+                                      '0',
+                                ) ??
+                                0;
                           });
                         },
                 ),
-                
+
                 if (_selectedChildPackageId != null) ...[
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.05),
-                      border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      color: Colors.green.withValues(alpha: 0.05),
+                      border: Border.all(
+                        color: Colors.green.withValues(alpha: 0.3),
+                      ),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Amount: \$$_packageAmount',
-                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green[800])),
-                        Text('Validity: $_validity Days',
-                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.green[800])),
+                        Text(
+                          'Amount: \$$_packageAmount',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green[800],
+                          ),
+                        ),
+                        Text(
+                          'Validity: $_validity Days',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green[800],
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ],
-                
+
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -276,19 +351,27 @@ class _ApplyPackageDialogState extends State<ApplyPackageDialog> {
                     onPressed: _isApplying ? null : _applyPackage,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1A237E),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       elevation: 0,
                     ),
                     child: _isApplying
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
                           )
                         : Text(
                             'Apply Package',
                             style: GoogleFonts.inter(
-                                color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
                           ),
                   ),
                 ),

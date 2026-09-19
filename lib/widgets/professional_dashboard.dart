@@ -1,7 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:staff_mate/theme/app_theme.dart';
+import 'package:staff_mate/theme/hr_theme.dart';
 
 /// Premium dashboard screen featuring glass‑morphic cards, dynamic gradients,
 /// subtle micro‑animations and a responsive grid layout. Designed to showcase
@@ -16,9 +17,14 @@ class ProfessionalDashboard extends ConsumerWidget {
     final crossAxisCount = size.width > 800 ? 4 : (size.width > 600 ? 3 : 2);
 
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.lightBackground,
+      backgroundColor: isDark
+          ? HRTheme.backgroundDark
+          : HRTheme.backgroundLight,
       appBar: AppBar(
-        title: Text('Enterprise Dashboard', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(
+          'Enterprise Dashboard',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: isDark ? Colors.white : Colors.black87,
@@ -125,7 +131,10 @@ class _GlassMorphicCard extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.2),
+              width: 1,
+            ),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -135,16 +144,19 @@ class _GlassMorphicCard extends StatelessWidget {
               children: [
                 Icon(icon, size: 28, color: Colors.white70),
                 const SizedBox(height: 12),
-                Text(value,
-                    style: GoogleFonts.inter(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white)),
+                Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(title,
-                    style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.white70)),
+                Text(
+                  title,
+                  style: GoogleFonts.inter(fontSize: 14, color: Colors.white70),
+                ),
               ],
             ),
           ),

@@ -34,7 +34,7 @@ class _ApplyPackageSheetState extends State<ApplyPackageSheet> {
 
   Future<void> _fetchPackages() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final existingPackage = await _packageService.checkPackageExists(
         int.tryParse(widget.patient.admissionId) ?? 0,
@@ -49,18 +49,24 @@ class _ApplyPackageSheetState extends State<ApplyPackageSheet> {
           _isLoading = false;
         });
 
-        if (existingPackage['success'] && existingPackage['data'] != null && existingPackage['data'].isNotEmpty) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(content: Text('Note: This patient already has an active package.')),
-           );
+        if (existingPackage['success'] &&
+            existingPackage['data'] != null &&
+            existingPackage['data'].isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Note: This patient already has an active package.',
+              ),
+            ),
+          );
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading packages: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading packages: $e')));
       }
     }
   }
@@ -84,7 +90,9 @@ class _ApplyPackageSheetState extends State<ApplyPackageSheet> {
   Future<void> _applyPackage() async {
     if (_selectedParentPackageId == null || _selectedChildPackageId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select both a parent and a child package.')),
+        const SnackBar(
+          content: Text('Please select both a parent and a child package.'),
+        ),
       );
       return;
     }
@@ -113,16 +121,18 @@ class _ApplyPackageSheetState extends State<ApplyPackageSheet> {
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'] ?? 'Failed to apply package')),
+            SnackBar(
+              content: Text(result['message'] ?? 'Failed to apply package'),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isApplying = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error applying package: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error applying package: $e')));
       }
     }
   }
@@ -130,9 +140,9 @@ class _ApplyPackageSheetState extends State<ApplyPackageSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20).copyWith(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
+      padding: const EdgeInsets.all(
+        20,
+      ).copyWith(bottom: MediaQuery.of(context).viewInsets.bottom + 20),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -163,18 +173,22 @@ class _ApplyPackageSheetState extends State<ApplyPackageSheet> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.05),
+              color: Colors.purple.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.purple.withOpacity(0.2)),
+              border: Border.all(color: Colors.purple.withValues(alpha: 0.2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Patient: ${widget.patient.patientname}',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+                Text(
+                  'Patient: ${widget.patient.patientname}',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                ),
                 const SizedBox(height: 4),
-                Text('Admn No: ${widget.patient.ipdNo}',
-                    style: GoogleFonts.inter(color: Colors.grey[700])),
+                Text(
+                  'Admn No: ${widget.patient.ipdNo}',
+                  style: GoogleFonts.inter(color: Colors.grey[700]),
+                ),
               ],
             ),
           ),
@@ -184,13 +198,21 @@ class _ApplyPackageSheetState extends State<ApplyPackageSheet> {
           else ...[
             Text(
               'Select Package',
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               decoration: InputDecoration(
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               hint: const Text('Select Parent Package'),
               value: _selectedParentPackageId,
@@ -212,13 +234,21 @@ class _ApplyPackageSheetState extends State<ApplyPackageSheet> {
             const SizedBox(height: 20),
             Text(
               'Select Sub Package',
-              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               decoration: InputDecoration(
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               hint: const Text('Select Sub Package'),
               value: _selectedChildPackageId,
@@ -233,9 +263,19 @@ class _ApplyPackageSheetState extends State<ApplyPackageSheet> {
                   : (value) {
                       setState(() {
                         _selectedChildPackageId = value;
-                        final selectedChild = _childPackages.firstWhere((p) => p['id']?.toString() == value);
-                        _packageAmount = double.tryParse(selectedChild['amount']?.toString() ?? '0') ?? 0.0;
-                        _validity = int.tryParse(selectedChild['validityDays']?.toString() ?? '0') ?? 0;
+                        final selectedChild = _childPackages.firstWhere(
+                          (p) => p['id']?.toString() == value,
+                        );
+                        _packageAmount =
+                            double.tryParse(
+                              selectedChild['amount']?.toString() ?? '0',
+                            ) ??
+                            0.0;
+                        _validity =
+                            int.tryParse(
+                              selectedChild['validityDays']?.toString() ?? '0',
+                            ) ??
+                            0;
                       });
                     },
             ),
@@ -244,10 +284,20 @@ class _ApplyPackageSheetState extends State<ApplyPackageSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Amount: \$$_packageAmount',
-                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500)),
-                  Text('Validity: $_validity Days',
-                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500)),
+                  Text(
+                    'Amount: \$$_packageAmount',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    'Validity: $_validity Days',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -259,18 +309,26 @@ class _ApplyPackageSheetState extends State<ApplyPackageSheet> {
                 onPressed: _isApplying ? null : _applyPackage,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1A237E),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 child: _isApplying
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
                       )
                     : Text(
                         'Apply Package',
                         style: GoogleFonts.inter(
-                            color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
                       ),
               ),
             ),

@@ -210,7 +210,7 @@
 //               height: size.width * 0.8,
 //               decoration: BoxDecoration(
 //                 shape: BoxShape.circle,
-//                 color: Colors.white.withOpacity(0.05),
+//                 color: Colors.white.withValues(alpha:0.05),
 //               ),
 //             ),
 //           ),
@@ -235,10 +235,10 @@
 //                               padding: EdgeInsets.all(size.width * 0.06),
 //                               decoration: BoxDecoration(
 //                                 shape: BoxShape.circle,
-//                                 color: Colors.white.withOpacity(0.1),
+//                                 color: Colors.white.withValues(alpha:0.1),
 //                                 boxShadow: [
 //                                   BoxShadow(
-//                                     color: Colors.black.withOpacity(0.1),
+//                                     color: Colors.black.withValues(alpha:0.1),
 //                                     blurRadius: 20,
 //                                     spreadRadius: 5,
 //                                   ),
@@ -337,7 +337,7 @@
 //                                       borderRadius: BorderRadius.circular(16),
 //                                       boxShadow: [
 //                                         BoxShadow(
-//                                           color: Colors.grey.withOpacity(0.1),
+//                                           color: Colors.grey.withValues(alpha:0.1),
 //                                           blurRadius: 10,
 //                                           offset: const Offset(0, 5),
 //                                         ),
@@ -358,7 +358,7 @@
 //                                         ),
 //                                         prefixIcon: Icon(
 //                                           Icons.email_outlined,
-//                                           color: AppColors.primaryDarkBlue.withOpacity(0.7),
+//                                           color: AppColors.primaryDarkBlue.withValues(alpha:0.7),
 //                                           size: 22,
 //                                         ),
 //                                         border: OutlineInputBorder(
@@ -407,7 +407,7 @@
 //                                       vertical: 8,
 //                                     ),
 //                                     decoration: BoxDecoration(
-//                                       color: AppColors.primaryDarkBlue.withOpacity(0.1),
+//                                       color: AppColors.primaryDarkBlue.withValues(alpha:0.1),
 //                                       borderRadius: BorderRadius.circular(20),
 //                                     ),
 //                                     child: Text(
@@ -521,7 +521,7 @@
 //           // Loading Overlay
 //           if (_isLoading)
 //             Container(
-//               color: Colors.black.withOpacity(0.3),
+//               color: Colors.black.withValues(alpha:0.3),
 //               child: const Center(
 //                 child: CircularProgressIndicator(
 //                   color: Colors.white,
@@ -547,7 +547,7 @@
 //           backgroundColor: AppColors.primaryDarkBlue,
 //           foregroundColor: Colors.white,
 //           elevation: 8,
-//           shadowColor: AppColors.primaryDarkBlue.withOpacity(0.4),
+//           shadowColor: AppColors.primaryDarkBlue.withValues(alpha:0.4),
 //           shape: RoundedRectangleBorder(
 //             borderRadius: BorderRadius.circular(16),
 //           ),

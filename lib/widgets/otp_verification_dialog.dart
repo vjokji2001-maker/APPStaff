@@ -418,7 +418,7 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
+                color: Colors.grey.withValues(alpha: 0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -436,7 +436,7 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryDarkBlue.withOpacity(0.1),
+                    color: AppColors.primaryDarkBlue.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -479,10 +479,7 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
                     height: 120,
                     child: TabBarView(
                       controller: _tabController,
-                      children: [
-                        _buildEmailInputTab(),
-                        _buildMobileInputTab(),
-                      ],
+                      children: [_buildEmailInputTab(), _buildMobileInputTab()],
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -546,12 +543,14 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
               elevation: 2,
               borderRadius: BorderRadius.circular(10),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
-                  color: _alertColor.withOpacity(0.1),
+                  color: _alertColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _alertColor.withOpacity(0.3)),
+                  border: Border.all(color: _alertColor.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -603,16 +602,17 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
         indicatorSize: TabBarIndicatorSize.tab,
         labelColor: Colors.white,
         unselectedLabelColor: AppColors.textBodyColor,
-        labelStyle:
-            GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
-        unselectedLabelStyle:
-            GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+        labelStyle: GoogleFonts.poppins(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: GoogleFonts.poppins(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
         dividerColor: Colors.transparent,
         tabs: const [
-          Tab(
-            icon: Icon(Icons.email_outlined, size: 18),
-            text: 'Email',
-          ),
+          Tab(icon: Icon(Icons.email_outlined, size: 18), text: 'Email'),
           Tab(
             icon: Icon(Icons.phone_android_rounded, size: 18),
             text: 'Mobile',
@@ -629,7 +629,9 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
         Text(
           'Enter your email to receive OTP',
           style: GoogleFonts.poppins(
-              fontSize: 12, color: AppColors.textBodyColor),
+            fontSize: 12,
+            color: AppColors.textBodyColor,
+          ),
         ),
         const SizedBox(height: 8),
         Container(
@@ -649,9 +651,14 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
             decoration: InputDecoration(
               hintText: 'Email Address',
               hintStyle: GoogleFonts.poppins(
-                  color: Colors.grey.shade400, fontSize: 13),
-              prefixIcon: Icon(Icons.email_outlined,
-                  color: AppColors.primaryDarkBlue, size: 20),
+                color: Colors.grey.shade400,
+                fontSize: 13,
+              ),
+              prefixIcon: Icon(
+                Icons.email_outlined,
+                color: AppColors.primaryDarkBlue,
+                size: 20,
+              ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(vertical: 14),
             ),
@@ -668,7 +675,9 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
         Text(
           'Enter your mobile number to receive OTP',
           style: GoogleFonts.poppins(
-              fontSize: 12, color: AppColors.textBodyColor),
+            fontSize: 12,
+            color: AppColors.textBodyColor,
+          ),
         ),
         const SizedBox(height: 8),
         Container(
@@ -692,9 +701,14 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
             decoration: InputDecoration(
               hintText: 'Mobile Number (10 digits)',
               hintStyle: GoogleFonts.poppins(
-                  color: Colors.grey.shade400, fontSize: 13),
-              prefixIcon: Icon(Icons.phone_android_rounded,
-                  color: AppColors.primaryDarkBlue, size: 20),
+                color: Colors.grey.shade400,
+                fontSize: 13,
+              ),
+              prefixIcon: Icon(
+                Icons.phone_android_rounded,
+                color: AppColors.primaryDarkBlue,
+                size: 20,
+              ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(vertical: 14),
             ),
@@ -717,7 +731,8 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
           backgroundColor: AppColors.primaryDarkBlue,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 2,
         ),
         child: _isLoading
@@ -725,21 +740,24 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
                 height: 20,
                 width: 20,
                 child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 2))
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    isEmail
-                        ? Icons.send_rounded
-                        : Icons.sms_rounded,
+                    isEmail ? Icons.send_rounded : Icons.sms_rounded,
                     size: 18,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'Send OTP',
                     style: GoogleFonts.poppins(
-                        fontSize: 15, fontWeight: FontWeight.w600),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -779,8 +797,7 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-                color: AppColors.primaryDarkBlue, width: 2),
+            border: Border.all(color: AppColors.primaryDarkBlue, width: 2),
           ),
         ),
         onTap: () {
@@ -802,22 +819,20 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
         Text(
           "Didn't receive code? ",
           style: GoogleFonts.poppins(
-              color: AppColors.textBodyColor, fontSize: 12),
+            color: AppColors.textBodyColor,
+            fontSize: 12,
+          ),
         ),
         GestureDetector(
           onTap: _isResendEnabled
               ? (_tabController.index == _kEmailTab
-                  ? _resendEmailOTP
-                  : _resendMobileOTP)
+                    ? _resendEmailOTP
+                    : _resendMobileOTP)
               : null,
           child: Text(
-            _isResendEnabled
-                ? 'Resend'
-                : 'Resend in $_resendTimer s',
+            _isResendEnabled ? 'Resend' : 'Resend in $_resendTimer s',
             style: GoogleFonts.poppins(
-              color: _isResendEnabled
-                  ? AppColors.primaryDarkBlue
-                  : Colors.grey,
+              color: _isResendEnabled ? AppColors.primaryDarkBlue : Colors.grey,
               fontSize: 12,
               fontWeight: FontWeight.w600,
               decoration: _isResendEnabled
@@ -843,7 +858,8 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
           backgroundColor: AppColors.primaryDarkBlue,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 2,
         ),
         child: _isLoading
@@ -851,11 +867,16 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
                 height: 20,
                 width: 20,
                 child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 2))
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
             : Text(
                 'Verify & Continue',
                 style: GoogleFonts.poppins(
-                    fontSize: 15, fontWeight: FontWeight.w600),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
       ),
     );

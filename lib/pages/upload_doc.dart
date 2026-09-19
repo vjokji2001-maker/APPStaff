@@ -16,7 +16,8 @@ class UploadDocScreen extends StatefulWidget {
   State<UploadDocScreen> createState() => _UploadDocScreenState();
 }
 
-class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProviderStateMixin {
+class _UploadDocScreenState extends State<UploadDocScreen>
+    with SingleTickerProviderStateMixin {
   // Color constants - Updated to follow the specified scheme
   static const Color primaryDarkBlue = Color(0xFF1A237E);
   static const Color midDarkBlue = Color(0xFF1B263B);
@@ -42,11 +43,11 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
   bool _isUploading = false;
   String? _practitionerId;
   bool _loadingPractitioners = false;
-  
+
   // Local file array to store multiple files before upload (matching React logic)
   List<Map<String, dynamic>> _localFileArray = [];
   List<Map<String, dynamic>> _fileList = [];
-  
+
   // Animation controller
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -63,7 +64,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
     'Admission Form',
     'Discharge Form',
     'Nursing',
-    'Other'
+    'Other',
   ];
 
   // IpdService instance
@@ -80,21 +81,21 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
       parent: _animationController,
       curve: Curves.easeInOut,
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
     _animationController.forward();
-    
+
     // Load practitioner ID from patient object FIRST (this is the correct source)
     _loadPractitionerIdFromPatient();
-    
+
     // Also load practitioner list for fallback (optional)
     _loadDefaultPractitionerId();
-    
+
     // Load patient data from localStorage equivalent (SharedPreferences)
     _loadPatientData();
   }
@@ -109,7 +110,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
   Future<void> _loadPatientData() async {
     final prefs = await SharedPreferences.getInstance();
     final patientDataString = prefs.getString('PatientDataArray');
-    
+
     if (patientDataString != null) {
       try {
         final List<dynamic> patientDataArray = jsonDecode(patientDataString);
@@ -123,13 +124,19 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
   // NEW METHOD: Load practitioner ID directly from the patient object
   void _loadPractitionerIdFromPatient() {
     // Check if the patient object has practitionerId
-    if (widget.patient.practitionerid != null && 
+    if (widget.patient.practitionerid != null &&
         widget.patient.practitionerid!.isNotEmpty) {
       _practitionerId = widget.patient.practitionerid;
-      debugPrint('✅ Practitioner ID loaded from patient object: $_practitionerId');
-      debugPrint('✅ Practitioner Name from patient: ${widget.patient.practitionername}');
+      debugPrint(
+        '✅ Practitioner ID loaded from patient object: $_practitionerId',
+      );
+      debugPrint(
+        '✅ Practitioner Name from patient: ${widget.patient.practitionername}',
+      );
     } else {
-      debugPrint('⚠️ No practitioner ID in patient object, will try other sources');
+      debugPrint(
+        '⚠️ No practitioner ID in patient object, will try other sources',
+      );
       _practitionerId = '0';
     }
   }
@@ -137,37 +144,41 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
   Future<void> _loadDefaultPractitionerId() async {
     // Only load if we don't already have a practitioner ID from patient object
     if (_practitionerId != null && _practitionerId != '0') {
-      debugPrint('✅ Already have practitioner ID from patient: $_practitionerId, skipping fetch');
+      debugPrint(
+        '✅ Already have practitioner ID from patient: $_practitionerId, skipping fetch',
+      );
       return;
     }
-    
+
     setState(() {
       _loadingPractitioners = true;
     });
-    
+
     try {
       final practitioners = await _ipdService.fetchPractitionerList();
-      
+
       if (practitioners.isNotEmpty) {
         // Try to find practitioner ID 13 specifically (from your successful example)
         dynamic selectedPractitioner;
-        
+
         for (var p in practitioners) {
           final id = p['id']?.toString() ?? '';
-          
+
           if (id == '13') {
             selectedPractitioner = p;
             debugPrint('✅ Found practitioner ID 13: ${p['practitionername']}');
             break;
           }
         }
-        
+
         // If no ID 13 found, take the first one
         selectedPractitioner ??= practitioners.first;
-        
+
         _practitionerId = selectedPractitioner['id']?.toString() ?? '0';
         debugPrint('✅ Fallback Practitioner ID loaded: $_practitionerId');
-        debugPrint('✅ Fallback Practitioner Name: ${selectedPractitioner['practitionername']}');
+        debugPrint(
+          '✅ Fallback Practitioner Name: ${selectedPractitioner['practitionername']}',
+        );
       } else {
         _practitionerId = '0';
         debugPrint('⚠️ No practitioners found, using default ID: 0');
@@ -183,27 +194,32 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
   }
 
   // ✅ FILE VALIDATION - Mirrors React logic exactly
-  bool _validateFile(File file, String fileName, String fileType, int fileSize) {
+  bool _validateFile(
+    File file,
+    String fileName,
+    String fileType,
+    int fileSize,
+  ) {
     // Check file size (≤ 2MB)
     final fileMb = fileSize / (1024 * 1024);
     if (fileMb >= 2) {
       _showError("File Size must be less than or equal to 2mb....!");
       return false;
     }
-    
+
     // Check file type
     final validTypes = [
       'application/pdf',
       'image/png',
       'image/jpeg',
-      'image/jpg'
+      'image/jpg',
     ];
-    
+
     if (!validTypes.contains(fileType)) {
       _showError("Please select correct file...!");
       return false;
     }
-    
+
     return true;
   }
 
@@ -237,18 +253,18 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
         final file = File(result.files.single.path!);
         final fileName = result.files.single.name;
         final fileSize = result.files.single.size;
-        
+
         // Determine MIME type
         String fileType = _getMimeType(fileName);
-        
+
         // Validate file (size & type)
         if (!_validateFile(file, fileName, fileType, fileSize)) {
           return;
         }
-        
+
         // Normalize file type (JPEG → JPG)
         fileType = _normalizeFileType(fileType);
-        
+
         setState(() {
           _selectedFile = file;
           _fileName = fileName;
@@ -256,8 +272,10 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
           _fileType = fileType;
           _lastModified = DateTime.now().millisecondsSinceEpoch;
         });
-        
-        debugPrint('✅ File selected: $fileName, Type: $fileType, Size: ${fileSize / 1024}KB');
+
+        debugPrint(
+          '✅ File selected: $fileName, Type: $fileType, Size: ${fileSize / 1024}KB',
+        );
       }
     } catch (e) {
       _showError('Error picking file: $e');
@@ -297,52 +315,60 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
     try {
       // Get user info from shared preferences
       final prefs = await SharedPreferences.getInstance();
-      final userFullName = prefs.getString('userFullName') ?? 
-                          prefs.getString('username') ?? 
-                          'Staff User';
-      
+      final userFullName =
+          prefs.getString('userFullName') ??
+          prefs.getString('username') ??
+          'Staff User';
+
       // Get patient data from localStorage equivalent
       String patientDataString = prefs.getString('PatientDataArray') ?? '[]';
       List<dynamic> patientRecord = jsonDecode(patientDataString);
-      
+
       // CRITICAL FIX: Start with values from the patient object passed to the screen
       String patient_id = widget.patient.patientId.toString();
-      
+
       // Get practitioner ID from patient object FIRST (this is the most reliable source)
       String practitioner_id = widget.patient.practitionerid ?? '0';
-      
+
       String condition_id = widget.patient.conditionId?.toString() ?? '0';
       String ipdId = widget.patient.admissionId;
-      
+
       debugPrint('📋 Initial values from patient object:');
       debugPrint('   Patient ID: $patient_id');
       debugPrint('   Practitioner ID from patient: $practitioner_id');
       debugPrint('   Condition ID: $condition_id');
       debugPrint('   Admission ID: $ipdId');
-      
+
       // ONLY use PatientDataArray if patient object doesn't have the values
-      if ((practitioner_id == '0' || practitioner_id.isEmpty) && patientRecord.isNotEmpty) {
-        debugPrint('⚠️ Practitioner ID missing from patient object, checking PatientDataArray...');
+      if ((practitioner_id == '0' || practitioner_id.isEmpty) &&
+          patientRecord.isNotEmpty) {
+        debugPrint(
+          '⚠️ Practitioner ID missing from patient object, checking PatientDataArray...',
+        );
         for (var record in patientRecord) {
           if (record['practitionerid'] != null) {
             practitioner_id = record['practitionerid'].toString();
-            debugPrint('✅ Found practitioner ID in PatientDataArray: $practitioner_id');
+            debugPrint(
+              '✅ Found practitioner ID in PatientDataArray: $practitioner_id',
+            );
             break;
           }
         }
       }
-      
+
       // If still no practitioner ID, use the fallback
       if (practitioner_id == '0' || practitioner_id.isEmpty) {
         if (_practitionerId != null && _practitionerId != '0') {
           practitioner_id = _practitionerId!;
-          debugPrint('⚠️ Using fallback practitioner ID from API: $practitioner_id');
+          debugPrint(
+            '⚠️ Using fallback practitioner ID from API: $practitioner_id',
+          );
         }
       }
 
       // Get document note
       final uploadNotes = _docNoteController.text.trim();
-      
+
       // Parse admission ID to integer
       int ipdOrOpdInt;
       try {
@@ -361,15 +387,17 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
       // Process file
       final bytes = await _selectedFile!.readAsBytes();
       final base64String = base64Encode(bytes);
-      
+
       // Determine file type - normalize JPEG to JPG to match React logic
       String fileType = _fileType ?? _getMimeType(_fileName ?? '');
       fileType = _normalizeFileType(fileType);
-      
+
       final fileDataUrl = 'data:$fileType;base64,$base64String';
       final fileName = _fileName ?? 'document';
-      
-      debugPrint('✅ File processed: $fileName, Type: $fileType, Size: ${bytes.length} bytes');
+
+      debugPrint(
+        '✅ File processed: $fileName, Type: $fileType, Size: ${bytes.length} bytes',
+      );
 
       // Create localFiles object
       Map<String, dynamic> localFiles = {
@@ -402,13 +430,10 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
         return;
       } else {
         _localFileArray.add(localFiles);
-        
+
         // Update fileList for UI
-        Map<String, dynamic> fileNameList = {
-          'id': '0',
-          'name': fileName,
-        };
-        
+        Map<String, dynamic> fileNameList = {'id': '0', 'name': fileName};
+
         bool isFileExistInFileList = false;
         for (var file in _fileList) {
           if (file['name'] == fileNameList['name']) {
@@ -416,12 +441,14 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
             break;
           }
         }
-        
+
         if (!isFileExistInFileList) {
           _fileList.add(fileNameList);
         }
-        
-        debugPrint('✅ File added to local array. Total files: ${_localFileArray.length}');
+
+        debugPrint(
+          '✅ File added to local array. Total files: ${_localFileArray.length}',
+        );
       }
 
       // ACTUAL API CALL - Upload the document WITH FILE
@@ -439,7 +466,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
       if (result['success'] == true) {
         _showSuccess(result['message'] ?? 'Document uploaded successfully!');
         _resetForm();
-        
+
         // Store updated local file array in SharedPreferences
         await prefs.setString('localFileArray', jsonEncode(_localFileArray));
       } else {
@@ -491,7 +518,11 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const Icon(
+              Icons.check_circle_outline,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 12),
             Expanded(child: Text(message)),
           ],
@@ -514,7 +545,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
         border: Border.all(color: tableBorderColor),
         boxShadow: [
           BoxShadow(
-            color: primaryDarkBlue.withOpacity(0.05),
+            color: primaryDarkBlue.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -527,13 +558,17 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                Icon(Icons.description_outlined, color: primaryDarkBlue, size: 20),
+                Icon(
+                  Icons.description_outlined,
+                  color: primaryDarkBlue,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Text(
                   'Choose document type',
                   style: TextStyle(
                     fontSize: 15,
-                    color: textBodyColor.withOpacity(0.7),
+                    color: textBodyColor.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -543,20 +578,25 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
             return DropdownMenuItem<String>(
               value: value,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: _selectedType == value 
-                            ? primaryDarkBlue.withOpacity(0.1)
+                        color: _selectedType == value
+                            ? primaryDarkBlue.withValues(alpha: 0.1)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         _getDocumentTypeIcon(value),
-                        color: _selectedType == value ? primaryDarkBlue : textBodyColor,
+                        color: _selectedType == value
+                            ? primaryDarkBlue
+                            : textBodyColor,
                         size: 18,
                       ),
                     ),
@@ -565,8 +605,12 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                       value,
                       style: TextStyle(
                         fontSize: 15,
-                        color: _selectedType == value ? primaryDarkBlue : textBodyColor,
-                        fontWeight: _selectedType == value ? FontWeight.w600 : FontWeight.w400,
+                        color: _selectedType == value
+                            ? primaryDarkBlue
+                            : textBodyColor,
+                        fontWeight: _selectedType == value
+                            ? FontWeight.w600
+                            : FontWeight.w400,
                       ),
                     ),
                   ],
@@ -605,17 +649,17 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
         curve: Curves.easeInOut,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: _selectedFile == null ? whiteColor : successGreen.withOpacity(0.05),
+          color: _selectedFile == null
+              ? whiteColor
+              : successGreen.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: _selectedFile == null 
-                ? tableBorderColor
-                : successGreen,
+            color: _selectedFile == null ? tableBorderColor : successGreen,
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: primaryDarkBlue.withOpacity(0.03),
+              color: primaryDarkBlue.withValues(alpha: 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -632,9 +676,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
             ),
             const SizedBox(height: 12),
             Text(
-              _selectedFile == null
-                  ? 'Tap to select file'
-                  : _fileName!,
+              _selectedFile == null ? 'Tap to select file' : _fileName!,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -649,7 +691,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                 _formatFileSize(_fileSize),
                 style: TextStyle(
                   fontSize: 13,
-                  color: textBodyColor.withOpacity(0.7),
+                  color: textBodyColor.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -657,7 +699,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: primaryDarkBlue.withOpacity(0.05),
+                color: primaryDarkBlue.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -717,7 +759,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
         border: Border.all(color: tableBorderColor),
         boxShadow: [
           BoxShadow(
-            color: primaryDarkBlue.withOpacity(0.05),
+            color: primaryDarkBlue.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -729,7 +771,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: primaryDarkBlue.withOpacity(0.1),
+              color: primaryDarkBlue.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -757,9 +799,12 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: primaryDarkBlue.withOpacity(0.1),
+                        color: primaryDarkBlue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -773,9 +818,12 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: accentBlue.withOpacity(0.1),
+                        color: accentBlue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -801,7 +849,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final horizontalPadding = screenWidth * 0.04;
-    
+
     return Scaffold(
       backgroundColor: lightGreyColor,
       appBar: AppBar(
@@ -836,7 +884,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                     children: [
                       _buildPatientInfoCard(),
                       const SizedBox(height: 20),
-                      
+
                       // Document Type Selection
                       const Text(
                         'Document Type',
@@ -855,7 +903,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                           'Optional - defaults to "Other"',
                           style: TextStyle(
                             fontSize: 11,
-                            color: textBodyColor.withOpacity(0.6),
+                            color: textBodyColor.withValues(alpha: 0.6),
                             fontStyle: FontStyle.italic,
                           ),
                         ),
@@ -881,15 +929,12 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                         child: TextFormField(
                           controller: _docNoteController,
                           maxLines: 3,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: textDark,
-                          ),
+                          style: const TextStyle(fontSize: 14, color: textDark),
                           decoration: InputDecoration(
                             hintText: 'Add notes or description...',
                             hintStyle: TextStyle(
                               fontSize: 14,
-                              color: textBodyColor.withOpacity(0.5),
+                              color: textBodyColor.withValues(alpha: 0.5),
                             ),
                             border: InputBorder.none,
                             contentPadding: const EdgeInsets.all(12),
@@ -898,7 +943,9 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                                     icon: Icon(
                                       Icons.clear_rounded,
                                       size: 18,
-                                      color: textBodyColor.withOpacity(0.7),
+                                      color: textBodyColor.withValues(
+                                        alpha: 0.7,
+                                      ),
                                     ),
                                     onPressed: () {
                                       _docNoteController.clear();
@@ -916,7 +963,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                           '${_docNoteController.text.length}/500',
                           style: TextStyle(
                             fontSize: 10,
-                            color: textBodyColor.withOpacity(0.5),
+                            color: textBodyColor.withValues(alpha: 0.5),
                           ),
                         ),
                       ),
@@ -940,7 +987,9 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: _isUploading || _loadingPractitioners ? null : _uploadDocument,
+                          onPressed: _isUploading || _loadingPractitioners
+                              ? null
+                              : _uploadDocument,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryDarkBlue,
                             foregroundColor: whiteColor,
@@ -948,7 +997,9 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            disabledBackgroundColor: primaryDarkBlue.withOpacity(0.5),
+                            disabledBackgroundColor: primaryDarkBlue.withValues(
+                              alpha: 0.5,
+                            ),
                           ),
                           child: _isUploading
                               ? Row(
@@ -959,7 +1010,10 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                                       width: 18,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(whiteColor),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              whiteColor,
+                                            ),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -983,8 +1037,8 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      _loadingPractitioners 
-                                          ? 'Loading...' 
+                                      _loadingPractitioners
+                                          ? 'Loading...'
                                           : 'Upload Document',
                                       style: const TextStyle(
                                         fontSize: 15,
@@ -997,14 +1051,16 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                         ),
                       ),
                       const SizedBox(height: 12),
-                      
+
                       // Info Banner - Simplified
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: primaryDarkBlue.withOpacity(0.03),
+                          color: primaryDarkBlue.withValues(alpha: 0.03),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: primaryDarkBlue.withOpacity(0.1)),
+                          border: Border.all(
+                            color: primaryDarkBlue.withValues(alpha: 0.1),
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -1019,7 +1075,7 @@ class _UploadDocScreenState extends State<UploadDocScreen> with SingleTickerProv
                                 'Maximum file size: 2MB. Supported: PNG, JPG, PDF',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: textBodyColor.withOpacity(0.8),
+                                  color: textBodyColor.withValues(alpha: 0.8),
                                 ),
                               ),
                             ),

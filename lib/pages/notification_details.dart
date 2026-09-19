@@ -18,10 +18,12 @@ class NotificationDetailsPage extends StatefulWidget {
   });
 
   @override
-  State<NotificationDetailsPage> createState() => _NotificationDetailsPageState();
+  State<NotificationDetailsPage> createState() =>
+      _NotificationDetailsPageState();
 }
 
-class _NotificationDetailsPageState extends State<NotificationDetailsPage> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+class _NotificationDetailsPageState extends State<NotificationDetailsPage>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   TabController? _tabController;
   final String _todayDate = DateFormat('dd-MMM-yyyy').format(DateTime.now());
   final IpdService _ipdService = IpdService();
@@ -31,7 +33,7 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> with 
   bool _isInvestigationLoading = false;
   String _errorMessage = '';
   String _investigationErrorMessage = '';
-  
+
   List<Map<String, dynamic>> _prescriptions = [];
   final List<Map<String, dynamic>> _nursingTasks = [
     {"task": "Check Vitals", "freq": "Every 4 Hours", "confirmed": false},
@@ -56,11 +58,11 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> with 
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
+
     _tabController = TabController(length: 3, vsync: this);
     _tabController!.addListener(_handleTabChange);
     _loadPrescriptionData();
-    
+
     // Check for recent saves after a short delay
     Future.delayed(const Duration(milliseconds: 500), () {
       _checkForRecentSaves();
@@ -87,32 +89,32 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> with 
   //     final prefs = await SharedPreferences.getInstance();
   //     final lastSaveTimeStr = prefs.getString('last_investigation_save_time');
   //     final shouldRefreshFlag = prefs.getBool('shouldRefreshNotifications') ?? false;
-      
+
   //     bool shouldRefresh = false;
-      
+
   //     // Check timestamp
   //     if (lastSaveTimeStr != null) {
   //       final lastSaveTime = DateTime.parse(lastSaveTimeStr);
   //       final now = DateTime.now();
   //       final difference = now.difference(lastSaveTime).inMinutes;
-        
+
   //       if (difference < 10) { // Saved within last 10 minutes
   //         await prefs.remove('last_investigation_save_time');
   //         shouldRefresh = true;
   //       }
   //     }
-      
+
   //     // Check flag
   //     if (shouldRefreshFlag) {
   //       await prefs.remove('shouldRefreshNotifications');
   //       shouldRefresh = true;
   //     }
-      
+
   //     if (shouldRefresh && mounted) {
   //       setState(() {
   //         _showRefreshBadge = true;
   //       });
-        
+
   //       // Show snackbar notification
   //       WidgetsBinding.instance.addPostFrameCallback((_) {
   //         ScaffoldMessenger.of(context).showSnackBar(
@@ -130,31 +132,31 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage> with 
   //   }
   // }
 
-// Update _checkForRecentSaves method:
-Future<void> _checkForRecentSaves() async {
-  try {
-    final shouldRefresh = await NotificationRefreshService().shouldRefresh();
-    
-    if (shouldRefresh && mounted) {
-      setState(() {
-        _showRefreshBadge = true;
-      });
-      
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('New data available. Tap refresh to update.'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      });
+  // Update _checkForRecentSaves method:
+  Future<void> _checkForRecentSaves() async {
+    try {
+      final shouldRefresh = await NotificationRefreshService().shouldRefresh();
+
+      if (shouldRefresh && mounted) {
+        setState(() {
+          _showRefreshBadge = true;
+        });
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('New data available. Tap refresh to update.'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        });
+      }
+    } catch (e) {
+      debugPrint('Error checking recent saves: $e');
     }
-  } catch (e) {
-    debugPrint('Error checking recent saves: $e');
   }
-}
 
   @override
   void dispose() {
@@ -171,7 +173,7 @@ Future<void> _checkForRecentSaves() async {
         setState(() {
           _showRefreshBadge = false;
         });
-        
+
         if (currentIndex == 0) {
           setState(() {
             _prescriptionLoaded = false;
@@ -194,80 +196,84 @@ Future<void> _checkForRecentSaves() async {
   }
 
   Future<void> _loadPrescriptionData() async {
-  setState(() {
-    _isLoading = true;
-    _errorMessage = '';
-  });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
 
-  try {
-    String admissionIdToUse = widget.admissionId;
-    
-    // debugPrint('🔍 NotificationDetailsPage - Loading prescriptions');
-    // debugPrint('📋 Received admissionId from widget: ${widget.admissionId}');
-    // debugPrint('📋 Received patientName: ${widget.patientName}');
-    // debugPrint('📋 Received patientId: ${widget.patientId}');
+    try {
+      String admissionIdToUse = widget.admissionId;
 
-    // Use the admission ID from widget (should be correct)
-    if (admissionIdToUse.isEmpty || admissionIdToUse == "0") {
-      debugPrint('⚠️ Warning: Empty admission ID from widget');
-      
-      final prefs = await SharedPreferences.getInstance();
-      admissionIdToUse = prefs.getString('admissionid') ?? '';
-      debugPrint('📋 Using admission ID from prefs: $admissionIdToUse');
-      
+      // debugPrint('🔍 NotificationDetailsPage - Loading prescriptions');
+      // debugPrint('📋 Received admissionId from widget: ${widget.admissionId}');
+      // debugPrint('📋 Received patientName: ${widget.patientName}');
+      // debugPrint('📋 Received patientId: ${widget.patientId}');
+
+      // Use the admission ID from widget (should be correct)
       if (admissionIdToUse.isEmpty || admissionIdToUse == "0") {
-        throw Exception('No valid admission ID found. Please select a patient first.');
-      }
-    }
-    
-    debugPrint('🚀 Fetching prescriptions for admission: $admissionIdToUse');
-    
-    final response = await _ipdService.fetchPrescriptionNotifications(admissionIdToUse);
-    
-    debugPrint('📦 API Response success: ${response['success']}');
-    debugPrint('📦 API Response keys: ${response.keys}');
+        debugPrint('⚠️ Warning: Empty admission ID from widget');
 
-    if (response['success'] == true || response['status_code'] == 200) {
-      final apiData = response['data'] ?? [];
-      debugPrint('✅ Found ${apiData.length} prescription items');
-      
-      if (apiData.isNotEmpty) {
-        for (var i = 0; i < apiData.length; i++) {
-          final item = apiData[i];
-          // debugPrint('📄 Item $i - priscriptionId: ${item['priscriptionId']}');
-          // debugPrint('📄 Item $i - medicineName: ${item['priscriptiontimeName']}');
-          // debugPrint('📄 Item $i - dose: ${item['dosage']}');
+        final prefs = await SharedPreferences.getInstance();
+        admissionIdToUse = prefs.getString('admissionid') ?? '';
+        debugPrint('📋 Using admission ID from prefs: $admissionIdToUse');
+
+        if (admissionIdToUse.isEmpty || admissionIdToUse == "0") {
+          throw Exception(
+            'No valid admission ID found. Please select a patient first.',
+          );
         }
       }
-      
+
+      debugPrint('🚀 Fetching prescriptions for admission: $admissionIdToUse');
+
+      final response = await _ipdService.fetchPrescriptionNotifications(
+        admissionIdToUse,
+      );
+
+      debugPrint('📦 API Response success: ${response['success']}');
+      debugPrint('📦 API Response keys: ${response.keys}');
+
+      if (response['success'] == true || response['status_code'] == 200) {
+        final apiData = response['data'] ?? [];
+        debugPrint('✅ Found ${apiData.length} prescription items');
+
+        if (apiData.isNotEmpty) {
+          for (var i = 0; i < apiData.length; i++) {
+            final item = apiData[i];
+            // debugPrint('📄 Item $i - priscriptionId: ${item['priscriptionId']}');
+            // debugPrint('📄 Item $i - medicineName: ${item['priscriptiontimeName']}');
+            // debugPrint('📄 Item $i - dose: ${item['dosage']}');
+          }
+        }
+
+        setState(() {
+          _prescriptions = _transformPrescriptionData(apiData);
+          _prescriptionLoaded = true;
+          _lastRefreshTime = DateTime.now();
+          _showRefreshBadge = false;
+        });
+
+        debugPrint('🔄 UI Updated with ${_prescriptions.length} prescriptions');
+        await NotificationRefreshService().clearRefreshFlags();
+      } else {
+        final errorMsg =
+            response['message'] ?? 'Failed to load prescription data';
+        debugPrint('❌ API Error: $errorMsg');
+        setState(() {
+          _errorMessage = errorMsg;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Exception loading prescription data: $e');
       setState(() {
-        _prescriptions = _transformPrescriptionData(apiData);
-        _prescriptionLoaded = true;
-        _lastRefreshTime = DateTime.now();
-        _showRefreshBadge = false; 
+        _errorMessage = 'Error: $e';
       });
-      
-      debugPrint('🔄 UI Updated with ${_prescriptions.length} prescriptions');
-      await NotificationRefreshService().clearRefreshFlags();
-      
-    } else {
-      final errorMsg = response['message'] ?? 'Failed to load prescription data';
-      debugPrint('❌ API Error: $errorMsg');
+    } finally {
       setState(() {
-        _errorMessage = errorMsg;
+        _isLoading = false;
       });
     }
-  } catch (e) {
-    debugPrint('❌ Exception loading prescription data: $e');
-    setState(() {
-      _errorMessage = 'Error: $e';
-    });
-  } finally {
-    setState(() {
-      _isLoading = false;
-    });
   }
-}
 
   // Future<void> _loadPrescriptionData() async {
   //   setState(() {
@@ -277,18 +283,18 @@ Future<void> _checkForRecentSaves() async {
 
   //   try {
   //     String admissionIdToUse = widget.admissionId;
-      
+
   //     if (admissionIdToUse.isEmpty || admissionIdToUse == "0") {
   //       final prefs = await SharedPreferences.getInstance();
   //       admissionIdToUse = prefs.getString('admissionid') ?? '';
-        
+
   //       if (admissionIdToUse.isEmpty || admissionIdToUse == "0") {
   //         throw Exception('No valid admission ID found. Please select a patient first.');
   //       }
   //     }
-      
+
   //     final response = await _ipdService.fetchPrescriptionNotifications(admissionIdToUse);
-      
+
   //     if (response['success'] == true) {
   //       final apiData = response['data'] ?? [];
   //       setState(() {
@@ -321,21 +327,25 @@ Future<void> _checkForRecentSaves() async {
 
     try {
       String admissionIdToUse = widget.admissionId;
-      
+
       if (admissionIdToUse.isEmpty || admissionIdToUse == "0") {
         final prefs = await SharedPreferences.getInstance();
         admissionIdToUse = prefs.getString('admissionid') ?? '';
-        
+
         if (admissionIdToUse.isEmpty || admissionIdToUse == "0") {
-          throw Exception('No valid admission ID found. Please select a patient first.');
+          throw Exception(
+            'No valid admission ID found. Please select a patient first.',
+          );
         }
       }
-  
-      final response = await _ipdService.fetchInvestigationNotifications(admissionIdToUse);
-      
+
+      final response = await _ipdService.fetchInvestigationNotifications(
+        admissionIdToUse,
+      );
+
       if (response['success'] == true) {
         final apiData = response['data'] ?? [];
-        
+
         setState(() {
           _investigations = _transformInvestigationData(apiData);
           _investigationLoaded = true;
@@ -343,7 +353,8 @@ Future<void> _checkForRecentSaves() async {
         });
       } else {
         setState(() {
-          _investigationErrorMessage = response['message'] ?? 'Failed to load investigation data';
+          _investigationErrorMessage =
+              response['message'] ?? 'Failed to load investigation data';
         });
       }
     } catch (e) {
@@ -372,7 +383,7 @@ Future<void> _checkForRecentSaves() async {
   //     });
   //     _loadInvestigationData();
   //   }
-    
+
   //   ScaffoldMessenger.of(context).showSnackBar(
   //     const SnackBar(
   //       content: Text('Refreshing data...'),
@@ -382,34 +393,33 @@ Future<void> _checkForRecentSaves() async {
   //   );
   // }
 
-
   void _forceRefreshCurrentTab() {
-  NotificationRefreshService().clearRefreshFlags();
-  
-  if ((_tabController?.index ?? 0) == 0) {
-    setState(() {
-      _prescriptionLoaded = false;
-      _isLoading = true;
-      _showRefreshBadge = false;
-    });
-    _loadPrescriptionData();
-  } else if ((_tabController?.index ?? 0) == 2) {
-    setState(() {
-      _investigationLoaded = false;
-      _isInvestigationLoading = true;
-      _showRefreshBadge = false;
-    });
-    _loadInvestigationData();
+    NotificationRefreshService().clearRefreshFlags();
+
+    if ((_tabController?.index ?? 0) == 0) {
+      setState(() {
+        _prescriptionLoaded = false;
+        _isLoading = true;
+        _showRefreshBadge = false;
+      });
+      _loadPrescriptionData();
+    } else if ((_tabController?.index ?? 0) == 2) {
+      setState(() {
+        _investigationLoaded = false;
+        _isInvestigationLoading = true;
+        _showRefreshBadge = false;
+      });
+      _loadInvestigationData();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Refreshing data...'),
+        backgroundColor: Colors.blue,
+        duration: Duration(seconds: 1),
+      ),
+    );
   }
-  
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Refreshing data...'),
-      backgroundColor: Colors.blue,
-      duration: Duration(seconds: 1),
-    ),
-  );
-}
 
   @override
   Widget build(BuildContext context) {
@@ -418,6 +428,12 @@ Future<void> _checkForRecentSaves() async {
       appBar: AppBar(
         backgroundColor: darkBlue,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(30),
+            bottomRight: Radius.circular(30),
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -425,8 +441,18 @@ Future<void> _checkForRecentSaves() async {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Notification Details", style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
-            Text(widget.patientName, style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
+            Text(
+              "Notification Details",
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              widget.patientName,
+              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11),
+            ),
           ],
         ),
         actions: [
@@ -436,7 +462,10 @@ Future<void> _checkForRecentSaves() async {
               child: SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
               ),
             ),
           Stack(
@@ -458,7 +487,7 @@ Future<void> _checkForRecentSaves() async {
                       borderRadius: BorderRadius.circular(4),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.red.withOpacity(0.5),
+                          color: Colors.red.withValues(alpha: 0.5),
                           blurRadius: 4,
                           spreadRadius: 1,
                         ),
@@ -475,7 +504,7 @@ Future<void> _checkForRecentSaves() async {
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(8),
             ),
             child: TabBar(
@@ -487,7 +516,10 @@ Future<void> _checkForRecentSaves() async {
               ),
               labelColor: darkBlue,
               unselectedLabelColor: Colors.white70,
-              labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
+              labelStyle: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
               tabs: const [
                 Tab(text: "Prescription"),
                 Tab(text: "Nursing"),
@@ -512,13 +544,15 @@ Future<void> _checkForRecentSaves() async {
     if (_isLoading) {
       return _buildLoadingState('Loading prescription data...');
     }
-    
+
     if (_errorMessage.isNotEmpty) {
       return _buildErrorState(_errorMessage, _loadPrescriptionData);
     }
-    
-    final activePrescriptions = _prescriptions.where((item) => !item['isStopped']).toList();
-    
+
+    final activePrescriptions = _prescriptions
+        .where((item) => !item['isStopped'])
+        .toList();
+
     if (activePrescriptions.isEmpty) {
       return RefreshIndicator(
         onRefresh: _loadPrescriptionData,
@@ -526,7 +560,11 @@ Future<void> _checkForRecentSaves() async {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.medical_services_outlined, size: 60, color: Colors.grey[300]),
+              Icon(
+                Icons.medical_services_outlined,
+                size: 60,
+                color: Colors.grey[300],
+              ),
               const SizedBox(height: 16),
               Text(
                 'No Active Prescriptions',
@@ -548,30 +586,52 @@ Future<void> _checkForRecentSaves() async {
         ),
       );
     }
-    
+
     return RefreshIndicator(
       onRefresh: _loadPrescriptionData,
       child: ListView.builder(
-        padding: const EdgeInsets.only(top: 10, left: 12, right: 12, bottom: 20),
+        padding: const EdgeInsets.only(
+          top: 10,
+          left: 12,
+          right: 12,
+          bottom: 20,
+        ),
         itemCount: activePrescriptions.length,
         itemBuilder: (context, index) {
           final item = activePrescriptions[index];
           List<String> freqParts = item['frequency'].toString().split('-');
-          int originalIndex = _prescriptions.indexWhere((med) => med['id'] == item['id']);
-          
+          int originalIndex = _prescriptions.indexWhere(
+            (med) => med['id'] == item['id'],
+          );
+
           return Container(
             margin: const EdgeInsets.only(bottom: 10),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.grey.shade200),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              data: Theme.of(
+                context,
+              ).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
-                tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                childrenPadding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
+                tilePadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 0,
+                ),
+                childrenPadding: const EdgeInsets.only(
+                  left: 12,
+                  right: 12,
+                  bottom: 12,
+                ),
                 dense: true,
                 title: Row(
                   children: [
@@ -590,7 +650,10 @@ Future<void> _checkForRecentSaves() async {
                       onTap: () => _handleStopMedicine(originalIndex),
                       borderRadius: BorderRadius.circular(4),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red[50],
                           borderRadius: BorderRadius.circular(4),
@@ -599,7 +662,11 @@ Future<void> _checkForRecentSaves() async {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.stop_circle_outlined, size: 12, color: Colors.red),
+                            const Icon(
+                              Icons.stop_circle_outlined,
+                              size: 12,
+                              color: Colors.red,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               "Stop",
@@ -621,7 +688,7 @@ Future<void> _checkForRecentSaves() async {
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(8)
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -635,21 +702,35 @@ Future<void> _checkForRecentSaves() async {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        if(item['instruction'] != "")
-                          Text("Note: ${item['instruction']}", style: GoogleFonts.poppins(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.orange[800])),
+                        if (item['instruction'] != "")
+                          Text(
+                            "Note: ${item['instruction']}",
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontStyle: FontStyle.italic,
+                              color: Colors.orange[800],
+                            ),
+                          ),
                         const SizedBox(height: 10),
                         const Divider(height: 1, thickness: 0.5),
                         const SizedBox(height: 10),
-                        Text("Today's Doses:", style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[600])),
+                        Text(
+                          "Today's Doses:",
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[600],
+                          ),
+                        ),
                         const SizedBox(height: 5),
                         Column(
                           children: List.generate(freqParts.length, (i) {
                             bool isScheduled = freqParts[i].trim() != "0";
                             bool isGiven = item['doseStatus'][i] == 1;
                             String remark = item['remarks'][i];
-                            
+
                             if (!isScheduled) return const SizedBox.shrink();
-                            
+
                             return Container(
                               margin: const EdgeInsets.only(bottom: 4),
                               child: IntrinsicHeight(
@@ -665,7 +746,7 @@ Future<void> _checkForRecentSaves() async {
                                           style: GoogleFonts.poppins(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w500,
-                                            color: Colors.grey[700]
+                                            color: Colors.grey[700],
                                           ),
                                         ),
                                       ),
@@ -676,22 +757,36 @@ Future<void> _checkForRecentSaves() async {
                                       child: Align(
                                         alignment: Alignment.centerLeft,
                                         child: InkWell(
-                                          onTap: () => _handleDoseClick(originalIndex, i),
+                                          onTap: () => _handleDoseClick(
+                                            originalIndex,
+                                            i,
+                                          ),
                                           child: AnimatedContainer(
-                                            duration: const Duration(milliseconds: 200),
+                                            duration: const Duration(
+                                              milliseconds: 200,
+                                            ),
                                             width: 20,
                                             height: 20,
                                             decoration: BoxDecoration(
-                                              color: isGiven ? Colors.green : Colors.white,
-                                              borderRadius: BorderRadius.circular(4),
+                                              color: isGiven
+                                                  ? Colors.green
+                                                  : Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                               border: Border.all(
-                                                color: isGiven ? Colors.green : Colors.grey[400]!,
-                                                width: 1.2
-                                              )
+                                                color: isGiven
+                                                    ? Colors.green
+                                                    : Colors.grey[400]!,
+                                                width: 1.2,
+                                              ),
                                             ),
                                             child: isGiven
-                                              ? const Icon(Icons.check, size: 14, color: Colors.white)
-                                              : null,
+                                                ? const Icon(
+                                                    Icons.check,
+                                                    size: 14,
+                                                    color: Colors.white,
+                                                  )
+                                                : null,
                                           ),
                                         ),
                                       ),
@@ -701,31 +796,47 @@ Future<void> _checkForRecentSaves() async {
                                       child: Align(
                                         alignment: Alignment.centerLeft,
                                         child: isGiven && remark.isNotEmpty
-                                          ? Container(
-                                              constraints: BoxConstraints(minHeight: 20),
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                              decoration: BoxDecoration(
-                                                color: Colors.blue[50],
-                                                borderRadius: BorderRadius.circular(4),
-                                                border: Border.all(color: Colors.blue[100]!, width: 0.5),
-                                              ),
-                                              child: Align(
-                                                alignment: Alignment.centerLeft,
-                                                child: Text(
-                                                  remark,
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 10,
-                                                    color: darkBlue,
-                                                  ),
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            )
-                                          : !isGiven
                                             ? Container(
-                                                constraints: BoxConstraints(minHeight: 20),
-                                                padding: const EdgeInsets.only(top: 3),
+                                                constraints: BoxConstraints(
+                                                  minHeight: 20,
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 3,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue[50],
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                  border: Border.all(
+                                                    color: Colors.blue[100]!,
+                                                    width: 0.5,
+                                                  ),
+                                                ),
+                                                child: Align(
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  child: Text(
+                                                    remark,
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 10,
+                                                      color: darkBlue,
+                                                    ),
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              )
+                                            : !isGiven
+                                            ? Container(
+                                                constraints: BoxConstraints(
+                                                  minHeight: 20,
+                                                ),
+                                                padding: const EdgeInsets.only(
+                                                  top: 3,
+                                                ),
                                                 child: Text(
                                                   "Click to confirm dose",
                                                   style: GoogleFonts.poppins(
@@ -746,7 +857,7 @@ Future<void> _checkForRecentSaves() async {
                         ),
                       ],
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
@@ -760,19 +871,34 @@ Future<void> _checkForRecentSaves() async {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.poppins(fontSize: 9, color: Colors.grey[500])),
-        Text(value, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black87)),
+        Text(
+          label,
+          style: GoogleFonts.poppins(fontSize: 9, color: Colors.grey[500]),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
       ],
     );
   }
 
   String _getTimeLabel(int index) {
     switch (index) {
-      case 0: return "Morning";
-      case 1: return "Noon";
-      case 2: return "Night";
-      case 3: return "Mid";
-      default: return "";
+      case 0:
+        return "Morning";
+      case 1:
+        return "Noon";
+      case 2:
+        return "Night";
+      case 3:
+        return "Mid";
+      default:
+        return "";
     }
   }
 
@@ -796,8 +922,20 @@ Future<void> _checkForRecentSaves() async {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(task['task'], style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-                    Text("Freq: ${task['freq']}", style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 11)),
+                    Text(
+                      task['task'],
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      "Freq: ${task['freq']}",
+                      style: GoogleFonts.poppins(
+                        color: Colors.grey[500],
+                        fontSize: 11,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -810,7 +948,7 @@ Future<void> _checkForRecentSaves() async {
                     setState(() => task['confirmed'] = val);
                   },
                 ),
-              )
+              ),
             ],
           ),
         );
@@ -822,11 +960,14 @@ Future<void> _checkForRecentSaves() async {
     if (_isInvestigationLoading) {
       return _buildLoadingState('Loading investigation data...');
     }
-    
+
     if (_investigationErrorMessage.isNotEmpty) {
-      return _buildErrorState(_investigationErrorMessage, _loadInvestigationData);
+      return _buildErrorState(
+        _investigationErrorMessage,
+        _loadInvestigationData,
+      );
     }
-    
+
     if (_investigations.isEmpty) {
       return RefreshIndicator(
         onRefresh: _loadInvestigationData,
@@ -834,7 +975,11 @@ Future<void> _checkForRecentSaves() async {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.assignment_outlined, size: 60, color: Colors.grey[300]),
+              Icon(
+                Icons.assignment_outlined,
+                size: 60,
+                color: Colors.grey[300],
+              ),
               const SizedBox(height: 16),
               Text(
                 'No Investigation Data',
@@ -856,7 +1001,7 @@ Future<void> _checkForRecentSaves() async {
         ),
       );
     }
-    
+
     return RefreshIndicator(
       onRefresh: _loadInvestigationData,
       child: Padding(
@@ -867,26 +1012,35 @@ Future<void> _checkForRecentSaves() async {
             final inv = _investigations[index];
             bool isToday = _isToday(inv['date']);
             Color statusColor = _getStatusColor(inv['report_status']);
-            
+
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: borderGrey.withOpacity(0.5)),
+                border: Border.all(color: borderGrey.withValues(alpha: 0.5)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: Theme(
-                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                data: Theme.of(
+                  context,
+                ).copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
-                  tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  childrenPadding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
+                  tilePadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  childrenPadding: const EdgeInsets.only(
+                    left: 12,
+                    right: 12,
+                    bottom: 12,
+                  ),
                   dense: true,
                   title: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -933,7 +1087,9 @@ Future<void> _checkForRecentSaves() async {
                                     Icon(
                                       Icons.calendar_today,
                                       size: 12,
-                                      color: isToday ? Colors.green[700] : Colors.grey[600],
+                                      color: isToday
+                                          ? Colors.green[700]
+                                          : Colors.grey[600],
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
@@ -941,19 +1097,24 @@ Future<void> _checkForRecentSaves() async {
                                       style: GoogleFonts.poppins(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w500,
-                                        color: isToday ? Colors.green[700] : Colors.grey[700],
+                                        color: isToday
+                                            ? Colors.green[700]
+                                            : Colors.grey[700],
                                       ),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(width: 12),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: statusColor.withOpacity(0.1),
+                                    color: statusColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(4),
                                     border: Border.all(
-                                      color: statusColor.withOpacity(0.3),
+                                      color: statusColor.withValues(alpha: 0.3),
                                       width: 1,
                                     ),
                                   ),
@@ -961,9 +1122,18 @@ Future<void> _checkForRecentSaves() async {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
-                                        inv['report_status'].toLowerCase() == 'collect' ? Icons.inventory_2 :
-                                        inv['report_status'].toLowerCase() == 'completed' ? Icons.check_circle :
-                                        inv['report_status'].toLowerCase() == 'approved' ? Icons.verified : Icons.pending,
+                                        inv['report_status'].toLowerCase() ==
+                                                'collect'
+                                            ? Icons.inventory_2
+                                            : inv['report_status']
+                                                      .toLowerCase() ==
+                                                  'completed'
+                                            ? Icons.check_circle
+                                            : inv['report_status']
+                                                      .toLowerCase() ==
+                                                  'approved'
+                                            ? Icons.verified
+                                            : Icons.pending,
                                         size: 10,
                                         color: statusColor,
                                       ),
@@ -986,11 +1156,17 @@ Future<void> _checkForRecentSaves() async {
                                   },
                                   borderRadius: BorderRadius.circular(4),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: darkBlue.withOpacity(0.08),
+                                      color: darkBlue.withValues(alpha: 0.08),
                                       borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: darkBlue.withOpacity(0.3), width: 0.5),
+                                      border: Border.all(
+                                        color: darkBlue.withValues(alpha: 0.3),
+                                        width: 0.5,
+                                      ),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -1021,11 +1197,17 @@ Future<void> _checkForRecentSaves() async {
                       if (isToday)
                         Container(
                           margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.green[50],
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.green[100]!, width: 1),
+                            border: Border.all(
+                              color: Colors.green[100]!,
+                              width: 1,
+                            ),
                           ),
                           child: Text(
                             "Today",
@@ -1044,7 +1226,7 @@ Future<void> _checkForRecentSaves() async {
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(8)
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1052,21 +1234,35 @@ Future<void> _checkForRecentSaves() async {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildMiniDetailInvestigation("Requested by", inv['requested_by']),
-                              _buildMiniDetailInvestigation("Doctor", inv['practitioner_name']),
+                              _buildMiniDetailInvestigation(
+                                "Requested by",
+                                inv['requested_by'],
+                              ),
+                              _buildMiniDetailInvestigation(
+                                "Doctor",
+                                inv['practitioner_name'],
+                              ),
                             ],
                           ),
                           const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildMiniDetailInvestigation("Request Date", _formatDisplayDate(inv['request_date'])),
-                              if (inv['charge_status'] != null && inv['charge_status'].toString().isNotEmpty)
-                                _buildMiniDetailInvestigation("Charge Status", inv['charge_status']),
+                              _buildMiniDetailInvestigation(
+                                "Request Date",
+                                _formatDisplayDate(inv['request_date']),
+                              ),
+                              if (inv['charge_status'] != null &&
+                                  inv['charge_status'].toString().isNotEmpty)
+                                _buildMiniDetailInvestigation(
+                                  "Charge Status",
+                                  inv['charge_status'],
+                                ),
                             ],
                           ),
                           const SizedBox(height: 10),
-                          if (inv['uhid'] != null && inv['uhid'].toString().isNotEmpty)
+                          if (inv['uhid'] != null &&
+                              inv['uhid'].toString().isNotEmpty)
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -1083,7 +1279,7 @@ Future<void> _checkForRecentSaves() async {
                             ),
                         ],
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -1098,10 +1294,17 @@ Future<void> _checkForRecentSaves() async {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.poppins(fontSize: 9, color: Colors.grey[500])),
+        Text(
+          label,
+          style: GoogleFonts.poppins(fontSize: 9, color: Colors.grey[500]),
+        ),
         Text(
           value,
-          style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.black87),
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
@@ -1116,10 +1319,7 @@ Future<void> _checkForRecentSaves() async {
         children: [
           CircularProgressIndicator(color: darkBlue),
           const SizedBox(height: 16),
-          Text(
-            message,
-            style: GoogleFonts.poppins(color: darkBlue),
-          ),
+          Text(message, style: GoogleFonts.poppins(color: darkBlue)),
         ],
       ),
     );
@@ -1170,7 +1370,7 @@ Future<void> _checkForRecentSaves() async {
 
   String _formatDisplayDate(String? apiDate) {
     if (apiDate == null || apiDate.isEmpty) return 'N/A';
-    
+
     try {
       final parts = apiDate.split(' ');
       if (parts.isNotEmpty) {
@@ -1188,14 +1388,15 @@ Future<void> _checkForRecentSaves() async {
   // Helper methods (keep your existing implementations)
   List<Map<String, dynamic>> _transformPrescriptionData(List<dynamic> apiData) {
     List<Map<String, dynamic>> transformedData = [];
-    
+
     for (var i = 0; i < apiData.length; i++) {
       var item = apiData[i];
-      
-      String medicineName = item['priscriptiontimeName']?.toString() ?? 
-                           item['medicineName']?.toString() ?? 
-                           'Unknown Medicine';
-      
+
+      String medicineName =
+          item['priscriptiontimeName']?.toString() ??
+          item['medicineName']?.toString() ??
+          'Unknown Medicine';
+
       String dosage = '500mg';
       if (item['dosage'] != null && item['dosage'].toString().isNotEmpty) {
         String dosageStr = item['dosage'].toString();
@@ -1203,12 +1404,13 @@ Future<void> _checkForRecentSaves() async {
           dosage = dosageStr;
         }
       }
-      
+
       String route = item['doseNotes']?.toString() ?? 'Oral';
-      String frequency = _extractFrequency(item['dosage']?.toString()) ?? '1-1-0';
+      String frequency =
+          _extractFrequency(item['dosage']?.toString()) ?? '1-1-0';
       List<int> doseStatus = _initializeDoseStatus(frequency);
       List<String> remarks = _initializeRemarks(frequency);
-     
+
       if (item['dosageList'] != null && item['dosageList'] is List) {
         List<dynamic> dosageList = item['dosageList'];
         for (var dose in dosageList) {
@@ -1222,28 +1424,30 @@ Future<void> _checkForRecentSaves() async {
           }
         }
       }
-      
+
       transformedData.add({
         "id": item['priscriptionId'] ?? i + 100,
         "medicine": medicineName,
-        "generic": item['priscriptionIndividualRemark']?.toString() ?? medicineName,
+        "generic":
+            item['priscriptionIndividualRemark']?.toString() ?? medicineName,
         "dosage": dosage,
         "route": route,
         "frequency": frequency,
-        "instruction": item['priscriptionIndividualRemark']?.toString() ?? "After Food",
+        "instruction":
+            item['priscriptionIndividualRemark']?.toString() ?? "After Food",
         "isStopped": false,
         "doseStatus": doseStatus,
         "remarks": remarks,
         "apiData": item,
       });
     }
-    
+
     return transformedData;
   }
 
   String? _extractFrequency(String? dosage) {
     if (dosage == null) return null;
-  
+
     if (dosage.contains('-')) {
       List<String> parts = dosage.split('-');
       if (parts.length >= 3) {
@@ -1272,20 +1476,22 @@ Future<void> _checkForRecentSaves() async {
     return List<String>.generate(parts.length, (index) => "");
   }
 
-  List<Map<String, dynamic>> _transformInvestigationData(List<dynamic> apiData) {
+  List<Map<String, dynamic>> _transformInvestigationData(
+    List<dynamic> apiData,
+  ) {
     List<Map<String, dynamic>> transformedData = [];
     int srCounter = 1;
-    
+
     for (var i = 0; i < apiData.length; i++) {
       var item = apiData[i];
-      
+
       String testName = item['test_name']?.toString() ?? 'Unknown Test';
       String requestDate = item['request_date']?.toString() ?? '';
-      String formattedDate = _formatInvestigationDate(requestDate);    
+      String formattedDate = _formatInvestigationDate(requestDate);
       String reportStatus = item['report_status']?.toString() ?? 'Pending';
       String requestedBy = item['requested_by']?.toString() ?? 'N/A';
       String practitionerName = item['practitionnername']?.toString() ?? 'N/A';
-      
+
       transformedData.add({
         "sr": srCounter++,
         "type": testName,
@@ -1301,15 +1507,16 @@ Future<void> _checkForRecentSaves() async {
         "apiData": item,
       });
     }
-  
+
     transformedData.sort((a, b) => b['date'].compareTo(a['date']));
-    
+
     return transformedData;
   }
 
   String _formatInvestigationDate(String? apiDate) {
-    if (apiDate == null || apiDate.isEmpty) return DateFormat('yyyy-MM-dd').format(DateTime.now());
-    
+    if (apiDate == null || apiDate.isEmpty)
+      return DateFormat('yyyy-MM-dd').format(DateTime.now());
+
     try {
       final parts = apiDate.split(' ');
       if (parts.isNotEmpty) {
@@ -1350,9 +1557,9 @@ Future<void> _checkForRecentSaves() async {
 
   void _handleDoseClick(int medicineIndex, int doseIndex) {
     final medicine = _prescriptions[medicineIndex];
-    
+
     if (medicine['doseStatus'][doseIndex] == 1) {
-      return; 
+      return;
     }
 
     TextEditingController remarkController = TextEditingController();
@@ -1361,12 +1568,18 @@ Future<void> _checkForRecentSaves() async {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: Text("Add Remark", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text(
+          "Add Remark",
+          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Medicine: ${medicine['medicine']}", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+            Text(
+              "Medicine: ${medicine['medicine']}",
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+            ),
             const SizedBox(height: 10),
             TextField(
               controller: remarkController,
@@ -1374,7 +1587,9 @@ Future<void> _checkForRecentSaves() async {
               decoration: InputDecoration(
                 hintText: "Enter note...",
                 isDense: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ],
@@ -1382,19 +1597,31 @@ Future<void> _checkForRecentSaves() async {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey)),
+            child: Text(
+              "Cancel",
+              style: GoogleFonts.poppins(color: Colors.grey),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: darkBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: darkBlue,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             onPressed: () {
               setState(() {
                 _prescriptions[medicineIndex]['doseStatus'][doseIndex] = 1;
-                _prescriptions[medicineIndex]['remarks'][doseIndex] = remarkController.text;
+                _prescriptions[medicineIndex]['remarks'][doseIndex] =
+                    remarkController.text;
               });
               Navigator.pop(context);
             },
-            child: Text("Confirm", style: GoogleFonts.poppins(color: Colors.white)),
-          )
+            child: Text(
+              "Confirm",
+              style: GoogleFonts.poppins(color: Colors.white),
+            ),
+          ),
         ],
       ),
     );
@@ -1405,7 +1632,10 @@ Future<void> _checkForRecentSaves() async {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: Text("Stop Medicine", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text(
+          "Stop Medicine",
+          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         content: Text(
           "Are you sure you want to stop ${_prescriptions[medicineIndex]['medicine']}?",
           style: GoogleFonts.poppins(fontSize: 13),
@@ -1413,12 +1643,17 @@ Future<void> _checkForRecentSaves() async {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey)),
+            child: Text(
+              "Cancel",
+              style: GoogleFonts.poppins(color: Colors.grey),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () {
               setState(() {
@@ -1426,8 +1661,11 @@ Future<void> _checkForRecentSaves() async {
               });
               Navigator.pop(context);
             },
-            child: Text("Stop", style: GoogleFonts.poppins(color: Colors.white)),
-          )
+            child: Text(
+              "Stop",
+              style: GoogleFonts.poppins(color: Colors.white),
+            ),
+          ),
         ],
       ),
     );

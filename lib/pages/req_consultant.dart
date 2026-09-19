@@ -15,7 +15,8 @@ class ReqConsultantPage extends StatefulWidget {
     required this.patientName,
     this.ipdNo,
     this.admissionId,
-    this.patientId, required Patient patient,
+    this.patientId,
+    required Patient patient,
   });
 
   @override
@@ -24,12 +25,13 @@ class ReqConsultantPage extends StatefulWidget {
 
 class _ReqConsultantPageState extends State<ReqConsultantPage> {
   final IpdService _ipdService = IpdService();
-  
+
   // Form controllers
   final TextEditingController _fromDateController = TextEditingController();
   final TextEditingController _toDateController = TextEditingController();
-  final TextEditingController _patientSearchController = TextEditingController();
-  
+  final TextEditingController _patientSearchController =
+      TextEditingController();
+
   // State variables
   List<dynamic> _doctorList = [];
   List<dynamic> _specializationList = [];
@@ -39,7 +41,7 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
   bool _isDoctorLoading = false;
   String? _errorMessage;
   String? _successMessage;
-  
+
   // For patient search
   List<dynamic> _patientList = [];
   String? _selectedPatientId;
@@ -56,25 +58,25 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
     final now = DateTime.now();
     _fromDateController.text = DateFormat('dd/MM/yyyy').format(now);
     _toDateController.text = DateFormat('dd/MM/yyyy').format(now);
-    
+
     // Set patient name if provided
     if (widget.patientName.isNotEmpty) {
       _patientSearchController.text = widget.patientName;
       _selectedPatientName = widget.patientName;
     }
-    
+
     if (widget.ipdNo != null) {
       _selectedIpdNo = widget.ipdNo;
     }
-    
+
     // Load initial data
     _loadSpecializationList();
-    
+
     // If we have patient info, load doctors
     if (widget.patientName.isNotEmpty || widget.ipdNo != null) {
       _loadDoctors();
     }
-    
+
     // Initialize patient search controller listener
     _patientSearchController.addListener(() {
       if (_patientSearchController.text.length > 2) {
@@ -85,7 +87,9 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
 
   Future<void> _loadSpecializationList() async {
     try {
-      final specializations = await _ipdService.fetchSpecializationList(branchId: "1");
+      final specializations = await _ipdService.fetchSpecializationList(
+        branchId: "1",
+      );
       setState(() {
         _specializationList = specializations;
       });
@@ -107,10 +111,12 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
     try {
       final doctors = await _ipdService.fetchPractitionerList(
         branchId: "1",
-        specializationId: specializationId != null ? int.parse(specializationId) : 0,
+        specializationId: specializationId != null
+            ? int.parse(specializationId)
+            : 0,
         isVisitingConsultant: 1,
       );
-      
+
       setState(() {
         _doctorList = doctors;
         _isDoctorLoading = false;
@@ -129,33 +135,45 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
       // In a real app, you would call an API to search for patients
       // For now, we'll simulate with a delay
       await Future.delayed(const Duration(milliseconds: 300));
-      
+
       // This is a mock implementation - replace with actual API call
       setState(() {
-        _patientList = [
-          {
-            'id': '1',
-            'name': 'John Doe',
-            'ipdNo': 'IPD-001',
-            'uhid': 'UHD-001'
-          },
-          {
-            'id': '2',
-            'name': 'Jane Smith',
-            'ipdNo': 'IPD-002',
-            'uhid': 'UHD-002'
-          },
-          {
-            'id': '3',
-            'name': widget.patientName.isNotEmpty ? widget.patientName : 'Robert Johnson',
-            'ipdNo': widget.ipdNo ?? 'IPD-003',
-            'uhid': 'UHD-003'
-          }
-        ].where((patient) => 
-          patient['name']!.toLowerCase().contains(query.toLowerCase()) ||
-          patient['ipdNo']!.toLowerCase().contains(query.toLowerCase()) ||
-          patient['uhid']!.toLowerCase().contains(query.toLowerCase())
-        ).toList();
+        _patientList =
+            [
+                  {
+                    'id': '1',
+                    'name': 'John Doe',
+                    'ipdNo': 'IPD-001',
+                    'uhid': 'UHD-001',
+                  },
+                  {
+                    'id': '2',
+                    'name': 'Jane Smith',
+                    'ipdNo': 'IPD-002',
+                    'uhid': 'UHD-002',
+                  },
+                  {
+                    'id': '3',
+                    'name': widget.patientName.isNotEmpty
+                        ? widget.patientName
+                        : 'Robert Johnson',
+                    'ipdNo': widget.ipdNo ?? 'IPD-003',
+                    'uhid': 'UHD-003',
+                  },
+                ]
+                .where(
+                  (patient) =>
+                      patient['name']!.toLowerCase().contains(
+                        query.toLowerCase(),
+                      ) ||
+                      patient['ipdNo']!.toLowerCase().contains(
+                        query.toLowerCase(),
+                      ) ||
+                      patient['uhid']!.toLowerCase().contains(
+                        query.toLowerCase(),
+                      ),
+                )
+                .toList();
       });
     } catch (e) {
       debugPrint('Error searching patients: $e');
@@ -170,28 +188,28 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
       });
       return;
     }
-    
+
     if (_selectedDoctor == null) {
       setState(() {
         _errorMessage = 'Please select a doctor';
       });
       return;
     }
-    
+
     if (_fromDateController.text.isEmpty) {
       setState(() {
         _errorMessage = 'Please select From Date';
       });
       return;
     }
-    
+
     if (_toDateController.text.isEmpty) {
       setState(() {
         _errorMessage = 'Please select To Date';
       });
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -210,20 +228,20 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
         'toDate': _toDateController.text,
         'specializationId': _selectedSpecialization,
       };
-      
+
       debugPrint('Submitting consultant request: $requestData');
-      
+
       // In a real app, you would call an API like:
       // final response = await _ipdService.requestConsultant(requestData);
-      
+
       // Simulate API call
       await Future.delayed(const Duration(seconds: 2));
-      
+
       setState(() {
         _isLoading = false;
         _successMessage = 'Consultant request submitted successfully!';
       });
-      
+
       // Clear form after successful submission
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
@@ -232,7 +250,6 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
           });
         }
       });
-      
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -241,7 +258,10 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
     }
   }
 
-  Future<void> _selectDate(BuildContext context, TextEditingController controller) async {
+  Future<void> _selectDate(
+    BuildContext context,
+    TextEditingController controller,
+  ) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -256,7 +276,7 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
         );
       },
     );
-    
+
     if (picked != null && mounted) {
       controller.text = DateFormat('dd/MM/yyyy').format(picked);
     }
@@ -318,12 +338,19 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 18,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: const TextStyle(color: Colors.red, fontSize: 12),
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ],
@@ -342,12 +369,19 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                      const Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                        size: 18,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           _successMessage!,
-                          style: const TextStyle(color: Colors.green, fontSize: 12),
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ],
@@ -367,15 +401,23 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                   decoration: InputDecoration(
                     hintText: "Enter UHD / patient name",
                     hintStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
-                    prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF1A237E)),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      size: 20,
+                      color: Color(0xFF1A237E),
+                    ),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 15,
+                    ),
                   ),
                 ),
               ),
 
               // Show patient suggestions if available
-              if (_patientList.isNotEmpty && _patientSearchController.text.isNotEmpty)
+              if (_patientList.isNotEmpty &&
+                  _patientSearchController.text.isNotEmpty)
                 Container(
                   margin: const EdgeInsets.only(top: 5),
                   decoration: BoxDecoration(
@@ -383,7 +425,7 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 5,
                         offset: const Offset(0, 2),
                       ),
@@ -396,11 +438,18 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                         leading: const CircleAvatar(
                           radius: 15,
                           backgroundColor: Color(0xFF1A237E),
-                          child: Icon(Icons.person, size: 14, color: Colors.white),
+                          child: Icon(
+                            Icons.person,
+                            size: 14,
+                            color: Colors.white,
+                          ),
                         ),
                         title: Text(
                           patient['name'],
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         subtitle: Text(
                           "IPD: ${patient['ipdNo']} | UHD: ${patient['uhid']}",
@@ -432,7 +481,8 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                       children: [
                         _buildSectionHeader("From Date"),
                         GestureDetector(
-                          onTap: () => _selectDate(context, _fromDateController),
+                          onTap: () =>
+                              _selectDate(context, _fromDateController),
                           child: Container(
                             height: 48,
                             decoration: BoxDecoration(
@@ -443,11 +493,18 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 15),
                             child: Row(
                               children: [
-                                const Icon(Icons.calendar_month, color: Color(0xFF1A237E), size: 18),
+                                const Icon(
+                                  Icons.calendar_month,
+                                  color: Color(0xFF1A237E),
+                                  size: 18,
+                                ),
                                 const SizedBox(width: 10),
                                 Text(
                                   _fromDateController.text,
-                                  style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: Colors.black87,
+                                  ),
                                 ),
                               ],
                             ),
@@ -474,11 +531,18 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 15),
                             child: Row(
                               children: [
-                                const Icon(Icons.calendar_month, color: Color(0xFF1A237E), size: 18),
+                                const Icon(
+                                  Icons.calendar_month,
+                                  color: Color(0xFF1A237E),
+                                  size: 18,
+                                ),
                                 const SizedBox(width: 10),
                                 Text(
                                   _toDateController.text,
-                                  style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: Colors.black87,
+                                  ),
                                 ),
                               ],
                             ),
@@ -510,8 +574,15 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                       "Select Specialization",
                       style: TextStyle(color: Colors.grey[500], fontSize: 13),
                     ),
-                    icon: const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey),
-                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87),
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 18,
+                      color: Colors.grey,
+                    ),
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.black87,
+                    ),
                     items: [
                       const DropdownMenuItem<String>(
                         value: null,
@@ -519,7 +590,9 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                       ),
                       ..._specializationList.map((specialization) {
                         final id = specialization['id']?.toString() ?? '';
-                        final name = specialization['specialization_name']?.toString() ?? 'Unknown';
+                        final name =
+                            specialization['specialization_name']?.toString() ??
+                            'Unknown';
                         return DropdownMenuItem<String>(
                           value: id,
                           child: Text(name),
@@ -563,10 +636,20 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                           isExpanded: true,
                           hint: Text(
                             "Select Doctor",
-                            style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 13,
+                            ),
                           ),
-                          icon: const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey),
-                          style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87),
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Colors.black87,
+                          ),
                           items: [
                             const DropdownMenuItem<String>(
                               value: null,
@@ -574,7 +657,10 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                             ),
                             ..._doctorList.map((doctor) {
                               final id = doctor['id']?.toString() ?? '';
-                              final name = doctor['fullname']?.toString() ?? doctor['name']?.toString() ?? 'Unknown';
+                              final name =
+                                  doctor['fullname']?.toString() ??
+                                  doctor['name']?.toString() ??
+                                  'Unknown';
                               return DropdownMenuItem<String>(
                                 value: id,
                                 child: Text(name),
@@ -606,7 +692,11 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.info_outline, color: Colors.blue, size: 16),
+                        const Icon(
+                          Icons.info_outline,
+                          color: Colors.blue,
+                          size: 16,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           "Important Information",
@@ -653,7 +743,7 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 5,
-                    shadowColor: darkBlue.withOpacity(0.3),
+                    shadowColor: darkBlue.withValues(alpha: 0.3),
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -661,7 +751,9 @@ class _ReqConsultantPageState extends State<ReqConsultantPage> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : Text(

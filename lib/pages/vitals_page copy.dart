@@ -9,16 +9,17 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class VitalsPage extends StatefulWidget {
   final Patient patient;
-  
+
   const VitalsPage({super.key, required this.patient});
 
   @override
   State<VitalsPage> createState() => _VitalsPageState();
 }
 
-class _VitalsPageState extends State<VitalsPage> with SingleTickerProviderStateMixin {
+class _VitalsPageState extends State<VitalsPage>
+    with SingleTickerProviderStateMixin {
   TabController? _tabController;
-  
+
   @override
   void initState() {
     super.initState();
@@ -45,7 +46,7 @@ class _VitalsPageState extends State<VitalsPage> with SingleTickerProviderStateM
             Text(
               "Capture Vitals & Intake",
               style: GoogleFonts.poppins(
-                fontSize: 16, 
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -80,7 +81,7 @@ class _VitalsPageState extends State<VitalsPage> with SingleTickerProviderStateM
             child: Container(
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(22),
               ),
               child: TabBar(
@@ -90,14 +91,14 @@ class _VitalsPageState extends State<VitalsPage> with SingleTickerProviderStateM
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 labelColor: const Color(0xFF1A237E),
-                unselectedLabelColor: Colors.white.withOpacity(0.8),
+                unselectedLabelColor: Colors.white.withValues(alpha: 0.8),
                 labelStyle: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -132,7 +133,7 @@ class _VitalsPageState extends State<VitalsPage> with SingleTickerProviderStateM
 // Vitals Tab - Original functionality
 class VitalsTab extends StatefulWidget {
   final Patient patient;
-  
+
   const VitalsTab({super.key, required this.patient});
 
   @override
@@ -148,7 +149,7 @@ class _VitalsTabState extends State<VitalsTab> {
   final TextEditingController _diaBpController = TextEditingController();
   final TextEditingController _rbsController = TextEditingController();
   final TextEditingController _spo2Controller = TextEditingController();
-  
+
   final Map<String, String?> _fieldErrors = {
     'temperature': null,
     'heartRate': null,
@@ -158,16 +159,16 @@ class _VitalsTabState extends State<VitalsTab> {
     'rbs': null,
     'spo2': null,
   };
-  
+
   final List<FocusNode> _focusNodes = List.generate(7, (index) => FocusNode());
   int _currentFieldIndex = 0;
-  
+
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   bool _speechAvailable = false;
   String _recognizedText = '';
   Timer? _speechTimeoutTimer;
-  
+
   String _selectedHH = '00';
   String _selectedMM = '00';
   bool _isLoading = false;
@@ -177,7 +178,7 @@ class _VitalsTabState extends State<VitalsTab> {
 
   static const Color darkBlue = Color(0xFF1A237E);
   final Color bgGrey = const Color(0xFFF5F7FA);
-  
+
   bool _showVoiceOverlay = false;
   String _voiceInstruction = 'Please speak Temperature';
   int _currentVoiceStep = 0;
@@ -266,10 +267,10 @@ class _VitalsTabState extends State<VitalsTab> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _dateController.text = DateFormat('yyyy-MM-dd').format(now); 
+    _dateController.text = DateFormat('yyyy-MM-dd').format(now);
     _selectedHH = DateFormat('HH').format(now);
     _selectedMM = DateFormat('mm').format(now);
-    
+
     _vitalPatterns[0]['controller'] = _tempController;
     _vitalPatterns[1]['controller'] = _hrController;
     _vitalPatterns[2]['controller'] = _sysBpController;
@@ -277,12 +278,12 @@ class _VitalsTabState extends State<VitalsTab> {
     _vitalPatterns[4]['controller'] = _rrController;
     _vitalPatterns[5]['controller'] = _spo2Controller;
     _vitalPatterns[6]['controller'] = _rbsController;
-    
+
     _voiceSteps = _vitalPatterns.map((v) => v['label'] as String).toList();
-    
+
     _loadVitalsMasterData();
     _initSpeech();
-    
+
     for (int i = 0; i < _focusNodes.length; i++) {
       _focusNodes[i].addListener(() {
         if (_focusNodes[i].hasFocus) {
@@ -303,44 +304,50 @@ class _VitalsTabState extends State<VitalsTab> {
     super.dispose();
   }
 
-Future<void> _initSpeech() async {
-  try {
-    _speechAvailable = await _speech.initialize(
-      onStatus: (status) {
-        debugPrint('Speech status: $status');
-        
-        // 🔥 FIX 1: Reset flag jab bhi speech stop ho
-        if (status == 'done' || status == 'notListening') {
+  Future<void> _initSpeech() async {
+    try {
+      _speechAvailable = await _speech.initialize(
+        onStatus: (status) {
+          debugPrint('Speech status: $status');
+
+          // 🔥 FIX 1: Reset flag jab bhi speech stop ho
+          if (status == 'done' || status == 'notListening') {
+            if (mounted) {
+              setState(() => _isListening = false);
+            }
+
+            if (_showVoiceOverlay &&
+                !_isProcessingVoice &&
+                !_isVoiceInputComplete &&
+                mounted) {
+              Future.delayed(const Duration(milliseconds: 500), () {
+                if (_showVoiceOverlay &&
+                    !_isVoiceInputComplete &&
+                    mounted &&
+                    !_isListening) {
+                  _startVoiceListening();
+                }
+              });
+            }
+          }
+        },
+        onError: (error) {
+          debugPrint('Speech recognition error: $error');
           if (mounted) {
             setState(() => _isListening = false);
           }
-          
-          if (_showVoiceOverlay && !_isProcessingVoice && !_isVoiceInputComplete && mounted) {
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (_showVoiceOverlay && !_isVoiceInputComplete && mounted && !_isListening) {
-                _startVoiceListening();
-              }
-            });
-          }
-        }
-      },
-      onError: (error) {
-        debugPrint('Speech recognition error: $error');
-        if (mounted) {
-          setState(() => _isListening = false);
-        }
-        _retrySpeechListening();
-      },
-    );
-    
-    if (!_speechAvailable) {
-      debugPrint('Speech recognition not available on this device');
+          _retrySpeechListening();
+        },
+      );
+
+      if (!_speechAvailable) {
+        debugPrint('Speech recognition not available on this device');
+      }
+    } catch (e) {
+      debugPrint('Error initializing speech recognition: $e');
+      _speechAvailable = false;
     }
-  } catch (e) {
-    debugPrint('Error initializing speech recognition: $e');
-    _speechAvailable = false;
   }
-}
 
   void _retrySpeechListening() {
     if (_showVoiceOverlay && !_isVoiceInputComplete && mounted) {
@@ -352,25 +359,25 @@ Future<void> _initSpeech() async {
     }
   }
 
-void _startVoiceInput() async {
-  // 🔥 FIX 4: Pehle permission check karo
-  if (!_speechAvailable) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Speech recognition is not available on this device'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 2),
-        ),
-      );
+  void _startVoiceInput() async {
+    // 🔥 FIX 4: Pehle permission check karo
+    if (!_speechAvailable) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Speech recognition is not available on this device'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
     }
-    return;
-  }
 
-  // Permission handler se explicitly permission lo
-  // Note: permission_handler package add karna padega pubspec.yaml mein
-  // import 'package:permission_handler/permission_handler.dart';
-  /*
+    // Permission handler se explicitly permission lo
+    // Note: permission_handler package add karna padega pubspec.yaml mein
+    // import 'package:permission_handler/permission_handler.dart';
+    /*
   var status = await Permission.microphone.status;
   if (!status.isGranted) {
     status = await Permission.microphone.request();
@@ -388,27 +395,29 @@ void _startVoiceInput() async {
   }
   */
 
-  // Agar permission_handler use nahi karna, toh ye basic check rakho:
-  bool hasPerm = await _speech.hasPermission;
-  if (!hasPerm) {
-    // Try to initialize again (first time pe system dialog dikhata hai)
-    bool initialized = await _speech.initialize();
-    if (!initialized) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enable microphone permission from settings'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 3),
-          ),
-        );
+    // Agar permission_handler use nahi karna, toh ye basic check rakho:
+    bool hasPerm = await _speech.hasPermission;
+    if (!hasPerm) {
+      // Try to initialize again (first time pe system dialog dikhata hai)
+      bool initialized = await _speech.initialize();
+      if (!initialized) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Please enable microphone permission from settings',
+              ),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
       }
-      return;
     }
-  }
 
-  _startVoiceSequence();
-}
+    _startVoiceSequence();
+  }
 
   void _startVoiceSequence() {
     setState(() {
@@ -417,10 +426,11 @@ void _startVoiceInput() async {
       _voiceCollectedValues.clear();
       _isProcessingVoice = false;
       _isVoiceInputComplete = false;
-      _voiceInstruction = 'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
+      _voiceInstruction =
+          'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
       _recognizedText = '';
     });
-    
+
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted && _showVoiceOverlay) {
         _startVoiceListening();
@@ -436,7 +446,7 @@ void _startVoiceInput() async {
       _isVoiceInputComplete = false;
     });
     _speech.stop();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_voiceCollectedValues.isNotEmpty && mounted) {
         final firstKey = _voiceCollectedValues.keys.first;
@@ -450,45 +460,46 @@ void _startVoiceInput() async {
     });
   }
 
- Future<void> _startVoiceListening() async {
-  if (_isListening || _isProcessingVoice || _isVoiceInputComplete) return;
+  Future<void> _startVoiceListening() async {
+    if (_isListening || _isProcessingVoice || _isVoiceInputComplete) return;
 
-  // 🔥 FIX 2: Agar plugin level pe already listening hai, toh pehle stop karo
-  if (_speech.isListening) {
-    await _speech.stop();
-    await Future.delayed(const Duration(milliseconds: 300));
-  }
-
-  setState(() {
-    _isListening = true;
-    _recognizedText = '';
-    _voiceInstruction = 'Listening... Speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
-  });
-
-  try {
-    await _speech.listen(
-      onResult: (result) {
-        setState(() {
-          _recognizedText = result.recognizedWords;
-        });
-
-        if (result.finalResult) {
-          debugPrint('Final result: ${result.recognizedWords}');
-          _processVoiceInputForCurrentStep(result.recognizedWords);
-        }
-      },
-      listenFor: const Duration(seconds: 15),
-      pauseFor: const Duration(seconds: 3),
-      localeId: 'en_US',  // 🔥 FIX 3: Explicit locale add kiya
-    );
-  } catch (e) {
-    debugPrint('Error starting speech listening: $e');
-    if (mounted) {
-      setState(() => _isListening = false);
+    // 🔥 FIX 2: Agar plugin level pe already listening hai, toh pehle stop karo
+    if (_speech.isListening) {
+      await _speech.stop();
+      await Future.delayed(const Duration(milliseconds: 300));
     }
-    _retrySpeechListening();
+
+    setState(() {
+      _isListening = true;
+      _recognizedText = '';
+      _voiceInstruction =
+          'Listening... Speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
+    });
+
+    try {
+      await _speech.listen(
+        onResult: (result) {
+          setState(() {
+            _recognizedText = result.recognizedWords;
+          });
+
+          if (result.finalResult) {
+            debugPrint('Final result: ${result.recognizedWords}');
+            _processVoiceInputForCurrentStep(result.recognizedWords);
+          }
+        },
+        listenFor: const Duration(seconds: 15),
+        pauseFor: const Duration(seconds: 3),
+        localeId: 'en_US', // 🔥 FIX 3: Explicit locale add kiya
+      );
+    } catch (e) {
+      debugPrint('Error starting speech listening: $e');
+      if (mounted) {
+        setState(() => _isListening = false);
+      }
+      _retrySpeechListening();
+    }
   }
-}
 
   void _processVoiceInputForCurrentStep(String text) {
     if (text.isEmpty || _isProcessingVoice) return;
@@ -499,37 +510,39 @@ void _startVoiceInput() async {
     });
 
     debugPrint('Processing voice for ${_voiceSteps[_currentVoiceStep]}: $text');
-    
+
     if (_isSkipCommand(text)) {
       _skipCurrentField();
       return;
     }
-    
+
     final value = _extractNumericValue(text);
-    
+
     if (value != null) {
       final validationResult = _validateVoiceInput(_currentVoiceStep, value);
-      
+
       if (validationResult['isValid'] == true) {
         _voiceCollectedValues[_currentVoiceStep] = value;
         _updateFieldWithValue(_currentVoiceStep, value);
         _showVoiceStepSuccess(value);
-        
+
         Future.delayed(const Duration(milliseconds: 1500), () {
           if (mounted && _showVoiceOverlay) {
             _moveToNextVoiceStep();
           }
         });
       } else {
-        final errorMessage = validationResult['message'] as String? ?? 'Value is outside allowed range';
+        final errorMessage =
+            validationResult['message'] as String? ??
+            'Value is outside allowed range';
         _showValidationError(errorMessage);
-        
+
         setState(() {
           _voiceInstruction = errorMessage;
           _recognizedText = '';
           _isProcessingVoice = false;
         });
-        
+
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted && _showVoiceOverlay) {
             _startVoiceListening();
@@ -538,11 +551,12 @@ void _startVoiceInput() async {
       }
     } else {
       setState(() {
-        _voiceInstruction = 'Could not understand. Please say ${_voiceSteps[_currentVoiceStep]} value or say "Skip". Example: "98.6"';
+        _voiceInstruction =
+            'Could not understand. Please say ${_voiceSteps[_currentVoiceStep]} value or say "Skip". Example: "98.6"';
         _recognizedText = '';
         _isProcessingVoice = false;
       });
-      
+
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted && _showVoiceOverlay) {
           _startVoiceListening();
@@ -554,17 +568,14 @@ void _startVoiceInput() async {
   Map<String, dynamic> _validateVoiceInput(int stepIndex, String value) {
     final fieldName = _vitalPatterns[stepIndex]['fieldName'] as String;
     final range = _vitalRanges[fieldName];
-    
+
     if (range == null) {
       return {'isValid': true};
     }
 
     final numValue = double.tryParse(value);
     if (numValue == null) {
-      return {
-        'isValid': false,
-        'message': 'Please speak a valid number',
-      };
+      return {'isValid': false, 'message': 'Please speak a valid number'};
     }
 
     if (numValue < range['min']) {
@@ -597,14 +608,21 @@ void _startVoiceInput() async {
   }
 
   bool _isSkipCommand(String text) {
-    final skipWords = ['skip', 'next', 'no', 'not needed', 'not required', 'pass'];
+    final skipWords = [
+      'skip',
+      'next',
+      'no',
+      'not needed',
+      'not required',
+      'pass',
+    ];
     final cleanText = text.toLowerCase().trim();
     return skipWords.contains(cleanText);
   }
 
   void _skipCurrentField() {
     _showSkipSuccess();
-    
+
     Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted && _showVoiceOverlay) {
         _moveToNextVoiceStep();
@@ -622,7 +640,7 @@ void _startVoiceInput() async {
         duration: const Duration(seconds: 1),
       ),
     );
-    
+
     setState(() {
       _voiceInstruction = '$currentField skipped. Moving to next field...';
     });
@@ -632,25 +650,47 @@ void _startVoiceInput() async {
     try {
       debugPrint('Speech Raw Input: "$text"');
       text = text.toLowerCase().trim();
-      
+
       // 1. Try to find digits first (most common case as STT usually returns digits)
       final match = RegExp(r'\d+(\.\d+)?').firstMatch(text);
       if (match != null) {
         debugPrint('Found digits: ${match.group(0)}');
         return match.group(0);
       }
-      
+
       // 2. Fallback: Parse English number words if STT returned literal words
       text = text.replaceAll('point', '.').replaceAll('dot', '.');
-      
+
       final Map<String, int> numberWords = {
-        'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4,
-        'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
-        'ten': 10, 'eleven': 11, 'twelve': 12, 'thirteen': 13,
-        'fourteen': 14, 'fifteen': 15, 'sixteen': 16, 'seventeen': 17,
-        'eighteen': 18, 'nineteen': 19, 'twenty': 20, 'thirty': 30,
-        'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70,
-        'eighty': 80, 'ninety': 90, 'hundred': 100,
+        'zero': 0,
+        'one': 1,
+        'two': 2,
+        'three': 3,
+        'four': 4,
+        'five': 5,
+        'six': 6,
+        'seven': 7,
+        'eight': 8,
+        'nine': 9,
+        'ten': 10,
+        'eleven': 11,
+        'twelve': 12,
+        'thirteen': 13,
+        'fourteen': 14,
+        'fifteen': 15,
+        'sixteen': 16,
+        'seventeen': 17,
+        'eighteen': 18,
+        'nineteen': 19,
+        'twenty': 20,
+        'thirty': 30,
+        'forty': 40,
+        'fifty': 50,
+        'sixty': 60,
+        'seventy': 70,
+        'eighty': 80,
+        'ninety': 90,
+        'hundred': 100,
       };
 
       List<String> words = text.split(RegExp(r'\s+'));
@@ -664,7 +704,7 @@ void _startVoiceInput() async {
           isDecimal = true;
           continue;
         }
-        
+
         if (numberWords.containsKey(word)) {
           foundNumber = true;
           int val = numberWords[word]!;
@@ -679,7 +719,7 @@ void _startVoiceInput() async {
           }
         }
       }
-      
+
       if (foundNumber) {
         String result = current.toInt().toString();
         if (decimalPart.isNotEmpty) {
@@ -695,8 +735,9 @@ void _startVoiceInput() async {
   }
 
   void _updateFieldWithValue(int stepIndex, String value) {
-    final controller = _vitalPatterns[stepIndex]['controller'] as TextEditingController;
-    
+    final controller =
+        _vitalPatterns[stepIndex]['controller'] as TextEditingController;
+
     if (mounted) {
       setState(() {
         controller.text = value;
@@ -722,9 +763,10 @@ void _startVoiceInput() async {
         _currentVoiceStep++;
         _isProcessingVoice = false;
         _recognizedText = '';
-        _voiceInstruction = 'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
+        _voiceInstruction =
+            'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
       });
-      
+
       Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted && _showVoiceOverlay) {
           _startVoiceListening();
@@ -741,18 +783,21 @@ void _startVoiceInput() async {
         _currentVoiceStep--;
         _isProcessingVoice = false;
         _recognizedText = '';
-        _voiceInstruction = 'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
+        _voiceInstruction =
+            'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
       });
-      
+
       _voiceCollectedValues.remove(_currentVoiceStep + 1);
-      
-      final controller = _vitalPatterns[_currentVoiceStep + 1]['controller'] as TextEditingController;
+
+      final controller =
+          _vitalPatterns[_currentVoiceStep + 1]['controller']
+              as TextEditingController;
       if (mounted) {
         setState(() {
           controller.text = '';
         });
       }
-      
+
       Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted && _showVoiceOverlay) {
           _startVoiceListening();
@@ -767,9 +812,9 @@ void _startVoiceInput() async {
       _voiceInstruction = 'Voice input complete!';
       _isListening = false;
     });
-    
+
     _speech.stop();
-    
+
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         _showVoiceInputComplete();
@@ -831,7 +876,10 @@ void _startVoiceInput() async {
                 Navigator.pop(context);
                 _hideVoiceOverlay();
               },
-              child: Text('Edit Values', style: GoogleFonts.poppins(color: darkBlue)),
+              child: Text(
+                'Edit Values',
+                style: GoogleFonts.poppins(color: darkBlue),
+              ),
             ),
             TextButton(
               onPressed: () {
@@ -854,10 +902,10 @@ void _startVoiceInput() async {
 
     try {
       final response = await _ipdService.fetchVitalsMasterData();
-      
+
       if (response['success'] == true) {
         final List<dynamic> masterData = response['data'] ?? [];
-        
+
         _vitalsMasterData = masterData.map((item) {
           if (item is Map<String, dynamic>) {
             return item;
@@ -865,7 +913,7 @@ void _startVoiceInput() async {
             return <String, dynamic>{};
           }
         }).toList();
-        
+
         debugPrint('Loaded ${_vitalsMasterData.length} vitals master items');
       } else {
         setState(() {
@@ -889,7 +937,7 @@ void _startVoiceInput() async {
     if (_vitalsMasterData.isEmpty) {
       return '(0-0)';
     }
-    
+
     try {
       for (var vital in _vitalsMasterData) {
         final id = vital['id'].toString();
@@ -902,7 +950,7 @@ void _startVoiceInput() async {
     } catch (e) {
       debugPrint('Error getting vital hint: $e');
     }
-    
+
     return '(0-0)';
   }
 
@@ -918,7 +966,8 @@ void _startVoiceInput() async {
       return;
     }
 
-    bool allEmpty = _tempController.text.isEmpty &&
+    bool allEmpty =
+        _tempController.text.isEmpty &&
         _hrController.text.isEmpty &&
         _rrController.text.isEmpty &&
         _sysBpController.text.isEmpty &&
@@ -934,25 +983,26 @@ void _startVoiceInput() async {
     }
 
     String admissionId = widget.patient.admissionId.toString();
-    
+
     if (admissionId.isEmpty || admissionId == '0') {
       final prefs = await SharedPreferences.getInstance();
       admissionId = prefs.getString('admissionid') ?? '';
     }
-    
+
     if (admissionId.isEmpty || admissionId == '0') {
       setState(() {
-        _errorMessage = 'Valid Admission ID not found. Please refresh patient data.';
+        _errorMessage =
+            'Valid Admission ID not found. Please refresh patient data.';
       });
       return;
     }
 
     String patientId = widget.patient.patientId.toString();
-    
+
     if (patientId.isEmpty) {
       patientId = widget.patient.id.toString();
     }
-    
+
     if (patientId.isEmpty) {
       setState(() {
         _errorMessage = 'Patient ID not found in patient data.';
@@ -978,7 +1028,7 @@ void _startVoiceInput() async {
       final response = await _ipdService.savePatientVitals(
         patientId: patientId,
         admissionId: admissionId,
-        date: _dateController.text, 
+        date: _dateController.text,
         time: '$_selectedHH:$_selectedMM',
         vitalEntries: vitalEntries,
       );
@@ -992,7 +1042,7 @@ void _startVoiceInput() async {
               duration: const Duration(seconds: 2),
             ),
           );
-          
+
           Navigator.pop(context);
         }
       } else {
@@ -1015,7 +1065,7 @@ void _startVoiceInput() async {
 
   List<Map<String, dynamic>> _prepareVitalEntries() {
     final entries = <Map<String, dynamic>>[];
-    
+
     if (_tempController.text.isNotEmpty) {
       entries.add({'vitalMasterId': 1, 'finding': _tempController.text});
     }
@@ -1037,7 +1087,7 @@ void _startVoiceInput() async {
     if (_spo2Controller.text.isNotEmpty) {
       entries.add({'vitalMasterId': 13, 'finding': _spo2Controller.text});
     }
-    
+
     return entries;
   }
 
@@ -1062,7 +1112,8 @@ void _startVoiceInput() async {
 
     if (numValue < range['min'] || numValue > range['max']) {
       setState(() {
-        _fieldErrors[fieldName] = 'Please select in range (${range['min']}-${range['max']})';
+        _fieldErrors[fieldName] =
+            'Please select in range (${range['min']}-${range['max']})';
       });
     } else {
       setState(() {
@@ -1091,12 +1142,19 @@ void _startVoiceInput() async {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 14),
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 14,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: const TextStyle(color: Colors.red, fontSize: 11),
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 11,
+                          ),
                         ),
                       ),
                     ],
@@ -1115,42 +1173,57 @@ void _startVoiceInput() async {
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: _isLoading ? null : () async {
-                          DateTime? picked = await showDatePicker(
-                            context: context, 
-                            initialDate: DateTime.now(), 
-                            firstDate: DateTime(2020), 
-                            lastDate: DateTime(2030),
-                            builder: (context, child) {
-                              return Theme(
-                                data: ThemeData.light().copyWith(
-                                  colorScheme: const ColorScheme.light(primary: darkBlue),
-                                ),
-                                child: child!,
-                              );
-                            }
-                          );
-                          if (picked != null && mounted) {
-                            setState(() {
-                              _dateController.text = DateFormat('yyyy-MM-dd').format(picked);
-                            });
-                          }
-                        },
+                        onTap: _isLoading
+                            ? null
+                            : () async {
+                                DateTime? picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: DateTime.now(),
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime(2030),
+                                  builder: (context, child) {
+                                    return Theme(
+                                      data: ThemeData.light().copyWith(
+                                        colorScheme: const ColorScheme.light(
+                                          primary: darkBlue,
+                                        ),
+                                      ),
+                                      child: child!,
+                                    );
+                                  },
+                                );
+                                if (picked != null && mounted) {
+                                  setState(() {
+                                    _dateController.text = DateFormat(
+                                      'yyyy-MM-dd',
+                                    ).format(picked);
+                                  });
+                                }
+                              },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: bgGrey,
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.grey[200] ?? Colors.grey),
+                            border: Border.all(
+                              color: Colors.grey[200] ?? Colors.grey,
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.calendar_month, color: darkBlue, size: 14),
+                              const Icon(
+                                Icons.calendar_month,
+                                color: darkBlue,
+                                size: 14,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 _dateController.text,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12, 
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.black87,
                                 ),
@@ -1162,15 +1235,24 @@ void _startVoiceInput() async {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: bgGrey,
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.grey[200] ?? Colors.grey),
+                        border: Border.all(
+                          color: Colors.grey[200] ?? Colors.grey,
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.access_time, color: darkBlue, size: 14),
+                          const Icon(
+                            Icons.access_time,
+                            color: darkBlue,
+                            size: 14,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             '$_selectedHH:$_selectedMM',
@@ -1190,7 +1272,7 @@ void _startVoiceInput() async {
               const SizedBox(height: 16),
 
               _buildSectionHeader("Vital Signs"),
-              
+
               GestureDetector(
                 onTap: _startVoiceInput,
                 child: Container(
@@ -1203,7 +1285,10 @@ void _startVoiceInput() async {
                       colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
                     ),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF64B5F6), width: 1.5),
+                    border: Border.all(
+                      color: const Color(0xFF64B5F6),
+                      width: 1.5,
+                    ),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x2264B5F6),
@@ -1227,7 +1312,11 @@ void _startVoiceInput() async {
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.mic, color: Colors.white, size: 20),
+                        child: const Icon(
+                          Icons.mic,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -1259,13 +1348,17 @@ void _startVoiceInput() async {
                           color: const Color(0x1A1A237E),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Icon(Icons.chevron_right, color: darkBlue, size: 18),
+                        child: const Icon(
+                          Icons.chevron_right,
+                          color: darkBlue,
+                          size: 18,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              
+
               Column(
                 children: [
                   Row(
@@ -1275,10 +1368,10 @@ void _startVoiceInput() async {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildModernInput(
-                              controller: _tempController, 
-                              label: "Temp F ${_getVitalHint('1')}", 
-                              hint: "98.6", 
-                              icon: Icons.thermostat, 
+                              controller: _tempController,
+                              label: "Temp F ${_getVitalHint('1')}",
+                              hint: "98.6",
+                              icon: Icons.thermostat,
                               suffix: "°F",
                               keyboardType: TextInputType.number,
                               focusNode: _focusNodes[0],
@@ -1305,10 +1398,10 @@ void _startVoiceInput() async {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildModernInput(
-                              controller: _hrController, 
-                              label: "Heart Rate ${_getVitalHint('2')}", 
-                              hint: "72", 
-                              icon: Icons.monitor_heart, 
+                              controller: _hrController,
+                              label: "Heart Rate ${_getVitalHint('2')}",
+                              hint: "72",
+                              icon: Icons.monitor_heart,
                               suffix: "bpm",
                               keyboardType: TextInputType.number,
                               focusNode: _focusNodes[1],
@@ -1340,10 +1433,10 @@ void _startVoiceInput() async {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildModernInput(
-                              controller: _sysBpController, 
-                              label: "Sys BP ${_getVitalHint('4')}", 
-                              hint: "120", 
-                              icon: Icons.arrow_upward, 
+                              controller: _sysBpController,
+                              label: "Sys BP ${_getVitalHint('4')}",
+                              hint: "120",
+                              icon: Icons.arrow_upward,
                               suffix: "mmHg",
                               keyboardType: TextInputType.number,
                               focusNode: _focusNodes[2],
@@ -1370,10 +1463,10 @@ void _startVoiceInput() async {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildModernInput(
-                              controller: _diaBpController, 
-                              label: "Dia BP ${_getVitalHint('5')}", 
-                              hint: "80", 
-                              icon: Icons.arrow_downward, 
+                              controller: _diaBpController,
+                              label: "Dia BP ${_getVitalHint('5')}",
+                              hint: "80",
+                              icon: Icons.arrow_downward,
                               suffix: "mmHg",
                               keyboardType: TextInputType.number,
                               focusNode: _focusNodes[3],
@@ -1405,10 +1498,10 @@ void _startVoiceInput() async {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildModernInput(
-                              controller: _rrController, 
-                              label: "Resp. Rate ${_getVitalHint('3')}", 
-                              hint: "18", 
-                              icon: Icons.air, 
+                              controller: _rrController,
+                              label: "Resp. Rate ${_getVitalHint('3')}",
+                              hint: "18",
+                              icon: Icons.air,
                               suffix: "/min",
                               keyboardType: TextInputType.number,
                               focusNode: _focusNodes[4],
@@ -1435,10 +1528,10 @@ void _startVoiceInput() async {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildModernInput(
-                              controller: _spo2Controller, 
-                              label: "SpO2 ${_getVitalHint('13')}", 
-                              hint: "98", 
-                              icon: Icons.water_drop, 
+                              controller: _spo2Controller,
+                              label: "SpO2 ${_getVitalHint('13')}",
+                              hint: "98",
+                              icon: Icons.water_drop,
                               suffix: "%",
                               keyboardType: TextInputType.number,
                               focusNode: _focusNodes[5],
@@ -1467,10 +1560,10 @@ void _startVoiceInput() async {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildModernInput(
-                        controller: _rbsController, 
-                        label: "RBS ${_getVitalHint('6')}", 
-                        hint: "100", 
-                        icon: Icons.bloodtype, 
+                        controller: _rbsController,
+                        label: "RBS ${_getVitalHint('6')}",
+                        hint: "100",
+                        icon: Icons.bloodtype,
                         suffix: "mg/dL",
                         keyboardType: TextInputType.number,
                         focusNode: _focusNodes[6],
@@ -1492,7 +1585,7 @@ void _startVoiceInput() async {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 60),
             ],
           ),
@@ -1520,7 +1613,13 @@ void _startVoiceInput() async {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, -3))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, -3),
+                ),
+              ],
             ),
             child: SizedBox(
               width: double.infinity,
@@ -1530,19 +1629,29 @@ void _startVoiceInput() async {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: darkBlue,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   elevation: 4,
                 ),
-                child: _isLoading 
+                child: _isLoading
                     ? const SizedBox(
                         height: 18,
                         width: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
-                    : Text("Save Vitals", style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
+                    : Text(
+                        "Save Vitals",
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -1551,389 +1660,467 @@ void _startVoiceInput() async {
     );
   }
 
-Widget _buildVoiceOverlay() {
-  return Positioned.fill(
-    child: Container(
-      color: const Color(0xCC000000), // Slightly darker background
-      child: Center(
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.85, // Slightly smaller width
-          constraints: const BoxConstraints(
-            maxHeight: 500, // Fixed maximum height for consistency
-            minHeight: 420,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x66000000),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              // Header with close button
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1A237E),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
+  Widget _buildVoiceOverlay() {
+    return Positioned.fill(
+      child: Container(
+        color: const Color(0xCC000000), // Slightly darker background
+        child: Center(
+          child: Container(
+            width:
+                MediaQuery.of(context).size.width *
+                0.85, // Slightly smaller width
+            constraints: const BoxConstraints(
+              maxHeight: 500, // Fixed maximum height for consistency
+              minHeight: 420,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66000000),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                // Header with close button
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1A237E),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Voice Input',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Step ${_currentVoiceStep + 1} of ${_voiceSteps.length}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        onPressed: _hideVoiceOverlay,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 40,
+                          minHeight: 40,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+
+                // Progress bar
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Column(
+                    children: [
+                      LinearProgressIndicator(
+                        value: (_currentVoiceStep + 1) / _voiceSteps.length,
+                        backgroundColor: Colors.grey[200],
+                        color: Colors.blue,
+                        minHeight: 6,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Text(
-                            'Voice Input',
+                            '${((_currentVoiceStep + 1) / _voiceSteps.length * 100).toInt()}%',
                             style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              fontSize: 10,
+                              color: Colors.grey[600],
                             ),
                           ),
-                          const SizedBox(height: 2),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Current field name
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    _voiceSteps[_currentVoiceStep],
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1A237E),
+                    ),
+                  ),
+                ),
+
+                // Voice status/instruction
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    _voiceInstruction,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: _voiceInstruction.contains('Listening')
+                          ? Colors.green
+                          : _voiceInstruction.contains('Could not understand')
+                          ? Colors.red
+                          : Colors.grey[700],
+                    ),
+                  ),
+                ),
+
+                // Mic animation/icon
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: _isListening ? 80 : 60,
+                    height: _isListening ? 80 : 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isListening
+                          ? const Color(0xFFE3F2FD)
+                          : Colors.grey[100],
+                      border: Border.all(
+                        color: _isListening
+                            ? Colors.blue
+                            : Colors.grey[300] ?? Colors.grey,
+                        width: _isListening ? 3 : 2,
+                      ),
+                    ),
+                    child: Center(
+                      child: _isProcessingVoice
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.blue,
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              Icons.mic,
+                              size: _isListening ? 32 : 28,
+                              color: _isListening
+                                  ? Colors.blue
+                                  : Colors.grey[600],
+                            ),
+                    ),
+                  ),
+                ),
+
+                // Recognized text
+                if (_recognizedText.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.grey[200] ?? Colors.grey,
+                        ),
+                      ),
+                      child: Text(
+                        _recognizedText,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.black87,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Current value if captured
+                if (_voiceCollectedValues.containsKey(_currentVoiceStep))
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
                           Text(
-                            'Step ${_currentVoiceStep + 1} of ${_voiceSteps.length}',
+                            'Value: ${_voiceCollectedValues[_currentVoiceStep]}',
                             style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green[800],
                             ),
                           ),
                         ],
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                      onPressed: _hideVoiceOverlay,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 40,
-                        minHeight: 40,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Progress bar
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    LinearProgressIndicator(
-                      value: (_currentVoiceStep + 1) / _voiceSteps.length,
-                      backgroundColor: Colors.grey[200],
-                      color: Colors.blue,
-                      minHeight: 6,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${((_currentVoiceStep + 1) / _voiceSteps.length * 100).toInt()}%',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Current field name
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  _voiceSteps[_currentVoiceStep],
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1A237E),
                   ),
-                ),
-              ),
-              
-              // Voice status/instruction
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  _voiceInstruction,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: _voiceInstruction.contains('Listening')
-                        ? Colors.green
-                        : _voiceInstruction.contains('Could not understand')
-                            ? Colors.red
-                            : Colors.grey[700],
-                  ),
-                ),
-              ),
-              
-              // Mic animation/icon
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: _isListening ? 80 : 60,
-                  height: _isListening ? 80 : 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isListening ? const Color(0xFFE3F2FD) : Colors.grey[100],
-                    border: Border.all(
-                      color: _isListening ? Colors.blue : Colors.grey[300] ?? Colors.grey,
-                      width: _isListening ? 3 : 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: _isProcessingVoice
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 3,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                            ),
-                          )
-                        : Icon(
-                            Icons.mic,
-                            size: _isListening ? 32 : 28,
-                            color: _isListening ? Colors.blue : Colors.grey[600],
-                          ),
-                  ),
-                ),
-              ),
-              
-              // Recognized text
-              if (_recognizedText.isNotEmpty)
+
+                // Example hint
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[200] ?? Colors.grey),
-                    ),
-                    child: Text(
-                      _recognizedText,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.black87,
-                        fontStyle: FontStyle.italic,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Example:',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _getExampleHint(_currentVoiceStep),
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.blue,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Or say "Skip" to skip this field',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              
-              // Current value if captured
-              if (_voiceCollectedValues.containsKey(_currentVoiceStep))
+
+                // Control buttons - FIXED to avoid overflow
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.green[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.green, size: 16),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Value: ${_voiceCollectedValues[_currentVoiceStep]}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.green[800],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              
-              // Example hint
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    Text(
-                      'Example:',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _getExampleHint(_currentVoiceStep),
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.blue,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Or say "Skip" to skip this field',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: Colors.orange,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Control buttons - FIXED to avoid overflow
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Main action buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _currentVoiceStep > 0 && !_isProcessingVoice ? _moveToPreviousVoiceStep : null,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              side: BorderSide(
-                                color: _currentVoiceStep > 0 && !_isProcessingVoice 
-                                    ? const Color(0xFF1A237E) 
-                                    : Colors.grey[300] ?? Colors.grey,
-                              ),
-                            ),
-                            child: Text(
-                              'Previous',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: _currentVoiceStep > 0 && !_isProcessingVoice 
-                                    ? const Color(0xFF1A237E) 
-                                    : Colors.grey[400],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _isProcessingVoice ? null : () {
-                              _skipCurrentField();
-                            },
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              side: const BorderSide(color: Colors.orange),
-                            ),
-                            child: Text(
-                              'Skip',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.orange,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 8),
-                    
-                    // Next/Finish button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isProcessingVoice 
-                            ? null
-                            : () {
-                                if (_voiceCollectedValues.containsKey(_currentVoiceStep)) {
-                                  if (_currentVoiceStep < _voiceSteps.length - 1) {
-                                    _moveToNextVoiceStep();
-                                  } else {
-                                    _completeVoiceInput();
-                                  }
-                                }
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _voiceCollectedValues.containsKey(_currentVoiceStep) 
-                              ? (_currentVoiceStep < _voiceSteps.length - 1 ? Colors.blue : Colors.green)
-                              : Colors.grey[300],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: _isProcessingVoice
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Main action buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed:
+                                  _currentVoiceStep > 0 && !_isProcessingVoice
+                                  ? _moveToPreviousVoiceStep
+                                  : null,
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
                                 ),
-                              )
-                            : Text(
-                                _voiceCollectedValues.containsKey(_currentVoiceStep)
-                                    ? (_currentVoiceStep < _voiceSteps.length - 1 ? 'Next Field' : 'Finish & Save')
-                                    : 'Speak Now',
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                side: BorderSide(
+                                  color:
+                                      _currentVoiceStep > 0 &&
+                                          !_isProcessingVoice
+                                      ? const Color(0xFF1A237E)
+                                      : Colors.grey[300] ?? Colors.grey,
+                                ),
+                              ),
+                              child: Text(
+                                'Previous',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color:
+                                      _currentVoiceStep > 0 &&
+                                          !_isProcessingVoice
+                                      ? const Color(0xFF1A237E)
+                                      : Colors.grey[400],
                                 ),
                               ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _isProcessingVoice
+                                  ? null
+                                  : () {
+                                      _skipCurrentField();
+                                    },
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                side: const BorderSide(color: Colors.orange),
+                              ),
+                              child: Text(
+                                'Skip',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(height: 8),
+
+                      // Next/Finish button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isProcessingVoice
+                              ? null
+                              : () {
+                                  if (_voiceCollectedValues.containsKey(
+                                    _currentVoiceStep,
+                                  )) {
+                                    if (_currentVoiceStep <
+                                        _voiceSteps.length - 1) {
+                                      _moveToNextVoiceStep();
+                                    } else {
+                                      _completeVoiceInput();
+                                    }
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                _voiceCollectedValues.containsKey(
+                                  _currentVoiceStep,
+                                )
+                                ? (_currentVoiceStep < _voiceSteps.length - 1
+                                      ? Colors.blue
+                                      : Colors.green)
+                                : Colors.grey[300],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isProcessingVoice
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  _voiceCollectedValues.containsKey(
+                                        _currentVoiceStep,
+                                      )
+                                      ? (_currentVoiceStep <
+                                                _voiceSteps.length - 1
+                                            ? 'Next Field'
+                                            : 'Finish & Save')
+                                      : 'Speak Now',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   String _getExampleHint(int stepIndex) {
     switch (stepIndex) {
-      case 0: return '"98.6" or "ninety eight point six"';
-      case 1: return '"72" or "seventy two"';
-      case 2: return '"120" or "one twenty"';
-      case 3: return '"80" or "eighty"';
-      case 4: return '"18" or "eighteen"';
-      case 5: return '"98" or "ninety eight"';
-      case 6: return '"100" or "one hundred"';
-      default: return 'Say the number clearly';
+      case 0:
+        return '"98.6" or "ninety eight point six"';
+      case 1:
+        return '"72" or "seventy two"';
+      case 2:
+        return '"120" or "one twenty"';
+      case 3:
+        return '"80" or "eighty"';
+      case 4:
+        return '"18" or "eighteen"';
+      case 5:
+        return '"98" or "ninety eight"';
+      case 6:
+        return '"100" or "one hundred"';
+      default:
+        return 'Say the number clearly';
     }
   }
 
@@ -1941,8 +2128,12 @@ Widget _buildVoiceOverlay() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6, left: 2),
       child: Text(
-        title, 
-        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700])
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey[700],
+        ),
       ),
     );
   }
@@ -1959,7 +2150,7 @@ Widget _buildVoiceOverlay() {
     int? currentFieldIndex,
   }) {
     final isCurrentField = fieldIndex == currentFieldIndex;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1967,8 +2158,12 @@ Widget _buildVoiceOverlay() {
           children: [
             Expanded(
               child: Text(
-                label, 
-                style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey[500])
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[500],
+                ),
               ),
             ),
             if (fieldIndex != null)
@@ -1995,7 +2190,9 @@ Widget _buildVoiceOverlay() {
             color: bgGrey,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isCurrentField ? darkBlue : Colors.grey[200] ?? Colors.grey,
+              color: isCurrentField
+                  ? darkBlue
+                  : Colors.grey[200] ?? Colors.grey,
               width: isCurrentField ? 1.5 : 1,
             ),
           ),
@@ -2004,19 +2201,33 @@ Widget _buildVoiceOverlay() {
             focusNode: focusNode,
             keyboardType: keyboardType,
             enabled: !_isLoading,
-            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
             decoration: InputDecoration(
               prefixIcon: Icon(icon, color: darkBlue, size: 16),
               suffixText: suffix,
-              suffixStyle: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500]),
+              suffixStyle: GoogleFonts.poppins(
+                fontSize: 11,
+                color: Colors.grey[500],
+              ),
               hintText: hint,
-              hintStyle: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 12),
+              hintStyle: GoogleFonts.poppins(
+                color: Colors.grey[400],
+                fontSize: 12,
+              ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 10,
+                horizontal: 10,
+              ),
               isDense: true,
             ),
             onChanged: (value) {
-              final fieldName = _vitalPatterns[fieldIndex!]['fieldName'] as String;
+              final fieldName =
+                  _vitalPatterns[fieldIndex!]['fieldName'] as String;
               _validateManualInput(fieldName, value);
             },
           ),
@@ -2029,7 +2240,7 @@ Widget _buildVoiceOverlay() {
 // Intake Assessment Tab - Same as Vitals design
 class IntakeAssessmentTab extends StatefulWidget {
   final Patient patient;
-  
+
   const IntakeAssessmentTab({super.key, required this.patient});
 
   @override
@@ -2044,15 +2255,15 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
   final TextEditingController _feedController = TextEditingController();
   final TextEditingController _medicationController = TextEditingController();
   final TextEditingController _urineController = TextEditingController();
-  
+
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
   int _currentFieldIndex = 0;
-  
+
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
   bool _speechAvailable = false;
   String _recognizedText = '';
-  
+
   bool _showVoiceOverlay = false;
   String _voiceInstruction = 'Please speak Fluid value';
   int _currentVoiceStep = 0;
@@ -2125,18 +2336,18 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
     super.initState();
     final now = DateTime.now();
     _dateController.text = DateFormat('dd-MM-yyyy').format(now);
-    
+
     _intakePatterns[0]['controller'] = _fluidController;
     _intakePatterns[1]['controller'] = _tpnController;
     _intakePatterns[2]['controller'] = _bloodFilterController;
     _intakePatterns[3]['controller'] = _feedController;
     _intakePatterns[4]['controller'] = _medicationController;
     _intakePatterns[5]['controller'] = _urineController;
-    
+
     _voiceSteps = _intakePatterns.map((v) => v['label'] as String).toList();
-    
+
     _initSpeech();
-    
+
     for (int i = 0; i < _focusNodes.length; i++) {
       _focusNodes[i].addListener(() {
         if (_focusNodes[i].hasFocus) {
@@ -2161,7 +2372,10 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
       _speechAvailable = await _speech.initialize(
         onStatus: (status) {
           if (status == 'done' || status == 'notListening') {
-            if (_showVoiceOverlay && !_isProcessingVoice && !_isVoiceInputComplete && mounted) {
+            if (_showVoiceOverlay &&
+                !_isProcessingVoice &&
+                !_isVoiceInputComplete &&
+                mounted) {
               Future.delayed(const Duration(milliseconds: 500), () {
                 if (_showVoiceOverlay && !_isVoiceInputComplete && mounted) {
                   _startVoiceListening();
@@ -2194,25 +2408,25 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
     }
   }
 
- void _startVoiceInput() async {
-  // 🔥 FIX 4: Pehle permission check karo
-  if (!_speechAvailable) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Speech recognition is not available on this device'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 2),
-        ),
-      );
+  void _startVoiceInput() async {
+    // 🔥 FIX 4: Pehle permission check karo
+    if (!_speechAvailable) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Speech recognition is not available on this device'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
     }
-    return;
-  }
 
-  // Permission handler se explicitly permission lo
-  // Note: permission_handler package add karna padega pubspec.yaml mein
-  // import 'package:permission_handler/permission_handler.dart';
-  /*
+    // Permission handler se explicitly permission lo
+    // Note: permission_handler package add karna padega pubspec.yaml mein
+    // import 'package:permission_handler/permission_handler.dart';
+    /*
   var status = await Permission.microphone.status;
   if (!status.isGranted) {
     status = await Permission.microphone.request();
@@ -2230,27 +2444,29 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
   }
   */
 
-  // Agar permission_handler use nahi karna, toh ye basic check rakho:
-  bool hasPerm = await _speech.hasPermission;
-  if (!hasPerm) {
-    // Try to initialize again (first time pe system dialog dikhata hai)
-    bool initialized = await _speech.initialize();
-    if (!initialized) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enable microphone permission from settings'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 3),
-          ),
-        );
+    // Agar permission_handler use nahi karna, toh ye basic check rakho:
+    bool hasPerm = await _speech.hasPermission;
+    if (!hasPerm) {
+      // Try to initialize again (first time pe system dialog dikhata hai)
+      bool initialized = await _speech.initialize();
+      if (!initialized) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Please enable microphone permission from settings',
+              ),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
       }
-      return;
     }
-  }
 
-  _startVoiceSequence();
-}
+    _startVoiceSequence();
+  }
 
   void _startVoiceSequence() {
     setState(() {
@@ -2259,10 +2475,11 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
       _voiceCollectedValues.clear();
       _isProcessingVoice = false;
       _isVoiceInputComplete = false;
-      _voiceInstruction = 'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
+      _voiceInstruction =
+          'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
       _recognizedText = '';
     });
-    
+
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted && _showVoiceOverlay) {
         _startVoiceListening();
@@ -2280,45 +2497,46 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
     _speech.stop();
   }
 
- Future<void> _startVoiceListening() async {
-  if (_isListening || _isProcessingVoice || _isVoiceInputComplete) return;
+  Future<void> _startVoiceListening() async {
+    if (_isListening || _isProcessingVoice || _isVoiceInputComplete) return;
 
-  // 🔥 FIX 2: Agar plugin level pe already listening hai, toh pehle stop karo
-  if (_speech.isListening) {
-    await _speech.stop();
-    await Future.delayed(const Duration(milliseconds: 300));
-  }
-
-  setState(() {
-    _isListening = true;
-    _recognizedText = '';
-    _voiceInstruction = 'Listening... Speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
-  });
-
-  try {
-    await _speech.listen(
-      onResult: (result) {
-        setState(() {
-          _recognizedText = result.recognizedWords;
-        });
-
-        if (result.finalResult) {
-          debugPrint('Final result: ${result.recognizedWords}');
-          _processVoiceInputForCurrentStep(result.recognizedWords);
-        }
-      },
-      listenFor: const Duration(seconds: 15),
-      pauseFor: const Duration(seconds: 3),
-      localeId: 'en_US',  // 🔥 FIX 3: Explicit locale add kiya
-    );
-  } catch (e) {
-    debugPrint('Error starting speech listening: $e');
-    if (mounted) {
-      setState(() => _isListening = false);
+    // 🔥 FIX 2: Agar plugin level pe already listening hai, toh pehle stop karo
+    if (_speech.isListening) {
+      await _speech.stop();
+      await Future.delayed(const Duration(milliseconds: 300));
     }
-    _retrySpeechListening();
+
+    setState(() {
+      _isListening = true;
+      _recognizedText = '';
+      _voiceInstruction =
+          'Listening... Speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
+    });
+
+    try {
+      await _speech.listen(
+        onResult: (result) {
+          setState(() {
+            _recognizedText = result.recognizedWords;
+          });
+
+          if (result.finalResult) {
+            debugPrint('Final result: ${result.recognizedWords}');
+            _processVoiceInputForCurrentStep(result.recognizedWords);
+          }
+        },
+        listenFor: const Duration(seconds: 15),
+        pauseFor: const Duration(seconds: 3),
+        localeId: 'en_US', // 🔥 FIX 3: Explicit locale add kiya
+      );
+    } catch (e) {
+      debugPrint('Error starting speech listening: $e');
+      if (mounted) {
+        setState(() => _isListening = false);
+      }
+      _retrySpeechListening();
+    }
   }
-}
 
   void _processVoiceInputForCurrentStep(String text) {
     if (text.isEmpty || _isProcessingVoice) return;
@@ -2327,19 +2545,19 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
       _isProcessingVoice = true;
       _isListening = false;
     });
-    
+
     if (_isSkipCommand(text)) {
       _skipCurrentField();
       return;
     }
-    
+
     final value = _extractNumericValue(text);
-    
+
     if (value != null) {
       _voiceCollectedValues[_currentVoiceStep] = value;
       _updateFieldWithValue(_currentVoiceStep, value);
       _showVoiceStepSuccess(value);
-      
+
       Future.delayed(const Duration(milliseconds: 1500), () {
         if (mounted && _showVoiceOverlay) {
           _moveToNextVoiceStep();
@@ -2347,11 +2565,12 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
       });
     } else {
       setState(() {
-        _voiceInstruction = 'Could not understand. Please say ${_voiceSteps[_currentVoiceStep]} value or say "Skip". Example: "100"';
+        _voiceInstruction =
+            'Could not understand. Please say ${_voiceSteps[_currentVoiceStep]} value or say "Skip". Example: "100"';
         _recognizedText = '';
         _isProcessingVoice = false;
       });
-      
+
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted && _showVoiceOverlay) {
           _startVoiceListening();
@@ -2361,14 +2580,21 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
   }
 
   bool _isSkipCommand(String text) {
-    final skipWords = ['skip', 'next', 'no', 'not needed', 'not required', 'pass'];
+    final skipWords = [
+      'skip',
+      'next',
+      'no',
+      'not needed',
+      'not required',
+      'pass',
+    ];
     final cleanText = text.toLowerCase().trim();
     return skipWords.contains(cleanText);
   }
 
   void _skipCurrentField() {
     _showSkipSuccess();
-    
+
     Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted && _showVoiceOverlay) {
         _moveToNextVoiceStep();
@@ -2386,7 +2612,7 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
         duration: const Duration(seconds: 1),
       ),
     );
-    
+
     setState(() {
       _voiceInstruction = '$currentField skipped. Moving to next field...';
     });
@@ -2395,7 +2621,7 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
   String? _extractNumericValue(String text) {
     try {
       text = text.toLowerCase();
-      
+
       final replacements = {
         'zero': '0',
         'one': '1',
@@ -2427,26 +2653,27 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
         'ninety': '90',
         'hundred': '00',
       };
-      
+
       for (final entry in replacements.entries) {
         text = text.replaceAll(entry.key, entry.value);
       }
-      
+
       text = text.replaceAll(RegExp(r'[^\d]'), '');
-      
+
       if (text.isNotEmpty) {
         return text;
       }
     } catch (e) {
       debugPrint('Error extracting numeric value: $e');
     }
-    
+
     return null;
   }
 
   void _updateFieldWithValue(int stepIndex, String value) {
-    final controller = _intakePatterns[stepIndex]['controller'] as TextEditingController;
-    
+    final controller =
+        _intakePatterns[stepIndex]['controller'] as TextEditingController;
+
     if (mounted) {
       setState(() {
         controller.text = value;
@@ -2472,9 +2699,10 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
         _currentVoiceStep++;
         _isProcessingVoice = false;
         _recognizedText = '';
-        _voiceInstruction = 'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
+        _voiceInstruction =
+            'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
       });
-      
+
       Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted && _showVoiceOverlay) {
           _startVoiceListening();
@@ -2491,18 +2719,21 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
         _currentVoiceStep--;
         _isProcessingVoice = false;
         _recognizedText = '';
-        _voiceInstruction = 'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
+        _voiceInstruction =
+            'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
       });
-      
+
       _voiceCollectedValues.remove(_currentVoiceStep + 1);
-      
-      final controller = _intakePatterns[_currentVoiceStep + 1]['controller'] as TextEditingController;
+
+      final controller =
+          _intakePatterns[_currentVoiceStep + 1]['controller']
+              as TextEditingController;
       if (mounted) {
         setState(() {
           controller.text = '';
         });
       }
-      
+
       Future.delayed(const Duration(milliseconds: 800), () {
         if (mounted && _showVoiceOverlay) {
           _startVoiceListening();
@@ -2517,9 +2748,9 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
       _voiceInstruction = 'Voice input complete!';
       _isListening = false;
     });
-    
+
     _speech.stop();
-    
+
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         _showVoiceInputComplete();
@@ -2587,14 +2818,20 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
                 Navigator.pop(context);
                 _hideVoiceOverlay();
               },
-              child: Text('Edit Values', style: GoogleFonts.poppins(color: darkBlue, fontSize: 13)),
+              child: Text(
+                'Edit Values',
+                style: GoogleFonts.poppins(color: darkBlue, fontSize: 13),
+              ),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 _hideVoiceOverlay();
               },
-              child: Text('OK', style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13)),
+              child: Text(
+                'OK',
+                style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
+              ),
             ),
           ],
         );
@@ -2614,7 +2851,8 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
       return;
     }
 
-    bool allEmpty = _fluidController.text.isEmpty &&
+    bool allEmpty =
+        _fluidController.text.isEmpty &&
         _tpnController.text.isEmpty &&
         _bloodFilterController.text.isEmpty &&
         _feedController.text.isEmpty &&
@@ -2658,389 +2896,465 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
     }
   }
 
-Widget _buildVoiceOverlay() {
-  return Positioned.fill(
-    child: Container(
-      color: const Color(0xCC000000), // Slightly darker background
-      child: Center(
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.85, // Slightly smaller width
-          constraints: const BoxConstraints(
-            maxHeight: 500, // Fixed maximum height for consistency
-            minHeight: 420,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x66000000),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              // Header with close button
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1A237E),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
+  Widget _buildVoiceOverlay() {
+    return Positioned.fill(
+      child: Container(
+        color: const Color(0xCC000000), // Slightly darker background
+        child: Center(
+          child: Container(
+            width:
+                MediaQuery.of(context).size.width *
+                0.85, // Slightly smaller width
+            constraints: const BoxConstraints(
+              maxHeight: 500, // Fixed maximum height for consistency
+              minHeight: 420,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66000000),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                // Header with close button
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1A237E),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Voice Input',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Step ${_currentVoiceStep + 1} of ${_voiceSteps.length}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        onPressed: _hideVoiceOverlay,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 40,
+                          minHeight: 40,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+
+                // Progress bar
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Column(
+                    children: [
+                      LinearProgressIndicator(
+                        value: (_currentVoiceStep + 1) / _voiceSteps.length,
+                        backgroundColor: Colors.grey[200],
+                        color: Colors.blue,
+                        minHeight: 6,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Text(
-                            'Voice Input',
+                            '${((_currentVoiceStep + 1) / _voiceSteps.length * 100).toInt()}%',
                             style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              fontSize: 10,
+                              color: Colors.grey[600],
                             ),
                           ),
-                          const SizedBox(height: 2),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Current field name
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    _voiceSteps[_currentVoiceStep],
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1A237E),
+                    ),
+                  ),
+                ),
+
+                // Voice status/instruction
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    _voiceInstruction,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: _voiceInstruction.contains('Listening')
+                          ? Colors.green
+                          : _voiceInstruction.contains('Could not understand')
+                          ? Colors.red
+                          : Colors.grey[700],
+                    ),
+                  ),
+                ),
+
+                // Mic animation/icon
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: _isListening ? 80 : 60,
+                    height: _isListening ? 80 : 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isListening
+                          ? const Color(0xFFE3F2FD)
+                          : Colors.grey[100],
+                      border: Border.all(
+                        color: _isListening
+                            ? Colors.blue
+                            : Colors.grey[300] ?? Colors.grey,
+                        width: _isListening ? 3 : 2,
+                      ),
+                    ),
+                    child: Center(
+                      child: _isProcessingVoice
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.blue,
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              Icons.mic,
+                              size: _isListening ? 32 : 28,
+                              color: _isListening
+                                  ? Colors.blue
+                                  : Colors.grey[600],
+                            ),
+                    ),
+                  ),
+                ),
+
+                // Recognized text
+                if (_recognizedText.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.grey[200] ?? Colors.grey,
+                        ),
+                      ),
+                      child: Text(
+                        _recognizedText,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.black87,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Current value if captured
+                if (_voiceCollectedValues.containsKey(_currentVoiceStep))
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
                           Text(
-                            'Step ${_currentVoiceStep + 1} of ${_voiceSteps.length}',
+                            'Value: ${_voiceCollectedValues[_currentVoiceStep]}',
                             style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.green[800],
                             ),
                           ),
                         ],
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                      onPressed: _hideVoiceOverlay,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 40,
-                        minHeight: 40,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Progress bar
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    LinearProgressIndicator(
-                      value: (_currentVoiceStep + 1) / _voiceSteps.length,
-                      backgroundColor: Colors.grey[200],
-                      color: Colors.blue,
-                      minHeight: 6,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${((_currentVoiceStep + 1) / _voiceSteps.length * 100).toInt()}%',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Current field name
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  _voiceSteps[_currentVoiceStep],
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF1A237E),
                   ),
-                ),
-              ),
-              
-              // Voice status/instruction
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  _voiceInstruction,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: _voiceInstruction.contains('Listening')
-                        ? Colors.green
-                        : _voiceInstruction.contains('Could not understand')
-                            ? Colors.red
-                            : Colors.grey[700],
-                  ),
-                ),
-              ),
-              
-              // Mic animation/icon
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: _isListening ? 80 : 60,
-                  height: _isListening ? 80 : 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isListening ? const Color(0xFFE3F2FD) : Colors.grey[100],
-                    border: Border.all(
-                      color: _isListening ? Colors.blue : Colors.grey[300] ?? Colors.grey,
-                      width: _isListening ? 3 : 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: _isProcessingVoice
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 3,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                            ),
-                          )
-                        : Icon(
-                            Icons.mic,
-                            size: _isListening ? 32 : 28,
-                            color: _isListening ? Colors.blue : Colors.grey[600],
-                          ),
-                  ),
-                ),
-              ),
-              
-              // Recognized text
-              if (_recognizedText.isNotEmpty)
+
+                // Example hint
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[200] ?? Colors.grey),
-                    ),
-                    child: Text(
-                      _recognizedText,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.black87,
-                        fontStyle: FontStyle.italic,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Example:',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _getExampleHint(_currentVoiceStep),
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.blue,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Or say "Skip" to skip this field',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              
-              // Current value if captured
-              if (_voiceCollectedValues.containsKey(_currentVoiceStep))
+
+                // Control buttons - FIXED to avoid overflow
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.green[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.green, size: 16),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Value: ${_voiceCollectedValues[_currentVoiceStep]}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.green[800],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              
-              // Example hint
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    Text(
-                      'Example:',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _getExampleHint(_currentVoiceStep),
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.blue,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Or say "Skip" to skip this field',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: Colors.orange,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Control buttons - FIXED to avoid overflow
-              Container(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Main action buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _currentVoiceStep > 0 && !_isProcessingVoice ? _moveToPreviousVoiceStep : null,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              side: BorderSide(
-                                color: _currentVoiceStep > 0 && !_isProcessingVoice 
-                                    ? const Color(0xFF1A237E) 
-                                    : Colors.grey[300] ?? Colors.grey,
-                              ),
-                            ),
-                            child: Text(
-                              'Previous',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: _currentVoiceStep > 0 && !_isProcessingVoice 
-                                    ? const Color(0xFF1A237E) 
-                                    : Colors.grey[400],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _isProcessingVoice ? null : () {
-                              _skipCurrentField();
-                            },
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              side: const BorderSide(color: Colors.orange),
-                            ),
-                            child: Text(
-                              'Skip',
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.orange,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 8),
-                    
-                    // Next/Finish button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isProcessingVoice 
-                            ? null
-                            : () {
-                                if (_voiceCollectedValues.containsKey(_currentVoiceStep)) {
-                                  if (_currentVoiceStep < _voiceSteps.length - 1) {
-                                    _moveToNextVoiceStep();
-                                  } else {
-                                    _completeVoiceInput();
-                                  }
-                                }
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _voiceCollectedValues.containsKey(_currentVoiceStep) 
-                              ? (_currentVoiceStep < _voiceSteps.length - 1 ? Colors.blue : Colors.green)
-                              : Colors.grey[300],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: _isProcessingVoice
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Main action buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed:
+                                  _currentVoiceStep > 0 && !_isProcessingVoice
+                                  ? _moveToPreviousVoiceStep
+                                  : null,
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
                                 ),
-                              )
-                            : Text(
-                                _voiceCollectedValues.containsKey(_currentVoiceStep)
-                                    ? (_currentVoiceStep < _voiceSteps.length - 1 ? 'Next Field' : 'Finish & Save')
-                                    : 'Speak Now',
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                side: BorderSide(
+                                  color:
+                                      _currentVoiceStep > 0 &&
+                                          !_isProcessingVoice
+                                      ? const Color(0xFF1A237E)
+                                      : Colors.grey[300] ?? Colors.grey,
+                                ),
+                              ),
+                              child: Text(
+                                'Previous',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color:
+                                      _currentVoiceStep > 0 &&
+                                          !_isProcessingVoice
+                                      ? const Color(0xFF1A237E)
+                                      : Colors.grey[400],
                                 ),
                               ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _isProcessingVoice
+                                  ? null
+                                  : () {
+                                      _skipCurrentField();
+                                    },
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                side: const BorderSide(color: Colors.orange),
+                              ),
+                              child: Text(
+                                'Skip',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(height: 8),
+
+                      // Next/Finish button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isProcessingVoice
+                              ? null
+                              : () {
+                                  if (_voiceCollectedValues.containsKey(
+                                    _currentVoiceStep,
+                                  )) {
+                                    if (_currentVoiceStep <
+                                        _voiceSteps.length - 1) {
+                                      _moveToNextVoiceStep();
+                                    } else {
+                                      _completeVoiceInput();
+                                    }
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                _voiceCollectedValues.containsKey(
+                                  _currentVoiceStep,
+                                )
+                                ? (_currentVoiceStep < _voiceSteps.length - 1
+                                      ? Colors.blue
+                                      : Colors.green)
+                                : Colors.grey[300],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: _isProcessingVoice
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  _voiceCollectedValues.containsKey(
+                                        _currentVoiceStep,
+                                      )
+                                      ? (_currentVoiceStep <
+                                                _voiceSteps.length - 1
+                                            ? 'Next Field'
+                                            : 'Finish & Save')
+                                      : 'Speak Now',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   String _getExampleHint(int stepIndex) {
     switch (stepIndex) {
-      case 0: return '"100"';
-      case 1: return '"50"';
-      case 2: return '"200"';
-      case 3: return '"150"';
-      case 4: return '"30"';
-      case 5: return '"300"';
-      default: return 'Say the number clearly';
+      case 0:
+        return '"100"';
+      case 1:
+        return '"50"';
+      case 2:
+        return '"200"';
+      case 3:
+        return '"150"';
+      case 4:
+        return '"30"';
+      case 5:
+        return '"300"';
+      default:
+        return 'Say the number clearly';
     }
   }
 
@@ -3064,12 +3378,19 @@ Widget _buildVoiceOverlay() {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 14),
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 14,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: const TextStyle(color: Colors.red, fontSize: 11),
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 11,
+                          ),
                         ),
                       ),
                     ],
@@ -3088,42 +3409,57 @@ Widget _buildVoiceOverlay() {
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: _isLoading ? null : () async {
-                          DateTime? picked = await showDatePicker(
-                            context: context, 
-                            initialDate: DateTime.now(), 
-                            firstDate: DateTime(2020), 
-                            lastDate: DateTime(2030),
-                            builder: (context, child) {
-                              return Theme(
-                                data: ThemeData.light().copyWith(
-                                  colorScheme: const ColorScheme.light(primary: darkBlue),
-                                ),
-                                child: child!,
-                              );
-                            }
-                          );
-                          if (picked != null && mounted) {
-                            setState(() {
-                              _dateController.text = DateFormat('dd-MM-yyyy').format(picked);
-                            });
-                          }
-                        },
+                        onTap: _isLoading
+                            ? null
+                            : () async {
+                                DateTime? picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: DateTime.now(),
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime(2030),
+                                  builder: (context, child) {
+                                    return Theme(
+                                      data: ThemeData.light().copyWith(
+                                        colorScheme: const ColorScheme.light(
+                                          primary: darkBlue,
+                                        ),
+                                      ),
+                                      child: child!,
+                                    );
+                                  },
+                                );
+                                if (picked != null && mounted) {
+                                  setState(() {
+                                    _dateController.text = DateFormat(
+                                      'dd-MM-yyyy',
+                                    ).format(picked);
+                                  });
+                                }
+                              },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             color: bgGrey,
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.grey[200] ?? Colors.grey),
+                            border: Border.all(
+                              color: Colors.grey[200] ?? Colors.grey,
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.calendar_month, color: darkBlue, size: 14),
+                              const Icon(
+                                Icons.calendar_month,
+                                color: darkBlue,
+                                size: 14,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 _dateController.text,
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12, 
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.black87,
                                 ),
@@ -3135,15 +3471,24 @@ Widget _buildVoiceOverlay() {
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: bgGrey,
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.grey[200] ?? Colors.grey),
+                        border: Border.all(
+                          color: Colors.grey[200] ?? Colors.grey,
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.access_time, color: darkBlue, size: 14),
+                          const Icon(
+                            Icons.access_time,
+                            color: darkBlue,
+                            size: 14,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             '$_selectedHH:$_selectedMM',
@@ -3163,7 +3508,7 @@ Widget _buildVoiceOverlay() {
               const SizedBox(height: 16),
 
               _buildSectionHeader("Vitals Measurements"),
-              
+
               GestureDetector(
                 onTap: _startVoiceInput,
                 child: Container(
@@ -3176,7 +3521,10 @@ Widget _buildVoiceOverlay() {
                       colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
                     ),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF64B5F6), width: 1.5),
+                    border: Border.all(
+                      color: const Color(0xFF64B5F6),
+                      width: 1.5,
+                    ),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x2264B5F6),
@@ -3200,7 +3548,11 @@ Widget _buildVoiceOverlay() {
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.mic, color: Colors.white, size: 20),
+                        child: const Icon(
+                          Icons.mic,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -3232,13 +3584,17 @@ Widget _buildVoiceOverlay() {
                           color: const Color(0x1A1A237E),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Icon(Icons.chevron_right, color: darkBlue, size: 18),
+                        child: const Icon(
+                          Icons.chevron_right,
+                          color: darkBlue,
+                          size: 18,
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              
+
               Column(
                 children: [
                   Row(
@@ -3334,7 +3690,7 @@ Widget _buildVoiceOverlay() {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 60),
             ],
           ),
@@ -3362,7 +3718,13 @@ Widget _buildVoiceOverlay() {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, -3))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, -3),
+                ),
+              ],
             ),
             child: SizedBox(
               width: double.infinity,
@@ -3372,19 +3734,29 @@ Widget _buildVoiceOverlay() {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: darkBlue,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   elevation: 4,
                 ),
-                child: _isLoading 
+                child: _isLoading
                     ? const SizedBox(
                         height: 18,
                         width: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
-                    : Text("Save Assessment", style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
+                    : Text(
+                        "Save Assessment",
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -3397,8 +3769,12 @@ Widget _buildVoiceOverlay() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6, left: 2),
       child: Text(
-        title, 
-        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700])
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Colors.grey[700],
+        ),
       ),
     );
   }
@@ -3414,7 +3790,7 @@ Widget _buildVoiceOverlay() {
     int? currentFieldIndex,
   }) {
     final isCurrentField = fieldIndex == currentFieldIndex;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -3422,8 +3798,12 @@ Widget _buildVoiceOverlay() {
           children: [
             Expanded(
               child: Text(
-                label, 
-                style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey[500])
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[500],
+                ),
               ),
             ),
             if (fieldIndex != null)
@@ -3447,10 +3827,7 @@ Widget _buildVoiceOverlay() {
         const SizedBox(height: 2),
         Text(
           "Range: $range",
-          style: GoogleFonts.poppins(
-            fontSize: 9,
-            color: Colors.grey[400],
-          ),
+          style: GoogleFonts.poppins(fontSize: 9, color: Colors.grey[400]),
         ),
         const SizedBox(height: 4),
         Container(
@@ -3458,7 +3835,9 @@ Widget _buildVoiceOverlay() {
             color: bgGrey,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isCurrentField ? darkBlue : Colors.grey[200] ?? Colors.grey,
+              color: isCurrentField
+                  ? darkBlue
+                  : Colors.grey[200] ?? Colors.grey,
               width: isCurrentField ? 1.5 : 1,
             ),
           ),
@@ -3467,13 +3846,23 @@ Widget _buildVoiceOverlay() {
             focusNode: focusNode,
             keyboardType: TextInputType.number,
             enabled: !_isLoading,
-            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
             decoration: InputDecoration(
               prefixIcon: Icon(icon, color: darkBlue, size: 16),
               hintText: hint,
-              hintStyle: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 12),
+              hintStyle: GoogleFonts.poppins(
+                color: Colors.grey[400],
+                fontSize: 12,
+              ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 10,
+                horizontal: 10,
+              ),
               isDense: true,
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -384,7 +385,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
                       color: Colors.white,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
+                          color: Colors.grey.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, -5),
                         ),
@@ -569,7 +570,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
@@ -631,7 +632,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -777,11 +778,11 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
           GestureDetector(
             onTap: _showFilterDialog,
             child: Container(
-             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
                 color: hasActiveFilter
                     ? AppColors.accentBlue
-                    : AppColors.accentBlue.withOpacity(0.8),
+                    : AppColors.accentBlue.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Stack(
@@ -873,7 +874,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.08),
+              color: Colors.grey.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -889,8 +890,8 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(
-                    color: (training['categoryColor'] as Color).withOpacity(
-                      0.1,
+                    color: (training['categoryColor'] as Color).withValues(
+                      alpha: 0.1,
                     ),
                     borderRadius: BorderRadius.circular(14),
                   ),
@@ -950,7 +951,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
                             ),
                             decoration: BoxDecoration(
                               color: (training['categoryColor'] as Color)
-                                  .withOpacity(0.1),
+                                  .withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
@@ -1207,7 +1208,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.08),
+                  color: Colors.grey.withValues(alpha: 0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -1342,7 +1343,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.purple.withOpacity(0.1),
+                  color: AppColors.purple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
@@ -1392,7 +1393,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
+            color: Colors.grey.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -1410,7 +1411,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(icon, color: color, size: 18),
@@ -1435,7 +1436,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.accentBlue.withOpacity(0.1),
+                        color: AppColors.accentBlue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -1519,7 +1520,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(icon, color: color, size: 22),
@@ -1591,7 +1592,9 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: (training['categoryColor'] as Color).withOpacity(0.1),
+                color: (training['categoryColor'] as Color).withValues(
+                  alpha: 0.1,
+                ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -1721,7 +1724,9 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
               width: 45,
               height: 45,
               decoration: BoxDecoration(
-                color: (training['categoryColor'] as Color).withOpacity(0.1),
+                color: (training['categoryColor'] as Color).withValues(
+                  alpha: 0.1,
+                ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -1816,7 +1821,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
       height: 75,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -1884,7 +1889,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.08),
+              color: Colors.grey.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -1898,8 +1903,8 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: (training['categoryColor'] as Color).withOpacity(
-                      0.1,
+                    color: (training['categoryColor'] as Color).withValues(
+                      alpha: 0.1,
                     ),
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -2014,7 +2019,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.08),
+              color: Colors.grey.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 3),
             ),
@@ -2072,7 +2077,7 @@ class _TrainingModuleScreenState extends State<TrainingModuleScreen>
             ),
             Container(
               decoration: BoxDecoration(
-                color: AppColors.accentBlue.withOpacity(0.1),
+                color: AppColors.accentBlue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: IconButton(
@@ -2284,7 +2289,7 @@ class _TrainingRegistrationPageState extends State<TrainingRegistrationPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.08),
+                    color: Colors.grey.withValues(alpha: 0.08),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -2299,7 +2304,7 @@ class _TrainingRegistrationPageState extends State<TrainingRegistrationPage> {
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: (widget.training['categoryColor'] as Color)
-                              .withOpacity(0.1),
+                              .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
@@ -2330,7 +2335,7 @@ class _TrainingRegistrationPageState extends State<TrainingRegistrationPage> {
                               decoration: BoxDecoration(
                                 color:
                                     (widget.training['categoryColor'] as Color)
-                                        .withOpacity(0.1),
+                                        .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
@@ -2401,7 +2406,7 @@ class _TrainingRegistrationPageState extends State<TrainingRegistrationPage> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.08),
+                    color: Colors.grey.withValues(alpha: 0.08),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -2475,13 +2480,69 @@ class _TrainingRegistrationPageState extends State<TrainingRegistrationPage> {
                     // Phone
                     TextFormField(
                       controller: _phoneController,
-                      style: GoogleFonts.poppins(fontSize: 14),
                       keyboardType: TextInputType.phone,
-                      decoration: _inputDecoration(
-                        label: 'Phone Number',
-                        icon: Icons.phone_outlined,
+
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(10),
+                      ],
+
+                      style: GoogleFonts.poppins(
+                        fontSize: 22,
+                        fontWeight: FontWeight.normal, // 👈 important
+                        color: Colors.black87,
                       ),
-                      validator: _validatePhone,
+
+                      decoration: InputDecoration(
+                        hintText: 'Phone Number',
+
+                        hintStyle: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.normal,
+                          color: Colors.grey,
+                        ),
+
+                        prefixIcon: const Icon(
+                          Icons.phone,
+                          color: Color(0xFF0B8FA3),
+                        ),
+
+                        filled: true,
+                        fillColor: const Color(0xFFF5F6FA),
+
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE0E0E0),
+                          ),
+                        ),
+
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE0E0E0),
+                          ),
+                        ),
+
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFE0E0E0),
+                          ),
+                        ),
+                      ),
+
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter phone number';
+                        }
+
+                        if (value.length != 10) {
+                          return 'Phone number must be 10 digits';
+                        }
+
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 24),
 
@@ -2521,7 +2582,7 @@ class _TrainingRegistrationPageState extends State<TrainingRegistrationPage> {
                           backgroundColor: AppColors.accentBlue,
                           foregroundColor: Colors.white,
                           disabledBackgroundColor: AppColors.accentBlue
-                              .withOpacity(0.6),
+                              .withValues(alpha: 0.6),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -2663,7 +2724,7 @@ class TrainingDetailScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.08),
+                    color: Colors.grey.withValues(alpha: 0.08),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -2678,7 +2739,7 @@ class TrainingDetailScreen extends StatelessWidget {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: (training['categoryColor'] as Color)
-                              .withOpacity(0.1),
+                              .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
@@ -2710,7 +2771,7 @@ class TrainingDetailScreen extends StatelessWidget {
                                   ),
                                   decoration: BoxDecoration(
                                     color: (training['categoryColor'] as Color)
-                                        .withOpacity(0.1),
+                                        .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
@@ -2839,7 +2900,7 @@ class TrainingDetailScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.08),
+                    color: Colors.grey.withValues(alpha: 0.08),
                     blurRadius: 10,
                     offset: const Offset(0, 3),
                   ),
@@ -3047,6 +3108,7 @@ class CertificateScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.lightGreyColor,
+
       appBar: AppBar(
         backgroundColor: AppColors.primaryDarkBlue,
         foregroundColor: Colors.white,
@@ -3062,34 +3124,46 @@ class CertificateScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
+
+      // ================= BODY =================
+      body: SafeArea(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // ================= CERTIFICATE =================
               Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(24),
+
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
+
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: Colors.grey.withValues(alpha: 0.1),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
                   ],
+
                   border: Border.all(color: Colors.amber.shade200, width: 3),
                 ),
+
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    // MEDAL ICON
                     Icon(
                       Icons.military_tech,
                       size: 60,
                       color: Colors.amber.shade700,
                     ),
+
                     const SizedBox(height: 16),
+
+                    // CERTIFICATE
                     Text(
                       'CERTIFICATE',
                       style: GoogleFonts.poppins(
@@ -3099,7 +3173,10 @@ class CertificateScreen extends StatelessWidget {
                         letterSpacing: 2,
                       ),
                     ),
+
                     const SizedBox(height: 8),
+
+                    // OF COMPLETION
                     Text(
                       'OF COMPLETION',
                       style: GoogleFonts.poppins(
@@ -3108,7 +3185,10 @@ class CertificateScreen extends StatelessWidget {
                         letterSpacing: 1,
                       ),
                     ),
+
                     const SizedBox(height: 30),
+
+                    // DESCRIPTION
                     Text(
                       'This is to certify that',
                       style: GoogleFonts.poppins(
@@ -3116,7 +3196,10 @@ class CertificateScreen extends StatelessWidget {
                         color: Colors.grey.shade600,
                       ),
                     ),
+
                     const SizedBox(height: 8),
+
+                    // NAME
                     Text(
                       'John Doe',
                       style: GoogleFonts.poppins(
@@ -3125,7 +3208,9 @@ class CertificateScreen extends StatelessWidget {
                         color: AppColors.textDark,
                       ),
                     ),
+
                     const SizedBox(height: 8),
+
                     Text(
                       'has successfully completed',
                       style: GoogleFonts.poppins(
@@ -3133,9 +3218,12 @@ class CertificateScreen extends StatelessWidget {
                         color: Colors.grey.shade600,
                       ),
                     ),
+
                     const SizedBox(height: 20),
+
+                    // TRAINING TITLE
                     Text(
-                      training['title'],
+                      training['title']?.toString() ?? '',
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -3143,76 +3231,110 @@ class CertificateScreen extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
+
                     const SizedBox(height: 30),
+
+                    // ================= DATE + ID =================
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Column(
-                          children: [
-                            Text(
-                              'Date',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                color: Colors.grey.shade600,
+                        // DATE
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Date',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade600,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              DateFormat('MMM d, yyyy').format(completionDate),
-                              style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
+
+                              const SizedBox(height: 4),
+
+                              Text(
+                                DateFormat(
+                                  'MMM d, yyyy',
+                                ).format(completionDate),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        Column(
-                          children: [
-                            Text(
-                              'Certificate ID',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                color: Colors.grey.shade600,
+
+                        // CERTIFICATE ID
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Certificate ID',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade600,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'CERT-${training['id'].toString().padLeft(6, '0')}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+
+                              const SizedBox(height: 4),
+
+                              Text(
+                                'CERT-${training['id'].toString().padLeft(6, '0')}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textAlign: TextAlign.right,
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 16),
+
+                    // INSTRUCTOR
                     Text(
-                      'Instructor: ${training['instructor']}',
+                      'Instructor: ${training['instructor'] ?? ''}',
                       style: GoogleFonts.poppins(
                         fontSize: 11,
                         color: Colors.grey.shade600,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
               ),
+
+              // SPACE BETWEEN CERTIFICATE AND BUTTON
               const SizedBox(height: 30),
+
+              // ================= DOWNLOAD BUTTON =================
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {},
+
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accentBlue,
                     foregroundColor: Colors.white,
+
                     padding: const EdgeInsets.symmetric(vertical: 16),
+
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
+
                     elevation: 0,
                   ),
+
                   icon: const Icon(Icons.file_download_outlined, size: 20),
+
                   label: Text(
                     'Download Certificate',
                     style: GoogleFonts.poppins(
@@ -3222,6 +3344,9 @@ class CertificateScreen extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // Bottom spacing
+              const SizedBox(height: 20),
             ],
           ),
         ),

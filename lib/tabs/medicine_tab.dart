@@ -10,9 +10,9 @@ class MedicineListTab extends StatefulWidget {
   final String patientId; // Useful for API calls
 
   const MedicineListTab({
-    super.key, 
-    required this.scrollController, 
-    required this.patientId
+    super.key,
+    required this.scrollController,
+    required this.patientId,
   });
 
   @override
@@ -22,9 +22,28 @@ class MedicineListTab extends StatefulWidget {
 class _MedicineListTabState extends State<MedicineListTab> {
   // TODO: Replace this with data fetched from your Backend/Service
   final List<Map<String, dynamic>> meds = [
-    {"name": "Saaz-DS Tablet", "route": "INTRAMUSCULAR", "dose": "1-1-0", "status": "pending", "remark": ""},
-    {"name": "Inj. Pantocid", "route": "IV", "dose": "1-0-1", "status": "pending", "remark": ""},
-    {"name": "Paracetamol 500mg", "route": "ORAL", "dose": "1-0-1", "status": "given", "time": "10:30 AM", "remark": "Mild fever"},
+    {
+      "name": "Saaz-DS Tablet",
+      "route": "INTRAMUSCULAR",
+      "dose": "1-1-0",
+      "status": "pending",
+      "remark": "",
+    },
+    {
+      "name": "Inj. Pantocid",
+      "route": "IV",
+      "dose": "1-0-1",
+      "status": "pending",
+      "remark": "",
+    },
+    {
+      "name": "Paracetamol 500mg",
+      "route": "ORAL",
+      "dose": "1-0-1",
+      "status": "given",
+      "time": "10:30 AM",
+      "remark": "Mild fever",
+    },
   ];
 
   @override
@@ -36,14 +55,26 @@ class _MedicineListTabState extends State<MedicineListTab> {
       itemBuilder: (context, index) {
         final med = meds[index];
         bool isGiven = med['status'] == "given";
-        
+
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: isGiven ? Colors.grey.shade50 : Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isGiven ? Colors.green.withOpacity(0.3) : Colors.grey.shade300),
-            boxShadow: isGiven ? [] : [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
+            border: Border.all(
+              color: isGiven
+                  ? Colors.green.withValues(alpha: 0.3)
+                  : Colors.grey.shade300,
+            ),
+            boxShadow: isGiven
+                ? []
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
           child: Column(
             children: [
@@ -59,7 +90,14 @@ class _MedicineListTabState extends State<MedicineListTab> {
                         children: [
                           Row(
                             children: [
-                              Text(med['name'], style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14, color: isGiven ? Colors.grey : Colors.black87)),
+                              Text(
+                                med['name'],
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: isGiven ? Colors.grey : Colors.black87,
+                                ),
+                              ),
                               const SizedBox(width: 8),
                               _buildTag(med['route'], Colors.blue),
                             ],
@@ -67,9 +105,17 @@ class _MedicineListTabState extends State<MedicineListTab> {
                           const SizedBox(height: 6),
                           Row(
                             children: [
-                              _buildInfoBadge(Icons.timer_outlined, med['dose']),
+                              _buildInfoBadge(
+                                Icons.timer_outlined,
+                                med['dose'],
+                              ),
                               const SizedBox(width: 12),
-                              if(isGiven) _buildInfoBadge(Icons.check_circle_outline, "Given ${med['time']}", color: Colors.green),
+                              if (isGiven)
+                                _buildInfoBadge(
+                                  Icons.check_circle_outline,
+                                  "Given ${med['time']}",
+                                  color: Colors.green,
+                                ),
                             ],
                           ),
                         ],
@@ -81,12 +127,17 @@ class _MedicineListTabState extends State<MedicineListTab> {
                       child: Checkbox(
                         value: isGiven,
                         activeColor: Colors.green,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                         onChanged: (val) {
                           // TODO: Call your Service API here to update status
                           setState(() {
-                             med['status'] = val == true ? "given" : "pending";
-                             if(val == true) med['time'] = DateFormat('hh:mm a').format(DateTime.now());
+                            med['status'] = val == true ? "given" : "pending";
+                            if (val == true)
+                              med['time'] = DateFormat(
+                                'hh:mm a',
+                              ).format(DateTime.now());
                           });
                         },
                       ),
@@ -94,28 +145,51 @@ class _MedicineListTabState extends State<MedicineListTab> {
                   ],
                 ),
               ),
-              
+
               // Bottom: Remark Input (Visible if active or has remark)
-              if (!isGiven || (med['remark'] != null && med['remark'].isNotEmpty))
+              if (!isGiven ||
+                  (med['remark'] != null && med['remark'].isNotEmpty))
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12))),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(12),
+                    ),
+                  ),
                   child: Row(
                     children: [
                       const Icon(Icons.edit_note, size: 18, color: Colors.grey),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: isGiven 
-                        ? Text(med['remark'].isEmpty ? "No remarks" : med['remark'], style: const TextStyle(fontSize: 12, color: Colors.grey))
-                        : TextField(
-                            decoration: const InputDecoration.collapsed(hintText: "Add Remark (Optional)", hintStyle: TextStyle(fontSize: 12, color: Colors.grey)),
-                            style: const TextStyle(fontSize: 13),
-                            onChanged: (val) => med['remark'] = val,
-                          ),
+                        child: isGiven
+                            ? Text(
+                                med['remark'].isEmpty
+                                    ? "No remarks"
+                                    : med['remark'],
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              )
+                            : TextField(
+                                decoration: const InputDecoration.collapsed(
+                                  hintText: "Add Remark (Optional)",
+                                  hintStyle: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                style: const TextStyle(fontSize: 13),
+                                onChanged: (val) => med['remark'] = val,
+                              ),
                       ),
                     ],
                   ),
-                )
+                ),
             ],
           ),
         );
@@ -126,12 +200,39 @@ class _MedicineListTabState extends State<MedicineListTab> {
   Widget _buildTag(String text, MaterialColor color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: color.shade50, borderRadius: BorderRadius.circular(4)),
-      child: Text(text, style: TextStyle(fontSize: 9, color: color.shade800, fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(
+        color: color.shade50,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 9,
+          color: color.shade800,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
-  
-  Widget _buildInfoBadge(IconData icon, String text, {Color color = Colors.grey}) {
-    return Row(children: [Icon(icon, size: 14, color: color), const SizedBox(width: 4), Text(text, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500))]);
+
+  Widget _buildInfoBadge(
+    IconData icon,
+    String text, {
+    Color color = Colors.grey,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 11,
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
   }
 }

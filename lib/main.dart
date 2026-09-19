@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:staff_mate/pages/login_page.dart';
 import 'package:staff_mate/pages/dashboard_page.dart';
 import 'package:staff_mate/presentation/face_attendance/face_attendance_page.dart';
@@ -13,14 +14,31 @@ import 'package:staff_mate/pages/session_gate.dart';
 import 'package:staff_mate/pages/settings.dart';
 import 'package:staff_mate/presentation/language/language_selector_page.dart';
 import 'package:staff_mate/di/providers.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+Future<void> _loadSavedSettings() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  final savedFontSize = prefs.getDouble('fontSize') ?? 16.0;
+  final savedDarkMode = prefs.getBool('darkMode') ?? false;
+
+  fontSizeNotifier.value = savedFontSize;
+  darkModeNotifier.value = savedDarkMode;
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
+  // Load saved app settings BEFORE the app starts.
+  await _loadSavedSettings();
+
   setupProviders();
+
   runApp(const MyApp());
 }
 
@@ -62,23 +80,27 @@ class MyApp extends StatelessWidget {
   ThemeData _buildTheme(bool isDark, double fontSize) {
     const primaryColor = Color(0xFF1A237E);
 
-    final textTheme = TextTheme(
-      displayLarge:  TextStyle(fontSize: fontSize + 18),
-      displayMedium: TextStyle(fontSize: fontSize + 14),
-      displaySmall:  TextStyle(fontSize: fontSize + 10),
-      headlineLarge: TextStyle(fontSize: fontSize + 8),
-      headlineMedium:TextStyle(fontSize: fontSize + 6),
-      headlineSmall: TextStyle(fontSize: fontSize + 4),
-      titleLarge:    TextStyle(fontSize: fontSize + 2),
-      titleMedium:   TextStyle(fontSize: fontSize),
-      titleSmall:    TextStyle(fontSize: fontSize - 1),
-      bodyLarge:     TextStyle(fontSize: fontSize + 2),
-      bodyMedium:    TextStyle(fontSize: fontSize),       // default body
-      bodySmall:     TextStyle(fontSize: fontSize - 2),
-      labelLarge:    TextStyle(fontSize: fontSize),
-      labelMedium:   TextStyle(fontSize: fontSize - 2),
-      labelSmall:    TextStyle(fontSize: fontSize - 3),
-    );
+   final textTheme = const TextTheme(
+  displayLarge: TextStyle(fontSize: 34),
+  displayMedium: TextStyle(fontSize: 30),
+  displaySmall: TextStyle(fontSize: 26),
+
+  headlineLarge: TextStyle(fontSize: 24),
+  headlineMedium: TextStyle(fontSize: 22),
+  headlineSmall: TextStyle(fontSize: 20),
+
+  titleLarge: TextStyle(fontSize: 18),
+  titleMedium: TextStyle(fontSize: 16),
+  titleSmall: TextStyle(fontSize: 15),
+
+  bodyLarge: TextStyle(fontSize: 18),
+  bodyMedium: TextStyle(fontSize: 16),
+  bodySmall: TextStyle(fontSize: 14),
+
+  labelLarge: TextStyle(fontSize: 16),
+  labelMedium: TextStyle(fontSize: 14),
+  labelSmall: TextStyle(fontSize: 13),
+);
 
     const appBarOverlay = AppBarTheme(
       systemOverlayStyle: SystemUiOverlayStyle(
@@ -129,8 +151,7 @@ return ThemeData(
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
-      textStyle: TextStyle(fontSize: fontSize),
-    ),
+textStyle: const TextStyle(fontSize: 16),    ),
   ),
 );
     }
@@ -156,8 +177,7 @@ return ThemeData(
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          textStyle: TextStyle(fontSize: fontSize),
-        ),
+textStyle: const TextStyle(fontSize: 16),        ),
       ),
     );
   }
@@ -170,13 +190,23 @@ return ThemeData(
         return ValueListenableBuilder<double>(
           valueListenable: fontSizeNotifier,
           builder: (context, fontSize, _) {
-            return MaterialApp(
-              title: 'Smart Mate',
-              debugShowCheckedModeBanner: false,
-              themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-              theme: _buildTheme(false, fontSize),
-              darkTheme: _buildTheme(true, fontSize),
-              home: const AppStartRouter(),
+          return MaterialApp(
+  title: 'Smart Mate',
+  debugShowCheckedModeBanner: false,
+  themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+  theme: _buildTheme(false, fontSize),
+  darkTheme: _buildTheme(true, fontSize),
+
+  // ADD THIS
+  builder: (context, child) {
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+textScaler: TextScaler.linear(fontSize / 16.0),      ),
+      child: child ?? const SizedBox.shrink(),
+    );
+  },
+
+  home: const AppStartRouter(),
               routes: {
                  '/session-gate': (context) => const SessionGate(),
                 '/login': (context) => const LoginPage(),

@@ -33,8 +33,8 @@ class HRGradientHeader extends StatelessWidget {
       decoration: const BoxDecoration(
         gradient: HRTheme.primaryGradient,
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(HRTheme.radiusXL),
-          bottomRight: Radius.circular(HRTheme.radiusXL),
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
         ),
       ),
       child: Row(
@@ -46,10 +46,14 @@ class HRGradientHeader extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(HRTheme.radiusSM),
                 ),
-                child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
+                child: const Icon(
+                  Icons.arrow_back_ios_new,
+                  color: Colors.white,
+                  size: 18,
+                ),
               ),
             )
           else if (leading != null)
@@ -59,17 +63,24 @@ class HRGradientHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white, fontSize: 18,
-                      fontWeight: FontWeight.w700, letterSpacing: 0.2,
-                    )),
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                ),
                 if (subtitle != null)
-                  Text(subtitle!,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white70, fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                      )),
+                  Text(
+                    subtitle!,
+                    style: GoogleFonts.poppins(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -100,8 +111,10 @@ class HRStatusBadge extends StatelessWidget {
   });
 
   factory HRStatusBadge.fromStatus(HRStatus status) => HRStatusBadge(
-    label: status.label, color: status.color,
-    bgColor: status.bgColor, icon: status.icon,
+    label: status.label,
+    color: status.color,
+    bgColor: status.bgColor,
+    icon: status.icon,
   );
 
   @override
@@ -111,7 +124,7 @@ class HRStatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(HRTheme.radiusFull),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -120,10 +133,14 @@ class HRStatusBadge extends StatelessWidget {
             Icon(icon, size: fontSize + 1, color: color),
             const SizedBox(width: 3),
           ],
-          Text(label,
-              style: GoogleFonts.poppins(
-                fontSize: fontSize, fontWeight: FontWeight.w600, color: color,
-              )),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: fontSize,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -163,10 +180,16 @@ class HRInfoRow extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: (iconColor ?? HRTheme.primaryDark).withOpacity(0.1),
+                    color: (iconColor ?? HRTheme.primaryDark).withValues(
+                      alpha: 0.1,
+                    ),
                     borderRadius: BorderRadius.circular(HRTheme.radiusXS),
                   ),
-                  child: Icon(icon, size: 14, color: iconColor ?? HRTheme.primaryDark),
+                  child: Icon(
+                    icon,
+                    size: 14,
+                    color: iconColor ?? HRTheme.primaryDark,
+                  ),
                 ),
                 const SizedBox(width: 10),
               ],
@@ -174,25 +197,34 @@ class HRInfoRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(label,
-                        style: GoogleFonts.poppins(
-                          fontSize: 11, color: HRTheme.textSecondary,
-                          fontWeight: FontWeight.w400,
-                        )),
+                    Text(
+                      label,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: HRTheme.textSecondary,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(value,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: isDark ? Colors.white : HRTheme.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        )),
+                    Text(
+                      value,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: isDark ? Colors.white : HRTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
         ),
-        if (!isLast) Divider(color: isDark ? HRTheme.dividerDark : HRTheme.divider, height: 1),
+        if (!isLast)
+          Divider(
+            color: isDark ? HRTheme.dividerDark : HRTheme.divider,
+            height: 1,
+          ),
       ],
     );
   }
@@ -267,21 +299,27 @@ class HRSectionHeader extends StatelessWidget {
             const SizedBox(width: 6),
           ],
           Expanded(
-            child: Text(title,
-                style: GoogleFonts.poppins(
-                  fontSize: 14, fontWeight: FontWeight.w700,
-                  color: HRTheme.primaryDark,
-                )),
+            child: Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: HRTheme.primaryDark,
+              ),
+            ),
           ),
           if (actionLabel != null)
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onAction,
-              child: Text(actionLabel!,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12, fontWeight: FontWeight.w600,
-                    color: HRTheme.cyan,
-                  )),
+              child: Text(
+                actionLabel!,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: HRTheme.cyan,
+                ),
+              ),
             ),
         ],
       ),
@@ -312,15 +350,20 @@ class HRProgressBar extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (label != null) ...[
-          Text(label!,
-              style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textSecondary)),
+          Text(
+            label!,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              color: HRTheme.textSecondary,
+            ),
+          ),
           const SizedBox(height: 4),
         ],
         ClipRRect(
           borderRadius: BorderRadius.circular(HRTheme.radiusFull),
           child: LinearProgressIndicator(
             value: value.clamp(0.0, 1.0),
-            backgroundColor: color.withOpacity(0.15),
+            backgroundColor: color.withValues(alpha: 0.15),
             valueColor: AlwaysStoppedAnimation<Color>(color),
             minHeight: height,
           ),
@@ -349,29 +392,36 @@ class HRSkeleton extends StatefulWidget {
   State<HRSkeleton> createState() => _HRSkeletonState();
 }
 
-class _HRSkeletonState extends State<HRSkeleton> with SingleTickerProviderStateMixin {
+class _HRSkeletonState extends State<HRSkeleton>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _anim;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
-      ..repeat(reverse: true);
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
     _anim = Tween<double>(begin: 0.3, end: 0.7).animate(_ctrl);
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _anim,
       builder: (_, __) => Container(
-        width: widget.width, height: widget.height,
+        width: widget.width,
+        height: widget.height,
         decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(_anim.value),
+          color: Colors.grey.withValues(alpha: _anim.value),
           borderRadius: BorderRadius.circular(widget.radius),
         ),
       ),
@@ -409,20 +459,34 @@ class HREmptyState extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: HRTheme.primaryDark.withOpacity(0.07),
+                color: HRTheme.primaryDark.withValues(alpha: 0.07),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 48, color: HRTheme.primaryDark.withOpacity(0.5)),
+              child: Icon(
+                icon,
+                size: 48,
+                color: HRTheme.primaryDark.withValues(alpha: 0.5),
+              ),
             ),
             const SizedBox(height: 16),
-            Text(title, textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 16, fontWeight: FontWeight.w600,
-                  color: HRTheme.textPrimary,
-                )),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: HRTheme.textPrimary,
+              ),
+            ),
             const SizedBox(height: 6),
-            Text(subtitle, textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(fontSize: 13, color: HRTheme.textSecondary)),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: HRTheme.textSecondary,
+              ),
+            ),
             if (actionLabel != null) ...[
               const SizedBox(height: 20),
               ElevatedButton(
@@ -431,9 +495,13 @@ class HREmptyState extends StatelessWidget {
                   backgroundColor: HRTheme.primaryDark,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(HRTheme.radiusSM)),
+                    borderRadius: BorderRadius.circular(HRTheme.radiusSM),
+                  ),
                 ),
-                child: Text(actionLabel!, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                child: Text(
+                  actionLabel!,
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                ),
               ),
             ],
           ],
@@ -464,7 +532,7 @@ class HRTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final active = activeColor ?? HRTheme.primaryDark;
-    
+
     return Container(
       height: 52,
       width: double.infinity,
@@ -489,17 +557,20 @@ class HRTabBar extends StatelessWidget {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeInOut,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: sel ? active : Colors.transparent,
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: sel
                         ? [
                             BoxShadow(
-                              color: active.withOpacity(0.3),
+                              color: active.withValues(alpha: 0.3),
                               blurRadius: 6,
                               offset: const Offset(0, 3),
-                            )
+                            ),
                           ]
                         : [],
                   ),
@@ -509,7 +580,11 @@ class HRTabBar extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 13,
                         fontWeight: sel ? FontWeight.w600 : FontWeight.w500,
-                        color: sel ? Colors.white : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                        color: sel
+                            ? Colors.white
+                            : (isDark
+                                  ? Colors.grey.shade400
+                                  : Colors.grey.shade600),
                       ),
                     ),
                   ),
@@ -565,29 +640,41 @@ class HRStatCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(HRTheme.radiusSM),
                   ),
                   child: Icon(icon, color: Colors.white, size: 18),
                 ),
-                const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 12),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white54,
+                  size: 12,
+                ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(value,
-                style: GoogleFonts.poppins(
-                  fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white,
-                )),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
             const SizedBox(height: 1),
-            Text(title,
-                style: GoogleFonts.poppins(
-                  fontSize: 10, fontWeight: FontWeight.w500, color: Colors.white70,
-                )),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: Colors.white70,
+              ),
+            ),
             if (subtitle != null)
-              Text(subtitle!,
-                  style: GoogleFonts.poppins(
-                    fontSize: 9, color: Colors.white54,
-                  )),
+              Text(
+                subtitle!,
+                style: GoogleFonts.poppins(fontSize: 9, color: Colors.white54),
+              ),
           ],
         ),
       ),
@@ -633,23 +720,34 @@ class HRModuleTile extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(icon, color: color, size: 26),
                 ),
                 if (badgeCount != null && badgeCount! > 0)
                   Positioned(
-                    top: 0, right: 0,
+                    top: 0,
+                    right: 0,
                     child: Container(
                       padding: const EdgeInsets.all(3),
                       decoration: const BoxDecoration(
-                        color: Colors.red, shape: BoxShape.circle,
+                        color: Colors.red,
+                        shape: BoxShape.circle,
                       ),
-                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                      child: Text('$badgeCount',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$badgeCount',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -657,13 +755,17 @@ class HRModuleTile extends StatelessWidget {
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2, overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11, fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : HRTheme.textPrimary,
-                  )),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : HRTheme.textPrimary,
+                ),
+              ),
             ),
           ],
         ),
@@ -699,13 +801,21 @@ class HRBarChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: List.generate(values.length, (i) {
-          final pct = maxValue > 0 ? (values[i] / maxValue).clamp(0.0, 1.0) : 0.0;
-          final isHighlighted = values[i] == values.reduce((a, b) => a > b ? a : b);
+          final pct = maxValue > 0
+              ? (values[i] / maxValue).clamp(0.0, 1.0)
+              : 0.0;
+          final isHighlighted =
+              values[i] == values.reduce((a, b) => a > b ? a : b);
           return Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text('${values[i].toStringAsFixed(0)}',
-                  style: GoogleFonts.poppins(fontSize: 9, color: HRTheme.textSecondary)),
+              Text(
+                '${values[i].toStringAsFixed(0)}',
+                style: GoogleFonts.poppins(
+                  fontSize: 9,
+                  color: HRTheme.textSecondary,
+                ),
+              ),
               const SizedBox(height: 2),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 600),
@@ -715,19 +825,28 @@ class HRBarChart extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: isHighlighted
-                        ? [barColor, barColor.withOpacity(0.7)]
-                        : [barColor.withOpacity(0.6), barColor.withOpacity(0.3)],
-                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                        ? [barColor, barColor.withValues(alpha: 0.7)]
+                        : [
+                            barColor.withValues(alpha: 0.6),
+                            barColor.withValues(alpha: 0.3),
+                          ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(6),
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
-              Text(labels[i],
-                  style: GoogleFonts.poppins(
-                    fontSize: 9, fontWeight: FontWeight.w500,
-                    color: isHighlighted ? barColor : HRTheme.textSecondary,
-                  )),
+              Text(
+                labels[i],
+                style: GoogleFonts.poppins(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w500,
+                  color: isHighlighted ? barColor : HRTheme.textSecondary,
+                ),
+              ),
             ],
           );
         }),
@@ -760,31 +879,42 @@ class HRCircularProgress extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          width: size, height: size,
+          width: size,
+          height: size,
           child: Stack(
             alignment: Alignment.center,
             children: [
               SizedBox(
-                width: size, height: size,
+                width: size,
+                height: size,
                 child: CircularProgressIndicator(
                   value: value.clamp(0.0, 1.0),
                   strokeWidth: 7,
-                  backgroundColor: color.withOpacity(0.15),
+                  backgroundColor: color.withValues(alpha: 0.15),
                   valueColor: AlwaysStoppedAnimation<Color>(color),
                   strokeCap: StrokeCap.round,
                 ),
               ),
-              Text(centerText,
-                  style: GoogleFonts.poppins(
-                    fontSize: 14, fontWeight: FontWeight.w800, color: color,
-                  )),
+              Text(
+                centerText,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
+              ),
             ],
           ),
         ),
         const SizedBox(height: 6),
-        Text(label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textSecondary)),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            color: HRTheme.textSecondary,
+          ),
+        ),
       ],
     );
   }
@@ -820,12 +950,20 @@ class HRTimelineItem extends StatelessWidget {
         Column(
           children: [
             Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
               child: Icon(icon, size: 18, color: color),
             ),
             if (!isLast)
-              Container(width: 2, height: 40, color: color.withOpacity(0.2)),
+              Container(
+                width: 2,
+                height: 40,
+                color: color.withValues(alpha: 0.2),
+              ),
           ],
         ),
         const SizedBox(width: 12),
@@ -836,17 +974,30 @@ class HRTimelineItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 8),
-                Text(title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13, fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : HRTheme.textPrimary,
-                    )),
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : HRTheme.textPrimary,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(subtitle,
-                    style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary)),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: HRTheme.textSecondary,
+                  ),
+                ),
                 const SizedBox(height: 3),
-                Text(time,
-                    style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textHint)),
+                Text(
+                  time,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: HRTheme.textHint,
+                  ),
+                ),
               ],
             ),
           ),
@@ -864,7 +1015,12 @@ class HRSearchBar extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final TextEditingController? controller;
 
-  const HRSearchBar({super.key, required this.hint, this.onChanged, this.controller});
+  const HRSearchBar({
+    super.key,
+    required this.hint,
+    this.onChanged,
+    this.controller,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -883,7 +1039,11 @@ class HRSearchBar extends StatelessWidget {
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.poppins(fontSize: 13, color: HRTheme.textHint),
-          prefixIcon: const Icon(Icons.search, size: 20, color: HRTheme.textHint),
+          prefixIcon: const Icon(
+            Icons.search,
+            size: 20,
+            color: HRTheme.textHint,
+          ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
@@ -911,9 +1071,12 @@ class HRAnnounceCard extends StatelessWidget {
 
   Color get _priorityColor {
     switch (priority.toLowerCase()) {
-      case 'high': return HRTheme.error;
-      case 'medium': return HRTheme.warning;
-      default: return HRTheme.teal;
+      case 'high':
+        return HRTheme.error;
+      case 'medium':
+        return HRTheme.warning;
+      default:
+        return HRTheme.teal;
     }
   }
 
@@ -926,7 +1089,7 @@ class HRAnnounceCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? HRTheme.bgCardDark : Colors.white,
         borderRadius: BorderRadius.circular(HRTheme.radiusMD),
-        border: Border.all(color: _priorityColor.withOpacity(0.3)),
+        border: Border.all(color: _priorityColor.withValues(alpha: 0.3)),
         boxShadow: HRTheme.subtleShadow,
       ),
       child: Column(
@@ -937,28 +1100,47 @@ class HRAnnounceCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: _priorityColor.withOpacity(0.1),
+                  color: _priorityColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(HRTheme.radiusFull),
                 ),
-                child: Text(priority,
-                    style: GoogleFonts.poppins(
-                      fontSize: 10, fontWeight: FontWeight.w600, color: _priorityColor,
-                    )),
+                child: Text(
+                  priority,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: _priorityColor,
+                  ),
+                ),
               ),
               const Spacer(),
-              Text(date,
-                  style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textHint)),
+              Text(
+                date,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: HRTheme.textHint,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(title,
-              style: GoogleFonts.poppins(
-                fontSize: 13, fontWeight: FontWeight.w700,
-                color: isDark ? Colors.white : HRTheme.textPrimary,
-              )),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : HRTheme.textPrimary,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(content, maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary)),
+          Text(
+            content,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: HRTheme.textSecondary,
+            ),
+          ),
         ],
       ),
     );
@@ -996,20 +1178,40 @@ class HRPrimaryButton extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(HRTheme.radiusSM)),
+            borderRadius: BorderRadius.circular(HRTheme.radiusSM),
+          ),
         ),
         child: isLoading
-            ? const SizedBox(width: 20, height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
             : icon != null
-                ? Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(icon, size: 18),
-                    const SizedBox(width: 8),
-                    Text(label,
-                        style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
-                  ])
-                : Text(label,
-                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 18),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              )
+            : Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
   }
@@ -1024,14 +1226,18 @@ class HRDividerLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      const Expanded(child: Divider()),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Text(label,
-            style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textHint)),
-      ),
-      const Expanded(child: Divider()),
-    ]);
+    return Row(
+      children: [
+        const Expanded(child: Divider()),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textHint),
+          ),
+        ),
+        const Expanded(child: Divider()),
+      ],
+    );
   }
 }

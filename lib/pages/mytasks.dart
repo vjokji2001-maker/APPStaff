@@ -55,11 +55,11 @@ class _MyTasksPageState extends State<MyTasksPage>
   DateTime _selectedCalendarDate = DateTime.now();
   List<Task> _calendarTasks = [];
   bool _isLoadingCalendarTasks = false;
-  
+
   // Starred tasks
   Set<int> _starredTaskIds = {};
   List<Task> _starredTasks = [];
-  
+
   // Assigned to me tasks
   List<Task> _assignedToMeTasks = [];
   bool _isLoadingAssignedTasks = false;
@@ -83,7 +83,7 @@ class _MyTasksPageState extends State<MyTasksPage>
     _searchController.addListener(() {
       if (mounted) setState(() => _searchQuery = _searchController.text);
     });
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scheduleReminders();
     });
@@ -96,219 +96,263 @@ class _MyTasksPageState extends State<MyTasksPage>
   }
 
   // ─── ASSIGNED TO ME TASKS ─────────────────────────────────────────────────────────
- // Add this method to debug the API response
-Future<void> _loadAssignedToMeTasks() async {
-  if (!mounted) return;
-  setState(() => _isLoadingAssignedTasks = true);
-  try {
-    final response = await MyTasksService.getMyTasks();
-    debugPrint('=== ASSIGNED TASKS API FULL RESPONSE ===');
-    debugPrint('Response keys: ${response.keys}');
-    debugPrint('Response data type: ${response['data'].runtimeType}');
-    debugPrint('Full response: $response');
-    
-    _processAssignedTasksResponse(response);
-  } catch (e) {
-    debugPrint('Error loading assigned tasks: $e');
-    // Only show the raw error in debug builds — in release the section
-    // simply stays empty, which is the correct UX for a non-critical widget.
-    if (mounted && kDebugMode) {
-      debugPrint('Assigned tasks load failed (debug only): $e');
-    }
-  } finally {
-    if (mounted) setState(() => _isLoadingAssignedTasks = false);
-  }
-}
+  // Add this method to debug the API response
+  Future<void> _loadAssignedToMeTasks() async {
+    if (!mounted) return;
+    setState(() => _isLoadingAssignedTasks = true);
+    try {
+      final response = await MyTasksService.getMyTasks();
+      debugPrint('=== ASSIGNED TASKS API FULL RESPONSE ===');
+      debugPrint('Response keys: ${response.keys}');
+      debugPrint('Response data type: ${response['data'].runtimeType}');
+      debugPrint('Full response: $response');
 
-void _processAssignedTasksResponse(Map<String, dynamic> response) {
-  List<dynamic> tasksData = [];
-  
-  // Try different response structures
-  if (response.containsKey('data')) {
-    final dataObj = response['data'];
-    debugPrint('Data object type: ${dataObj.runtimeType}');
-    
-    if (dataObj is List) {
-      tasksData = dataObj;
-      debugPrint('Found List in data, length: ${tasksData.length}');
-    } else if (dataObj is Map<String, dynamic>) {
-      // Check for nested list structures
-      if (dataObj.containsKey('list') && dataObj['list'] is List) {
-        tasksData = dataObj['list'] as List;
-        debugPrint('Found list in data.list, length: ${tasksData.length}');
-      } else if (dataObj.containsKey('content') && dataObj['content'] is List) {
-        tasksData = dataObj['content'] as List;
-        debugPrint('Found list in data.content, length: ${tasksData.length}');
-      } else if (dataObj.containsKey('tasks') && dataObj['tasks'] is List) {
-        tasksData = dataObj['tasks'] as List;
-        debugPrint('Found list in data.tasks, length: ${tasksData.length}');
-      } else {
-        // Maybe the data object itself is a single task
-        tasksData = [dataObj];
-        debugPrint('Data is a single object, wrapping in list');
+      _processAssignedTasksResponse(response);
+    } catch (e) {
+      debugPrint('Error loading assigned tasks: $e');
+      // Only show the raw error in debug builds — in release the section
+      // simply stays empty, which is the correct UX for a non-critical widget.
+      if (mounted && kDebugMode) {
+        debugPrint('Assigned tasks load failed (debug only): $e');
       }
-    }
-  } else if (response.containsKey('list') && response['list'] is List) {
-    tasksData = response['list'] as List;
-    debugPrint('Found list in root, length: ${tasksData.length}');
-  } else if (response.containsKey('tasks') && response['tasks'] is List) {
-    tasksData = response['tasks'] as List;
-    debugPrint('Found tasks in root, length: ${tasksData.length}');
-  } else if (response.containsKey('content') && response['content'] is List) {
-    tasksData = response['content'] as List;
-    debugPrint('Found content in root, length: ${tasksData.length}');
-  } else {
-    // Last resort: check if response itself is a list
-    for (final value in response.values) {
-      if (value is List) {
-        tasksData = value;
-        debugPrint('Found list somewhere in response, length: ${tasksData.length}');
-        break;
-      }
+    } finally {
+      if (mounted) setState(() => _isLoadingAssignedTasks = false);
     }
   }
 
-  debugPrint('Total tasks data found: ${tasksData.length}');
+  void _processAssignedTasksResponse(Map<String, dynamic> response) {
+    List<dynamic> tasksData = [];
 
-  if (mounted) {
-    setState(() {
-      final List<Task> tasks = [];
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      
-      for (var item in tasksData) {
-        if (item is Map<String, dynamic>) {
-          try {
-            debugPrint('Processing task: ${item['taskName'] ?? item['title']}');
-            
-            Task task = Task.fromJson(item, 'UPCOMING');
-            
-            // Set status based on due date
-            if (task.dueDate.isBefore(now) && !task.isCompleted) {
-              task.status = 'overdue';
-            } else if (task.alertDate != null && 
-                       task.alertDate!.isBefore(now) && 
-                       task.alertDate!.isAfter(now.subtract(const Duration(days: 1))) &&
-                       !task.isCompleted) {
-              task.status = 'due_soon';
-            } else if (task.dueDate.year == today.year &&
-                       task.dueDate.month == today.month &&
-                       task.dueDate.day == today.day) {
-              task.status = 'today';
-            } else if (task.dueDate.isAfter(now)) {
-              task.status = 'upcoming';
-            } else if (task.isCompleted) {
-              task.status = 'completed';
-            }
-            
-            tasks.add(task);
-            debugPrint('✅ Task added: ${task.title}, Due: ${task.dueDate}');
-          } catch (e) {
-            debugPrint('Error parsing assigned task: $e');
-            debugPrint('Problematic task data: $item');
-          }
+    // Try different response structures
+    if (response.containsKey('data')) {
+      final dataObj = response['data'];
+      debugPrint('Data object type: ${dataObj.runtimeType}');
+
+      if (dataObj is List) {
+        tasksData = dataObj;
+        debugPrint('Found List in data, length: ${tasksData.length}');
+      } else if (dataObj is Map<String, dynamic>) {
+        // Check for nested list structures
+        if (dataObj.containsKey('list') && dataObj['list'] is List) {
+          tasksData = dataObj['list'] as List;
+          debugPrint('Found list in data.list, length: ${tasksData.length}');
+        } else if (dataObj.containsKey('content') &&
+            dataObj['content'] is List) {
+          tasksData = dataObj['content'] as List;
+          debugPrint('Found list in data.content, length: ${tasksData.length}');
+        } else if (dataObj.containsKey('tasks') && dataObj['tasks'] is List) {
+          tasksData = dataObj['tasks'] as List;
+          debugPrint('Found list in data.tasks, length: ${tasksData.length}');
+        } else {
+          // Maybe the data object itself is a single task
+          tasksData = [dataObj];
+          debugPrint('Data is a single object, wrapping in list');
         }
       }
-      
-      tasks.sort((a, b) => a.dueDate.compareTo(b.dueDate));
-      _assignedToMeTasks = tasks;
-      debugPrint('Total assigned tasks loaded: ${_assignedToMeTasks.length}');
-    });
+    } else if (response.containsKey('list') && response['list'] is List) {
+      tasksData = response['list'] as List;
+      debugPrint('Found list in root, length: ${tasksData.length}');
+    } else if (response.containsKey('tasks') && response['tasks'] is List) {
+      tasksData = response['tasks'] as List;
+      debugPrint('Found tasks in root, length: ${tasksData.length}');
+    } else if (response.containsKey('content') && response['content'] is List) {
+      tasksData = response['content'] as List;
+      debugPrint('Found content in root, length: ${tasksData.length}');
+    } else {
+      // Last resort: check if response itself is a list
+      for (final value in response.values) {
+        if (value is List) {
+          tasksData = value;
+          debugPrint(
+            'Found list somewhere in response, length: ${tasksData.length}',
+          );
+          break;
+        }
+      }
+    }
+
+    debugPrint('Total tasks data found: ${tasksData.length}');
+
+    if (mounted) {
+      setState(() {
+        final List<Task> tasks = [];
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+
+        for (var item in tasksData) {
+          if (item is Map<String, dynamic>) {
+            try {
+              debugPrint(
+                'Processing task: ${item['taskName'] ?? item['title']}',
+              );
+
+              Task task = Task.fromJson(item, 'UPCOMING');
+
+              // Set status based on due date
+              if (task.dueDate.isBefore(now) && !task.isCompleted) {
+                task.status = 'overdue';
+              } else if (task.alertDate != null &&
+                  task.alertDate!.isBefore(now) &&
+                  task.alertDate!.isAfter(
+                    now.subtract(const Duration(days: 1)),
+                  ) &&
+                  !task.isCompleted) {
+                task.status = 'due_soon';
+              } else if (task.dueDate.year == today.year &&
+                  task.dueDate.month == today.month &&
+                  task.dueDate.day == today.day) {
+                task.status = 'today';
+              } else if (task.dueDate.isAfter(now)) {
+                task.status = 'upcoming';
+              } else if (task.isCompleted) {
+                task.status = 'completed';
+              }
+
+              tasks.add(task);
+              debugPrint('✅ Task added: ${task.title}, Due: ${task.dueDate}');
+            } catch (e) {
+              debugPrint('Error parsing assigned task: $e');
+              debugPrint('Problematic task data: $item');
+            }
+          }
+        }
+
+        tasks.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+        _assignedToMeTasks = tasks;
+        debugPrint('Total assigned tasks loaded: ${_assignedToMeTasks.length}');
+      });
+    }
   }
-}
 
   Future<void> _refreshAssignedTasks() async {
     await _loadAssignedToMeTasks();
   }
-void _showAssignedToMeTasks() {
-  setState(() {
-    _isSideMenuOpen = false;
-  });
-  
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) => DraggableScrollableSheet(
-      initialChildSize: 0.85,
-      maxChildSize: 0.95,
-      minChildSize: 0.5,
-      builder: (_, controller) => Container(
-        decoration: const BoxDecoration(
-          color: _AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              decoration: const BoxDecoration(
-                color: Color(0xFF8B5CF6),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+
+  void _showAssignedToMeTasks() {
+    setState(() {
+      _isSideMenuOpen = false;
+    });
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        builder: (_, controller) => Container(
+          decoration: const BoxDecoration(
+            color: _AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF8B5CF6),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.person_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Assigned to Me',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.person_rounded, color: Colors.white, size: 24),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text('Assigned to Me',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: _isLoadingAssignedTasks
-                  ? const Center(child: CircularProgressIndicator(color: _AppColors.accent))
-                  : _assignedToMeTasks.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.person_outline_rounded, size: 48, color: _AppColors.textTertiary.withOpacity(0.5)),
-                              const SizedBox(height: 12),
-                              const Text('No tasks assigned to you', style: TextStyle(color: _AppColors.textSecondary)),
-                              const SizedBox(height: 6),
-                              const Text('Tasks assigned by others will appear here',
-                                  style: TextStyle(fontSize: 12, color: _AppColors.textTertiary)),
-                              const SizedBox(height: 16),
-                              OutlinedButton.icon(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  _refreshAssignedTasks();
-                                },
-                                icon: const Icon(Icons.refresh_rounded, size: 16),
-                                label: const Text('Refresh'),
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Color(0xFF8B5CF6)),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+              Expanded(
+                child: _isLoadingAssignedTasks
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: _AppColors.accent,
+                        ),
+                      )
+                    : _assignedToMeTasks.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.person_outline_rounded,
+                              size: 48,
+                              color: _AppColors.textTertiary.withValues(
+                                alpha: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'No tasks assigned to you',
+                              style: TextStyle(color: _AppColors.textSecondary),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Tasks assigned by others will appear here',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _AppColors.textTertiary,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _refreshAssignedTasks();
+                              },
+                              icon: const Icon(Icons.refresh_rounded, size: 16),
+                              label: const Text('Refresh'),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: Color(0xFF8B5CF6),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                            ],
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _refreshAssignedTasks,
-                          child: ListView.builder(
-                            controller: controller,
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _assignedToMeTasks.length,
-                            itemBuilder: (_, i) => _buildTaskCard(_assignedToMeTasks[i]),
-                          ),
+                            ),
+                          ],
                         ),
-            ),
-          ],
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _refreshAssignedTasks,
+                        child: ListView.builder(
+                          controller: controller,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _assignedToMeTasks.length,
+                          itemBuilder: (_, i) =>
+                              _buildTaskCard(_assignedToMeTasks[i]),
+                        ),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   // ─── STARRED TASKS ─────────────────────────────────────────────────────────
   Future<void> _loadStarredTasks() async {
     final prefs = await SharedPreferences.getInstance();
@@ -322,7 +366,10 @@ void _showAssignedToMeTasks() {
 
   Future<void> _saveStarredTasks() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('starred_tasks', jsonEncode(_starredTaskIds.toList()));
+    await prefs.setString(
+      'starred_tasks',
+      jsonEncode(_starredTaskIds.toList()),
+    );
     _updateStarredTasksList();
   }
 
@@ -333,7 +380,9 @@ void _showAssignedToMeTasks() {
       ...?_tasksByStatus['COMPLETED'],
       ..._assignedToMeTasks,
     ];
-    _starredTasks = allTasks.where((t) => t.realId != null && _starredTaskIds.contains(t.realId)).toList();
+    _starredTasks = allTasks
+        .where((t) => t.realId != null && _starredTaskIds.contains(t.realId))
+        .toList();
     if (mounted) setState(() {});
   }
 
@@ -349,7 +398,8 @@ void _showAssignedToMeTasks() {
     _saveStarredTasks();
   }
 
-  bool _isStarred(Task task) => task.realId != null && _starredTaskIds.contains(task.realId);
+  bool _isStarred(Task task) =>
+      task.realId != null && _starredTaskIds.contains(task.realId);
 
   // ─── DATA LOADING ─────────────────────────────────────────────────────────
 
@@ -396,7 +446,8 @@ void _showAssignedToMeTasks() {
       } else if (dataObj is Map<String, dynamic>) {
         if (dataObj.containsKey('list') && dataObj['list'] is List) {
           tasksData = dataObj['list'] as List;
-        } else if (dataObj.containsKey('content') && dataObj['content'] is List) {
+        } else if (dataObj.containsKey('content') &&
+            dataObj['content'] is List) {
           tasksData = dataObj['content'] as List;
         }
       }
@@ -409,29 +460,31 @@ void _showAssignedToMeTasks() {
         final List<Task> tasks = [];
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
-        
+
         for (var item in tasksData) {
           if (item is Map<String, dynamic>) {
             try {
               Task task = Task.fromJson(item, status);
-              
+
               if (task.dueDate.isBefore(now) && !task.isCompleted) {
                 task.status = 'overdue';
-              } else if (task.alertDate != null && 
-                         task.alertDate!.isBefore(now) && 
-                         task.alertDate!.isAfter(now.subtract(const Duration(days: 1))) &&
-                         !task.isCompleted) {
+              } else if (task.alertDate != null &&
+                  task.alertDate!.isBefore(now) &&
+                  task.alertDate!.isAfter(
+                    now.subtract(const Duration(days: 1)),
+                  ) &&
+                  !task.isCompleted) {
                 task.status = 'due_soon';
               } else if (task.dueDate.year == today.year &&
-                         task.dueDate.month == today.month &&
-                         task.dueDate.day == today.day) {
+                  task.dueDate.month == today.month &&
+                  task.dueDate.day == today.day) {
                 task.status = 'today';
               } else if (task.dueDate.isAfter(now)) {
                 task.status = 'upcoming';
               } else if (task.isCompleted) {
                 task.status = 'completed';
               }
-              
+
               tasks.add(task);
             } catch (e) {
               debugPrint('Error parsing task: $e');
@@ -485,7 +538,8 @@ void _showAssignedToMeTasks() {
     if (mounted) {
       setState(() {
         _masterCategories = categoriesData.map((item) {
-          if (item is Map<String, dynamic>) return MasterCategory.fromJson(item);
+          if (item is Map<String, dynamic>)
+            return MasterCategory.fromJson(item);
           return MasterCategory(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             name: item.toString(),
@@ -527,19 +581,27 @@ void _showAssignedToMeTasks() {
   // ─── REMINDER SCHEDULING ─────────────────────────────────────────────────
 
   Future<void> _scheduleReminders() async {
-    final allTasks = [..._tasksByStatus['TODAY'] ?? [], ..._tasksByStatus['UPCOMING'] ?? [], ..._assignedToMeTasks];
+    final allTasks = [
+      ..._tasksByStatus['TODAY'] ?? [],
+      ..._tasksByStatus['UPCOMING'] ?? [],
+      ..._assignedToMeTasks,
+    ];
     final now = DateTime.now();
-    
+
     for (var task in allTasks) {
       if (task.alertDate != null && !task.isCompleted) {
         final reminderTime = task.alertDate!;
         final timeUntilReminder = reminderTime.difference(now);
-        
+
         if (timeUntilReminder.inMinutes > 0) {
           await _scheduleNotification(
-            taskId: task.realId?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+            taskId:
+                task.realId?.toString() ??
+                DateTime.now().millisecondsSinceEpoch.toString(),
             title: 'Reminder: ${task.title}',
-            body: task.description.isNotEmpty ? task.description : 'Task due ${_formatDueDate(task.dueDate)}',
+            body: task.description.isNotEmpty
+                ? task.description
+                : 'Task due ${_formatDueDate(task.dueDate)}',
             scheduledTime: reminderTime,
           );
         }
@@ -573,10 +635,14 @@ void _showAssignedToMeTasks() {
         ..._assignedToMeTasks,
       ];
 
-      final tasksOnDate = allTasks.where((task) =>
-          task.dueDate.year == date.year &&
-          task.dueDate.month == date.month &&
-          task.dueDate.day == date.day).toList();
+      final tasksOnDate = allTasks
+          .where(
+            (task) =>
+                task.dueDate.year == date.year &&
+                task.dueDate.month == date.month &&
+                task.dueDate.day == date.day,
+          )
+          .toList();
 
       final List<Task> historyTasks = [];
       final formattedDate = DateFormat('dd-MM-yyyy').format(date);
@@ -602,9 +668,11 @@ void _showAssignedToMeTasks() {
                 if (historyItem is Map<String, dynamic>) {
                   try {
                     final historyTask = Task.fromJson(historyItem, 'COMPLETED');
-                    if (!historyTasks.any((t) =>
-                        t.realId == historyTask.realId &&
-                        t.dueDate.day == historyTask.dueDate.day)) {
+                    if (!historyTasks.any(
+                      (t) =>
+                          t.realId == historyTask.realId &&
+                          t.dueDate.day == historyTask.dueDate.day,
+                    )) {
                       historyTasks.add(historyTask);
                     }
                   } catch (e) {
@@ -637,7 +705,10 @@ void _showAssignedToMeTasks() {
       debugPrint('Error loading tasks for date: $e');
       if (mounted) {
         setState(() => _isLoadingCalendarTasks = false);
-        _showSnackBar('Error loading tasks for selected date', _AppColors.danger);
+        _showSnackBar(
+          'Error loading tasks for selected date',
+          _AppColors.danger,
+        );
       }
     }
   }
@@ -648,7 +719,10 @@ void _showAssignedToMeTasks() {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(fontWeight: FontWeight.w500)),
+        content: Text(
+          message,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -662,37 +736,46 @@ void _showAssignedToMeTasks() {
     final upcomingTasks = _tasksByStatus['UPCOMING'] ?? [];
     final assignedTasks = _assignedToMeTasks;
     final now = DateTime.now();
-    
-    final tasksWithReminders = [...upcomingTasks, ...assignedTasks].where((t) => 
-      !t.isCompleted && 
-      t.alertDate != null && 
-      t.alertDate!.isAfter(now) && 
-      t.alertDate!.isBefore(now.add(const Duration(hours: 24)))
-    ).toList();
-    
-    final overdueTasks = [...upcomingTasks, ...assignedTasks].where((t) => 
-      !t.isCompleted && 
-      t.dueDate.isBefore(now)
-    ).toList();
-    
+
+    final tasksWithReminders = [...upcomingTasks, ...assignedTasks]
+        .where(
+          (t) =>
+              !t.isCompleted &&
+              t.alertDate != null &&
+              t.alertDate!.isAfter(now) &&
+              t.alertDate!.isBefore(now.add(const Duration(hours: 24))),
+        )
+        .toList();
+
+    final overdueTasks = [
+      ...upcomingTasks,
+      ...assignedTasks,
+    ].where((t) => !t.isCompleted && t.dueDate.isBefore(now)).toList();
+
     final urgent = [...todayTasks, ...overdueTasks, ...tasksWithReminders];
-    
+
     return urgent.toSet().toList();
   }
 
   Color _getPriorityColor(Priority priority) {
     switch (priority) {
-      case Priority.high: return _AppColors.danger;
-      case Priority.medium: return _AppColors.warning;
-      case Priority.low: return _AppColors.success;
+      case Priority.high:
+        return _AppColors.danger;
+      case Priority.medium:
+        return _AppColors.warning;
+      case Priority.low:
+        return _AppColors.success;
     }
   }
 
   IconData _getPriorityIcon(Priority priority) {
     switch (priority) {
-      case Priority.high: return Icons.keyboard_double_arrow_up_rounded;
-      case Priority.medium: return Icons.remove_rounded;
-      case Priority.low: return Icons.keyboard_double_arrow_down_rounded;
+      case Priority.high:
+        return Icons.keyboard_double_arrow_up_rounded;
+      case Priority.medium:
+        return Icons.remove_rounded;
+      case Priority.low:
+        return Icons.keyboard_double_arrow_down_rounded;
     }
   }
 
@@ -714,14 +797,22 @@ void _showAssignedToMeTasks() {
 
   String _getRepeatPatternText(RepeatPattern pattern) {
     switch (pattern) {
-      case RepeatPattern.never: return '';
-      case RepeatPattern.daily: return 'Daily';
-      case RepeatPattern.weekly: return 'Weekly';
-      case RepeatPattern.monthly: return 'Monthly';
-      case RepeatPattern.halfYearly: return 'Half-Yearly';
-      case RepeatPattern.quarterly: return 'Quarterly';
-      case RepeatPattern.yearly: return 'Yearly';
-      case RepeatPattern.custom: return 'Custom';
+      case RepeatPattern.never:
+        return '';
+      case RepeatPattern.daily:
+        return 'Daily';
+      case RepeatPattern.weekly:
+        return 'Weekly';
+      case RepeatPattern.monthly:
+        return 'Monthly';
+      case RepeatPattern.halfYearly:
+        return 'Half-Yearly';
+      case RepeatPattern.quarterly:
+        return 'Quarterly';
+      case RepeatPattern.yearly:
+        return 'Yearly';
+      case RepeatPattern.custom:
+        return 'Custom';
     }
   }
 
@@ -740,9 +831,7 @@ void _showAssignedToMeTasks() {
           Column(
             children: [
               _buildHeader(urgentTasks),
-              Expanded(
-                child: _buildCalendarView(),
-              ),
+              Expanded(child: _buildCalendarView()),
             ],
           ),
           AnimatedOpacity(
@@ -752,9 +841,7 @@ void _showAssignedToMeTasks() {
               ignoring: !_isSideMenuOpen,
               child: GestureDetector(
                 onTap: () => setState(() => _isSideMenuOpen = false),
-                child: Container(
-                  color: Colors.black.withOpacity(0.40),
-                ),
+                child: Container(color: Colors.black.withValues(alpha: 0.40)),
               ),
             ),
           ),
@@ -767,11 +854,7 @@ void _showAssignedToMeTasks() {
             width: menuWidth,
             child: _buildSideMenu(urgentTasks),
           ),
-          Positioned(
-            bottom: 28,
-            right: 24,
-            child: _buildFAB(),
-          ),
+          Positioned(bottom: 28, right: 24, child: _buildFAB()),
         ],
       ),
     );
@@ -801,7 +884,9 @@ void _showAssignedToMeTasks() {
               child: Row(
                 children: [
                   _headerIconButton(
-                    icon: _isSideMenuOpen ? Icons.close_rounded : Icons.menu_rounded,
+                    icon: _isSideMenuOpen
+                        ? Icons.close_rounded
+                        : Icons.menu_rounded,
                     onTap: () => setState(() {
                       _isSideMenuOpen = !_isSideMenuOpen;
                     }),
@@ -840,7 +925,10 @@ void _showAssignedToMeTasks() {
                               color: _AppColors.danger,
                               shape: BoxShape.circle,
                             ),
-                            constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                            constraints: const BoxConstraints(
+                              minWidth: 18,
+                              minHeight: 18,
+                            ),
                             child: Text(
                               '${urgentTasks.length}',
                               style: const TextStyle(
@@ -867,14 +955,17 @@ void _showAssignedToMeTasks() {
     );
   }
 
-  Widget _headerIconButton({required IconData icon, required VoidCallback onTap}) {
+  Widget _headerIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 38,
         height: 38,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.12),
+          color: Colors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, color: Colors.white, size: 20),
@@ -885,7 +976,8 @@ void _showAssignedToMeTasks() {
   Widget _buildStatsRow() {
     final todayCount = _tasksByStatus['TODAY']?.length ?? 0;
     final completedCount = _tasksByStatus['COMPLETED']?.length ?? 0;
-    final total = todayCount + completedCount + (_tasksByStatus['UPCOMING']?.length ?? 0);
+    final total =
+        todayCount + completedCount + (_tasksByStatus['UPCOMING']?.length ?? 0);
     final completion = total == 0 ? 0.0 : completedCount / total;
     final percent = (completion * 100).toInt();
 
@@ -900,7 +992,7 @@ void _showAssignedToMeTasks() {
               Text(
                 'Good ${_getGreeting()}! 👋',
                 style: GoogleFonts.poppins(
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -920,7 +1012,7 @@ void _showAssignedToMeTasks() {
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: completion,
-              backgroundColor: Colors.white.withOpacity(0.12),
+              backgroundColor: Colors.white.withValues(alpha: 0.12),
               valueColor: const AlwaysStoppedAnimation(Color(0xFF00C897)),
               minHeight: 6,
             ),
@@ -961,17 +1053,25 @@ void _showAssignedToMeTasks() {
     );
   }
 
-  Widget _statsCard({required String label, required int count, required IconData icon, required Color color}) {
+  Widget _statsCard({
+    required String label,
+    required int count,
+    required IconData icon,
+    required Color color,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08), width: 1.0),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 1.0,
+        ),
       ),
       child: Row(
         children: [
-          Icon(icon, color: color.withOpacity(0.8), size: 16),
+          Icon(icon, color: color.withValues(alpha: 0.8), size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -1026,16 +1126,18 @@ void _showAssignedToMeTasks() {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.10),
+                    color: Colors.white.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.filter_list_rounded,
-                          size: 16,
-                          color: _selectedTaskCategory != null
-                              ? const Color(0xFF00C897)
-                              : Colors.white70),
+                      Icon(
+                        Icons.filter_list_rounded,
+                        size: 16,
+                        color: _selectedTaskCategory != null
+                            ? const Color(0xFF00C897)
+                            : Colors.white70,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -1070,22 +1172,32 @@ void _showAssignedToMeTasks() {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.10),
+                  color: Colors.white.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Icon(Icons.search_rounded, color: Colors.white70, size: 16),
+                    const Icon(
+                      Icons.search_rounded,
+                      color: Colors.white70,
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextField(
                         controller: _searchController,
-                        style: GoogleFonts.poppins(color: Colors.white, fontSize: 12),
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
                         decoration: InputDecoration(
                           isDense: true,
                           hintText: 'Search tasks...',
-                          hintStyle: GoogleFonts.poppins(color: Colors.white38, fontSize: 12),
+                          hintStyle: GoogleFonts.poppins(
+                            color: Colors.white38,
+                            fontSize: 12,
+                          ),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -1097,7 +1209,11 @@ void _showAssignedToMeTasks() {
                           _searchController.clear();
                           setState(() => _searchQuery = '');
                         },
-                        child: const Icon(Icons.close_rounded, color: Colors.white70, size: 16),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white70,
+                          size: 16,
+                        ),
                       ),
                   ],
                 ),
@@ -1110,11 +1226,17 @@ void _showAssignedToMeTasks() {
                   _showAddCategoryDialog();
                 } else if (value == 'add_subcategory') {
                   if (_selectedTaskCategory == null) {
-                    _showSnackBar('Please select a category first from filter', _AppColors.warning);
+                    _showSnackBar(
+                      'Please select a category first from filter',
+                      _AppColors.warning,
+                    );
                     return;
                   }
                   if (_masterCategories.isEmpty) {
-                    _showSnackBar('No category data available, please reload', _AppColors.warning);
+                    _showSnackBar(
+                      'No category data available, please reload',
+                      _AppColors.warning,
+                    );
                     return;
                   }
                   final selectedCategory = _masterCategories.firstWhere(
@@ -1128,25 +1250,38 @@ void _showAssignedToMeTasks() {
               color: _AppColors.surface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: _AppColors.border.withOpacity(0.5)),
+                side: BorderSide(
+                  color: _AppColors.border.withValues(alpha: 0.5),
+                ),
               ),
               icon: Container(
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.10),
+                  color: Colors.white.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.more_horiz_rounded, color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.more_horiz_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
               itemBuilder: (context) => [
                 const PopupMenuItem(
                   value: 'add_category',
                   child: Row(
                     children: [
-                      Icon(Icons.add_circle_outline_rounded, size: 18, color: _AppColors.accent),
+                      Icon(
+                        Icons.add_circle_outline_rounded,
+                        size: 18,
+                        color: _AppColors.accent,
+                      ),
                       SizedBox(width: 12),
-                      Text('Add Category', style: TextStyle(color: _AppColors.textPrimary)),
+                      Text(
+                        'Add Category',
+                        style: TextStyle(color: _AppColors.textPrimary),
+                      ),
                     ],
                   ),
                 ),
@@ -1154,9 +1289,16 @@ void _showAssignedToMeTasks() {
                   value: 'add_subcategory',
                   child: Row(
                     children: [
-                      Icon(Icons.subdirectory_arrow_right_rounded, size: 18, color: _AppColors.accent),
+                      Icon(
+                        Icons.subdirectory_arrow_right_rounded,
+                        size: 18,
+                        color: _AppColors.accent,
+                      ),
                       SizedBox(width: 12),
-                      Text('Add Subcategory', style: TextStyle(color: _AppColors.textPrimary)),
+                      Text(
+                        'Add Subcategory',
+                        style: TextStyle(color: _AppColors.textPrimary),
+                      ),
                     ],
                   ),
                 ),
@@ -1189,14 +1331,29 @@ void _showAssignedToMeTasks() {
                       color: _AppColors.accent,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.task_alt_rounded, color: Colors.white, size: 24),
+                    child: const Icon(
+                      Icons.task_alt_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  const Text('Task Manager',
-                      style: TextStyle(fontSize: 27, fontWeight: FontWeight.w700, color: Colors.white)),
+                  const Text(
+                    'Task Manager',
+                    style: TextStyle(
+                      fontSize: 27,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text('Stay organised',
-                      style: TextStyle(fontSize: 22, color: Colors.white.withOpacity(0.6))),
+                  Text(
+                    'Stay organised',
+                    style: TextStyle(
+                      fontSize: 22,
+                      color: Colors.white.withValues(alpha: 0.6),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1204,33 +1361,52 @@ void _showAssignedToMeTasks() {
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 children: [
-                  _sideItem(icon: Icons.today_rounded, label: "Today's Tasks",
-                      count: _tasksByStatus['TODAY']?.length ?? 0,
-                      color: _AppColors.accent, onTap: () => _showTasksByStatus('TODAY')),
-                  _sideItem(icon: Icons.upcoming_rounded, label: 'Upcoming',
-                      count: _tasksByStatus['UPCOMING']?.length ?? 0,
-                      color: _AppColors.warning, onTap: () => _showTasksByStatus('UPCOMING')),
-                  _sideItem(icon: Icons.check_circle_outline_rounded, label: 'Completed',
-                      count: _tasksByStatus['COMPLETED']?.length ?? 0,
-                      color: _AppColors.success, onTap: () => _showTasksByStatus('COMPLETED')),
+                  _sideItem(
+                    icon: Icons.today_rounded,
+                    label: "Today's Tasks",
+                    count: _tasksByStatus['TODAY']?.length ?? 0,
+                    color: _AppColors.accent,
+                    onTap: () => _showTasksByStatus('TODAY'),
+                  ),
+                  _sideItem(
+                    icon: Icons.upcoming_rounded,
+                    label: 'Upcoming',
+                    count: _tasksByStatus['UPCOMING']?.length ?? 0,
+                    color: _AppColors.warning,
+                    onTap: () => _showTasksByStatus('UPCOMING'),
+                  ),
+                  _sideItem(
+                    icon: Icons.check_circle_outline_rounded,
+                    label: 'Completed',
+                    count: _tasksByStatus['COMPLETED']?.length ?? 0,
+                    color: _AppColors.success,
+                    onTap: () => _showTasksByStatus('COMPLETED'),
+                  ),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Divider(color: _AppColors.border),
                   ),
-                  _sideItem(icon: Icons.star_rounded, label: 'Starred',
-                      count: _starredTasks.length,
-                      color: _AppColors.starColor, onTap: _showStarredTasks),
+                  _sideItem(
+                    icon: Icons.star_rounded,
+                    label: 'Starred',
+                    count: _starredTasks.length,
+                    color: _AppColors.starColor,
+                    onTap: _showStarredTasks,
+                  ),
                   // New: Assigned to Me section
                   _sideItem(
-                    icon: Icons.person_rounded, 
+                    icon: Icons.person_rounded,
                     label: 'Assigned to Me',
                     count: _assignedToMeTasks.length,
-                    color: const Color(0xFF8B5CF6), 
+                    color: const Color(0xFF8B5CF6),
                     onTap: _showAssignedToMeTasks,
                   ),
                   if (urgentTasks.isNotEmpty) ...[
                     const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       child: Divider(color: _AppColors.border),
                     ),
                     _sideItemAction(
@@ -1257,10 +1433,12 @@ void _showAssignedToMeTasks() {
     setState(() {
       _isSideMenuOpen = false;
     });
-    
+
     final tasks = _tasksByStatus[status] ?? [];
-    final String title = status == 'TODAY' ? "Today's Tasks" : (status == 'UPCOMING' ? 'Upcoming Tasks' : 'Completed Tasks');
-    
+    final String title = status == 'TODAY'
+        ? "Today's Tasks"
+        : (status == 'UPCOMING' ? 'Upcoming Tasks' : 'Completed Tasks');
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1279,23 +1457,44 @@ void _showAssignedToMeTasks() {
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 decoration: BoxDecoration(
-                  color: status == 'TODAY' ? _AppColors.accent : (status == 'UPCOMING' ? _AppColors.warning : _AppColors.success),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  color: status == 'TODAY'
+                      ? _AppColors.accent
+                      : (status == 'UPCOMING'
+                            ? _AppColors.warning
+                            : _AppColors.success),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
                 ),
                 child: Row(
                   children: [
                     Icon(
-                      status == 'TODAY' ? Icons.today_rounded : (status == 'UPCOMING' ? Icons.upcoming_rounded : Icons.check_circle_rounded),
-                      color: Colors.white, size: 24,
+                      status == 'TODAY'
+                          ? Icons.today_rounded
+                          : (status == 'UPCOMING'
+                                ? Icons.upcoming_rounded
+                                : Icons.check_circle_rounded),
+                      color: Colors.white,
+                      size: 24,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(title,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
                   ],
                 ),
@@ -1306,9 +1505,20 @@ void _showAssignedToMeTasks() {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.inbox_rounded, size: 48, color: _AppColors.textTertiary.withOpacity(0.5)),
+                            Icon(
+                              Icons.inbox_rounded,
+                              size: 48,
+                              color: _AppColors.textTertiary.withValues(
+                                alpha: 0.5,
+                              ),
+                            ),
                             const SizedBox(height: 12),
-                            Text('No $title', style: const TextStyle(color: _AppColors.textSecondary)),
+                            Text(
+                              'No $title',
+                              style: const TextStyle(
+                                color: _AppColors.textSecondary,
+                              ),
+                            ),
                           ],
                         ),
                       )
@@ -1329,7 +1539,7 @@ void _showAssignedToMeTasks() {
     setState(() {
       _isSideMenuOpen = false;
     });
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1353,15 +1563,29 @@ void _showAssignedToMeTasks() {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.star_rounded, color: Colors.white, size: 24),
+                    const Icon(
+                      Icons.star_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                     const SizedBox(width: 12),
                     const Expanded(
-                      child: Text('Starred Tasks',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+                      child: Text(
+                        'Starred Tasks',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close_rounded, color: Colors.white, size: 24),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
                   ],
                 ),
@@ -1372,12 +1596,26 @@ void _showAssignedToMeTasks() {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.star_outline_rounded, size: 48, color: _AppColors.textTertiary.withOpacity(0.5)),
+                            Icon(
+                              Icons.star_outline_rounded,
+                              size: 48,
+                              color: _AppColors.textTertiary.withValues(
+                                alpha: 0.5,
+                              ),
+                            ),
                             const SizedBox(height: 12),
-                            const Text('No Starred Tasks', style: TextStyle(color: _AppColors.textSecondary)),
+                            const Text(
+                              'No Starred Tasks',
+                              style: TextStyle(color: _AppColors.textSecondary),
+                            ),
                             const SizedBox(height: 6),
-                            const Text('Tap the star icon on any task to add it here',
-                                style: TextStyle(fontSize: 12, color: _AppColors.textTertiary)),
+                            const Text(
+                              'Tap the star icon on any task to add it here',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _AppColors.textTertiary,
+                              ),
+                            ),
                           ],
                         ),
                       )
@@ -1406,37 +1644,43 @@ void _showAssignedToMeTasks() {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: color, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: _AppColors.textPrimary,
-                  )),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: _AppColors.textPrimary,
+                ),
+              ),
             ),
             if (count > 0)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text('$count',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
               ),
           ],
         ),
@@ -1458,7 +1702,7 @@ void _showAssignedToMeTasks() {
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : Colors.transparent,
+          color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -1466,27 +1710,37 @@ void _showAssignedToMeTasks() {
             Container(
               padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: color, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected ? color : _AppColors.textPrimary,
-                  )),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? color : _AppColors.textPrimary,
+                ),
+              ),
             ),
             if (badge != null && badge > 0)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),
-                child: Text('$badge',
-                    style: const TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$badge',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
               ),
           ],
         ),
@@ -1509,9 +1763,13 @@ void _showAssignedToMeTasks() {
         ...(_tasksByStatus['COMPLETED'] ?? []),
         ..._assignedToMeTasks,
       ];
-      filteredCalendarTasks = allTasks.where((task) =>
-          task.title.toLowerCase().contains(q) ||
-          task.description.toLowerCase().contains(q)).toList();
+      filteredCalendarTasks = allTasks
+          .where(
+            (task) =>
+                task.title.toLowerCase().contains(q) ||
+                task.description.toLowerCase().contains(q),
+          )
+          .toList();
     } else {
       filteredCalendarTasks = _calendarTasks;
     }
@@ -1529,9 +1787,10 @@ void _showAssignedToMeTasks() {
               ),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4))
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
               ],
             ),
             child: Column(
@@ -1561,22 +1820,29 @@ void _showAssignedToMeTasks() {
                     color: _AppColors.accentLight,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.event_note_rounded,
-                      size: 16, color: _AppColors.accent),
+                  child: const Icon(
+                    Icons.event_note_rounded,
+                    size: 16,
+                    color: _AppColors.accent,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     DateFormat('EEE, MMM dd').format(_selectedCalendarDate),
                     style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _AppColors.textPrimary),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _AppColors.textPrimary,
+                    ),
                   ),
                 ),
                 if (filteredCalendarTasks.isNotEmpty)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: _AppColors.accentLight,
                       borderRadius: BorderRadius.circular(8),
@@ -1584,19 +1850,24 @@ void _showAssignedToMeTasks() {
                     child: Text(
                       '${filteredCalendarTasks.length} task${filteredCalendarTasks.length == 1 ? '' : 's'}',
                       style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: _AppColors.accent),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _AppColors.accent,
+                      ),
                     ),
                   ),
               ],
             ),
           ),
         ),
-        const SliverToBoxAdapter(child: Divider(height: 1, color: _AppColors.border)),
+        const SliverToBoxAdapter(
+          child: Divider(height: 1, color: _AppColors.border),
+        ),
         if (_isLoadingCalendarTasks)
           const SliverFillRemaining(
-            child: Center(child: CircularProgressIndicator(color: _AppColors.accent)),
+            child: Center(
+              child: CircularProgressIndicator(color: _AppColors.accent),
+            ),
           )
         else if (filteredCalendarTasks.isEmpty)
           SliverFillRemaining(
@@ -1604,11 +1875,21 @@ void _showAssignedToMeTasks() {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.event_busy_rounded,
-                      size: 36, color: _AppColors.textTertiary.withOpacity(0.5)),
+                  Icon(
+                    Icons.event_busy_rounded,
+                    size: 36,
+                    color: _AppColors.textTertiary.withValues(alpha: 0.5),
+                  ),
                   const SizedBox(height: 8),
-                  Text(_searchQuery.isNotEmpty ? 'No matching tasks for this date' : 'No tasks for this date',
-                      style: const TextStyle(color: _AppColors.textSecondary, fontSize: 13)),
+                  Text(
+                    _searchQuery.isNotEmpty
+                        ? 'No matching tasks for this date'
+                        : 'No tasks for this date',
+                    style: const TextStyle(
+                      color: _AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1645,7 +1926,9 @@ void _showAssignedToMeTasks() {
             icon: const Icon(Icons.chevron_left_rounded, size: 20),
             style: IconButton.styleFrom(
               backgroundColor: _AppColors.background,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               padding: const EdgeInsets.all(6),
             ),
           ),
@@ -1654,7 +1937,10 @@ void _showAssignedToMeTasks() {
               DateFormat('MMMM yyyy').format(_selectedCalendarDate),
               textAlign: TextAlign.center,
               style: const TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w700, color: _AppColors.textPrimary),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: _AppColors.textPrimary,
+              ),
             ),
           ),
           IconButton(
@@ -1670,7 +1956,9 @@ void _showAssignedToMeTasks() {
             icon: const Icon(Icons.chevron_right_rounded, size: 20),
             style: IconButton.styleFrom(
               backgroundColor: _AppColors.background,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               padding: const EdgeInsets.all(6),
             ),
           ),
@@ -1684,17 +1972,23 @@ void _showAssignedToMeTasks() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
-        children: days.map((d) => Expanded(
-          child: Center(
-            child: Text(d,
-              style: GoogleFonts.poppins(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade400,
-                letterSpacing: 0.5,
-              )),
-          ),
-        )).toList(),
+        children: days
+            .map(
+              (d) => Expanded(
+                child: Center(
+                  child: Text(
+                    d,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade400,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -1702,9 +1996,15 @@ void _showAssignedToMeTasks() {
   Widget _buildCalendarGrid() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final daysInMonth = DateTime(
-        _selectedCalendarDate.year, _selectedCalendarDate.month + 1, 0).day;
-    final firstDay =
-        DateTime(_selectedCalendarDate.year, _selectedCalendarDate.month, 1);
+      _selectedCalendarDate.year,
+      _selectedCalendarDate.month + 1,
+      0,
+    ).day;
+    final firstDay = DateTime(
+      _selectedCalendarDate.year,
+      _selectedCalendarDate.month,
+      1,
+    );
     final startWeekday = firstDay.weekday % 7;
 
     final List<Widget> rows = [];
@@ -1715,77 +2015,96 @@ void _showAssignedToMeTasks() {
     }
 
     for (int day = 1; day <= daysInMonth; day++) {
-      final date =
-          DateTime(_selectedCalendarDate.year, _selectedCalendarDate.month, day);
-      final hasTasks = _tasks.any((t) =>
-          t.dueDate.year == date.year &&
-          t.dueDate.month == date.month &&
-          t.dueDate.day == day) || _assignedToMeTasks.any((t) =>
-          t.dueDate.year == date.year &&
-          t.dueDate.month == date.month &&
-          t.dueDate.day == day);
-      final isSelected = _selectedCalendarDate.day == day &&
+      final date = DateTime(
+        _selectedCalendarDate.year,
+        _selectedCalendarDate.month,
+        day,
+      );
+      final hasTasks =
+          _tasks.any(
+            (t) =>
+                t.dueDate.year == date.year &&
+                t.dueDate.month == date.month &&
+                t.dueDate.day == day,
+          ) ||
+          _assignedToMeTasks.any(
+            (t) =>
+                t.dueDate.year == date.year &&
+                t.dueDate.month == date.month &&
+                t.dueDate.day == day,
+          );
+      final isSelected =
+          _selectedCalendarDate.day == day &&
           _selectedCalendarDate.month == date.month;
-      final isToday = DateTime.now().day == day &&
+      final isToday =
+          DateTime.now().day == day &&
           DateTime.now().month == _selectedCalendarDate.month &&
           DateTime.now().year == _selectedCalendarDate.year;
 
-      week.add(Expanded(
-        child: GestureDetector(
-          onTap: () {
-            setState(() => _selectedCalendarDate = date);
-            _loadTasksForDate(date);
-          },
-          child: Container(
-            height: 28,
-            margin: const EdgeInsets.all(1.5),
-            decoration: BoxDecoration(
-              gradient: isSelected
-                  ? const LinearGradient(
-                      colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: isSelected
-                  ? null
-                  : (isToday
-                      ? const Color(0xFF6366F1).withOpacity(0.1)
-                      : Colors.transparent),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Text(
-                  '$day',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: isSelected || isToday ? FontWeight.bold : FontWeight.w500,
-                    color: isSelected
-                        ? Colors.white
-                        : (isToday
-                            ? const Color(0xFF4F46E5)
-                            : (isDark ? Colors.white70 : _AppColors.textPrimary)),
-                  ),
-                ),
-                if (hasTasks && !isSelected)
-                  Positioned(
-                    bottom: 3,
-                    child: Container(
-                      width: 4,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: isToday ? _AppColors.accent : _AppColors.textTertiary,
-                        shape: BoxShape.circle,
-                      ),
+      week.add(
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              setState(() => _selectedCalendarDate = date);
+              _loadTasksForDate(date);
+            },
+            child: Container(
+              height: 28,
+              margin: const EdgeInsets.all(1.5),
+              decoration: BoxDecoration(
+                gradient: isSelected
+                    ? const LinearGradient(
+                        colors: [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: isSelected
+                    ? null
+                    : (isToday
+                          ? const Color(0xFF6366F1).withValues(alpha: 0.1)
+                          : Colors.transparent),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Text(
+                    '$day',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: isSelected || isToday
+                          ? FontWeight.bold
+                          : FontWeight.w500,
+                      color: isSelected
+                          ? Colors.white
+                          : (isToday
+                                ? const Color(0xFF4F46E5)
+                                : (isDark
+                                      ? Colors.white70
+                                      : _AppColors.textPrimary)),
                     ),
                   ),
-              ],
+                  if (hasTasks && !isSelected)
+                    Positioned(
+                      bottom: 3,
+                      child: Container(
+                        width: 4,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isToday
+                              ? _AppColors.accent
+                              : _AppColors.textTertiary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
-      ));
+      );
 
       if (week.length == 7) {
         rows.add(Row(children: List<Widget>.from(week)));
@@ -1800,19 +2119,20 @@ void _showAssignedToMeTasks() {
       rows.add(Row(children: List<Widget>.from(week)));
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: rows,
-    );
+    return Column(mainAxisSize: MainAxisSize.min, children: rows);
   }
 
   Widget _buildTaskCard(Task task) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final dueDay = DateTime(task.dueDate.year, task.dueDate.month, task.dueDate.day);
+    final dueDay = DateTime(
+      task.dueDate.year,
+      task.dueDate.month,
+      task.dueDate.day,
+    );
     final daysUntil = task.dueDate.difference(now).inDays;
     final isOverdue = !task.isCompleted && daysUntil < 0;
-    
+
     final hasReminder = task.alertDate != null;
     final categoryColor = _getCategoryColor(task.category);
     final isStarred = _isStarred(task);
@@ -1831,10 +2151,10 @@ void _showAssignedToMeTasks() {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.015),
+              color: Colors.black.withValues(alpha: 0.015),
               blurRadius: 10,
               offset: const Offset(0, 4),
-            )
+            ),
           ],
         ),
         child: ClipRRect(
@@ -1843,10 +2163,7 @@ void _showAssignedToMeTasks() {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  width: 5,
-                  color: _getPriorityColor(task.priority),
-                ),
+                Container(width: 5, color: _getPriorityColor(task.priority)),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -1855,7 +2172,11 @@ void _showAssignedToMeTasks() {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.category_rounded, size: 12, color: categoryColor),
+                            Icon(
+                              Icons.category_rounded,
+                              size: 12,
+                              color: categoryColor,
+                            ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
@@ -1869,7 +2190,11 @@ void _showAssignedToMeTasks() {
                               ),
                             ),
                             if (isStarred)
-                              Icon(Icons.star_rounded, size: 14, color: _AppColors.starColor),
+                              Icon(
+                                Icons.star_rounded,
+                                size: 14,
+                                color: _AppColors.starColor,
+                              ),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -1878,10 +2203,14 @@ void _showAssignedToMeTasks() {
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: task.isCompleted 
+                            color: task.isCompleted
                                 ? (isDark ? Colors.white30 : Colors.black38)
-                                : (isDark ? Colors.white : _AppColors.textPrimary),
-                            decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                                : (isDark
+                                      ? Colors.white
+                                      : _AppColors.textPrimary),
+                            decoration: task.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
                           ),
                         ),
                         if (task.description.isNotEmpty) ...[
@@ -1890,7 +2219,9 @@ void _showAssignedToMeTasks() {
                             task.description,
                             style: GoogleFonts.poppins(
                               fontSize: 12,
-                              color: isDark ? Colors.white54 : _AppColors.textSecondary,
+                              color: isDark
+                                  ? Colors.white54
+                                  : _AppColors.textSecondary,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -1900,13 +2231,22 @@ void _showAssignedToMeTasks() {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                color: _getPriorityColor(task.priority).withOpacity(0.12),
+                                color: _getPriorityColor(
+                                  task.priority,
+                                ).withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(30),
                               ),
                               child: Text(
-                                task.priority.toString().split('.').last.toUpperCase(),
+                                task.priority
+                                    .toString()
+                                    .split('.')
+                                    .last
+                                    .toUpperCase(),
                                 style: GoogleFonts.poppins(
                                   fontSize: 8,
                                   fontWeight: FontWeight.bold,
@@ -1918,14 +2258,24 @@ void _showAssignedToMeTasks() {
                             const Spacer(),
                             Row(
                               children: [
-                                Icon(Icons.schedule_rounded, size: 11, color: isOverdue ? _AppColors.danger : Colors.grey),
+                                Icon(
+                                  Icons.schedule_rounded,
+                                  size: 11,
+                                  color: isOverdue
+                                      ? _AppColors.danger
+                                      : Colors.grey,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   _formatDueDate(task.dueDate),
                                   style: GoogleFonts.poppins(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w600,
-                                    color: isOverdue ? _AppColors.danger : (isDark ? Colors.white38 : _AppColors.textSecondary),
+                                    color: isOverdue
+                                        ? _AppColors.danger
+                                        : (isDark
+                                              ? Colors.white38
+                                              : _AppColors.textSecondary),
                                   ),
                                 ),
                               ],
@@ -1943,12 +2293,16 @@ void _showAssignedToMeTasks() {
       ),
     );
   }
-  
-  Widget _metaChip({required String text, required Color color, required IconData icon}) {
+
+  Widget _metaChip({
+    required String text,
+    required Color color,
+    required IconData icon,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -1989,7 +2343,7 @@ void _showAssignedToMeTasks() {
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: _AppColors.accent.withOpacity(0.4),
+              color: _AppColors.accent.withValues(alpha: 0.4),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -2000,7 +2354,14 @@ void _showAssignedToMeTasks() {
           children: [
             Icon(Icons.add_rounded, color: Colors.white, size: 20),
             SizedBox(width: 6),
-            Text('Create Task', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+            Text(
+              'Create Task',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
@@ -2029,17 +2390,22 @@ void _showAssignedToMeTasks() {
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                    color: _AppColors.border, borderRadius: BorderRadius.circular(2)),
+                  color: _AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
               const Padding(
                 padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
                 child: Row(
                   children: [
-                    Text('Filter by Category',
-                        style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: _AppColors.textPrimary)),
+                    Text(
+                      'Filter by Category',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: _AppColors.textPrimary,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -2063,42 +2429,55 @@ void _showAssignedToMeTasks() {
                       },
                     ),
                     const Divider(
-                        height: 1, indent: 20, endIndent: 20, color: _AppColors.border),
-                    ..._masterCategories.map((cat) => Column(
-                      children: [
-                        _filterItem(
-                          label: cat.name,
-                          icon: Icons.label_rounded,
-                          color: _getCategoryColor(cat.name),
-                          isSelected: _selectedTaskCategory == cat.name,
-                          onTap: () {
-                            setState(() {
-                              _selectedTaskCategory = cat.name;
-                              _selectedSubCategory = null;
-                            });
-                            Navigator.pop(context);
-                          },
-                        ),
-                        if (_selectedTaskCategory == cat.name && cat.subCategories.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 40),
-                            child: Column(
-                              children: cat.subCategories.map((sub) => _filterItem(
-                                label: '↳ ${sub.name}',
-                                icon: Icons.subdirectory_arrow_right_rounded,
-                                color: Colors.blue,
-                                isSelected: _selectedSubCategory == sub.name,
-                                onTap: () {
-                                  setState(() {
-                                    _selectedSubCategory = sub.name;
-                                  });
-                                  Navigator.pop(context);
-                                },
-                              )).toList(),
-                            ),
+                      height: 1,
+                      indent: 20,
+                      endIndent: 20,
+                      color: _AppColors.border,
+                    ),
+                    ..._masterCategories.map(
+                      (cat) => Column(
+                        children: [
+                          _filterItem(
+                            label: cat.name,
+                            icon: Icons.label_rounded,
+                            color: _getCategoryColor(cat.name),
+                            isSelected: _selectedTaskCategory == cat.name,
+                            onTap: () {
+                              setState(() {
+                                _selectedTaskCategory = cat.name;
+                                _selectedSubCategory = null;
+                              });
+                              Navigator.pop(context);
+                            },
                           ),
-                      ],
-                    )),
+                          if (_selectedTaskCategory == cat.name &&
+                              cat.subCategories.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 40),
+                              child: Column(
+                                children: cat.subCategories
+                                    .map(
+                                      (sub) => _filterItem(
+                                        label: '↳ ${sub.name}',
+                                        icon: Icons
+                                            .subdirectory_arrow_right_rounded,
+                                        color: Colors.blue,
+                                        isSelected:
+                                            _selectedSubCategory == sub.name,
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedSubCategory = sub.name;
+                                          });
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -2121,17 +2500,22 @@ void _showAssignedToMeTasks() {
       leading: Container(
         padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
-            color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Icon(icon, size: 16, color: color),
       ),
-      title: Text(label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: _AppColors.textPrimary,
-          )),
-      trailing:
-          isSelected ? Icon(Icons.check_circle_rounded, color: color, size: 20) : null,
+      title: Text(
+        label,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          color: _AppColors.textPrimary,
+        ),
+      ),
+      trailing: isSelected
+          ? Icon(Icons.check_circle_rounded, color: color, size: 20)
+          : null,
     );
   }
 
@@ -2147,8 +2531,9 @@ void _showAssignedToMeTasks() {
           color: _AppColors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        constraints:
-            BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -2160,20 +2545,29 @@ void _showAssignedToMeTasks() {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.notifications_active_rounded,
-                      color: Colors.white, size: 20),
+                  const Icon(
+                    Icons.notifications_active_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text('Urgent Tasks (${urgentTasks.length})',
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white)),
+                    child: Text(
+                      'Urgent Tasks (${urgentTasks.length})',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded,
-                        color: Colors.white, size: 20),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
@@ -2182,15 +2576,20 @@ void _showAssignedToMeTasks() {
               child: urgentTasks.isEmpty
                   ? const Center(
                       child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.check_circle_rounded,
-                                size: 40, color: _AppColors.success),
-                            SizedBox(height: 10),
-                            Text('All clear!',
-                                style:
-                                    TextStyle(color: _AppColors.textSecondary)),
-                          ]),
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.check_circle_rounded,
+                            size: 40,
+                            color: _AppColors.success,
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'All clear!',
+                            style: TextStyle(color: _AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
@@ -2229,14 +2628,18 @@ void _showAssignedToMeTasks() {
         return const Center(
           child: Card(
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(16))),
+              borderRadius: BorderRadius.all(Radius.circular(16)),
+            ),
             child: Padding(
               padding: EdgeInsets.all(24),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                CircularProgressIndicator(color: _AppColors.accent),
-                SizedBox(height: 16),
-                Text('Loading categories...'),
-              ]),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: _AppColors.accent),
+                  SizedBox(height: 16),
+                  Text('Loading categories...'),
+                ],
+              ),
             ),
           ),
         );
@@ -2274,18 +2677,19 @@ void _showAssignedToMeTasks() {
     }
   }
 
-  void _showConnectionErrorDialog({
-    String? errorDetails,
-    String? apiUrl,
-  }) {
+  void _showConnectionErrorDialog({String? errorDetails, String? apiUrl}) {
     if (!mounted) return;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Connection Error',
-            style: TextStyle(
-                color: _AppColors.accent, fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Connection Error',
+          style: TextStyle(
+            color: _AppColors.accent,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2293,15 +2697,9 @@ void _showAssignedToMeTasks() {
             const Text('Unable to connect. Please check your connection.'),
             if (apiUrl != null && apiUrl.isNotEmpty) ...[
               const SizedBox(height: 12),
-              const Text(
-                'API:',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
+              const Text('API:', style: TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: 4),
-              Text(
-                apiUrl,
-                style: const TextStyle(fontSize: 12),
-              ),
+              Text(apiUrl, style: const TextStyle(fontSize: 12)),
             ],
             if (errorDetails != null && errorDetails.isNotEmpty) ...[
               const SizedBox(height: 12),
@@ -2310,16 +2708,15 @@ void _showAssignedToMeTasks() {
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
-              Text(
-                errorDetails,
-                style: const TextStyle(fontSize: 12),
-              ),
+              Text(errorDetails, style: const TextStyle(fontSize: 12)),
             ],
           ],
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
@@ -2328,7 +2725,8 @@ void _showAssignedToMeTasks() {
             style: ElevatedButton.styleFrom(
               backgroundColor: _AppColors.accent,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: const Text('Retry'),
           ),
@@ -2343,14 +2741,21 @@ void _showAssignedToMeTasks() {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('No Categories',
-            style: TextStyle(
-                color: _AppColors.accent, fontWeight: FontWeight.w700)),
-        content:
-            const Text('No task categories found. Would you like to add one?'),
+        title: const Text(
+          'No Categories',
+          style: TextStyle(
+            color: _AppColors.accent,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: const Text(
+          'No task categories found. Would you like to add one?',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Not Now')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Not Now'),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
@@ -2360,7 +2765,8 @@ void _showAssignedToMeTasks() {
               backgroundColor: _AppColors.accent,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: const Text('Add Category'),
           ),
@@ -2380,51 +2786,73 @@ void _showAssignedToMeTasks() {
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (context, ss) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Add New Category',
-              style: TextStyle(
-                  color: _AppColors.accent, fontWeight: FontWeight.w700)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Add New Category',
+            style: TextStyle(
+              color: _AppColors.accent,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           content: SizedBox(
             width: 400,
             child: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                _styledField(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _styledField(
                     controller: nameCtrl,
                     label: 'Category Name *',
-                    enabled: !isSaving),
-                const SizedBox(height: 12),
-                _styledField(
+                    enabled: !isSaving,
+                  ),
+                  const SizedBox(height: 12),
+                  _styledField(
                     controller: descCtrl,
                     label: 'Description (Optional)',
                     enabled: !isSaving,
-                    maxLines: 2),
-                const SizedBox(height: 8),
-                Text(
-                  'Note: You can add subcategories later',
-                  style: TextStyle(fontSize: 11, color: _AppColors.textSecondary),
-                ),
-                if (isSaving)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 16),
-                    child: Row(
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Note: You can add subcategories later',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _AppColors.textSecondary,
+                    ),
+                  ),
+                  if (isSaving)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 16),
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: _AppColors.accent)),
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: _AppColors.accent,
+                            ),
+                          ),
                           SizedBox(width: 12),
                           Text('Saving...'),
-                        ]),
-                  ),
-              ]),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           actions: [
             TextButton(
-                onPressed: isSaving ? null : () => Navigator.pop(ctx),
-                child: const Text('Cancel', style: TextStyle(color: _AppColors.textSecondary))),
+              onPressed: isSaving ? null : () => Navigator.pop(ctx),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: _AppColors.textSecondary),
+              ),
+            ),
             ElevatedButton(
               onPressed: isSaving
                   ? null
@@ -2432,7 +2860,9 @@ void _showAssignedToMeTasks() {
                       final name = nameCtrl.text.trim();
                       if (name.isEmpty) {
                         _showSnackBar(
-                            'Please enter a category name', _AppColors.danger);
+                          'Please enter a category name',
+                          _AppColors.danger,
+                        );
                         return;
                       }
                       ss(() => isSaving = true);
@@ -2445,16 +2875,21 @@ void _showAssignedToMeTasks() {
                         );
                         if (resp['success'] == true) {
                           await MyTasksService.clearMasterCategoriesCache();
-                          final updated = await MyTasksService.getMasterCategories();
+                          final updated =
+                              await MyTasksService.getMasterCategories();
                           if (mounted) {
                             Navigator.pop(ctx);
                             _processCategoriesResponse(updated);
                             _showSnackBar(
-                                'Category "$name" added successfully', _AppColors.success);
+                              'Category "$name" added successfully',
+                              _AppColors.success,
+                            );
                             await _refreshTasks();
                           }
                         } else {
-                          throw Exception(resp['message'] ?? 'Failed to save category');
+                          throw Exception(
+                            resp['message'] ?? 'Failed to save category',
+                          );
                         }
                       } catch (e) {
                         if (mounted) {
@@ -2467,7 +2902,8 @@ void _showAssignedToMeTasks() {
                 backgroundColor: _AppColors.accent,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: Text(isSaving ? 'Saving...' : 'Add Category'),
             ),
@@ -2499,16 +2935,21 @@ void _showAssignedToMeTasks() {
                 padding: const EdgeInsets.fromLTRB(20, 20, 8, 12),
                 child: Row(
                   children: [
-                    const Text('Create New Task',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: _AppColors.textPrimary)),
+                    const Text(
+                      'Create New Task',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: _AppColors.textPrimary,
+                      ),
+                    ),
                     const Spacer(),
                     IconButton(
                       onPressed: () => Navigator.pop(ctx),
-                      icon: const Icon(Icons.close_rounded,
-                          color: _AppColors.textSecondary),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: _AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -2518,19 +2959,25 @@ void _showAssignedToMeTasks() {
                 child: ListView(
                   padding: const EdgeInsets.all(12),
                   shrinkWrap: true,
-                  children: _masterCategories.map((cat) => _categoryDialogItem(
-                        name: cat.name,
-                        color: _getCategoryColor(cat.name),
-                        icon: Icons.label_rounded,
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          Future.delayed(const Duration(milliseconds: 100),
+                  children: _masterCategories
+                      .map(
+                        (cat) => _categoryDialogItem(
+                          name: cat.name,
+                          color: _getCategoryColor(cat.name),
+                          icon: Icons.label_rounded,
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            Future.delayed(
+                              const Duration(milliseconds: 100),
                               () {
-                            if (mounted)
-                              _showSubCategorySelectionDialog(cat);
-                          });
-                        },
-                      )).toList(),
+                                if (mounted)
+                                  _showSubCategorySelectionDialog(cat);
+                              },
+                            );
+                          },
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ],
@@ -2552,29 +2999,36 @@ void _showAssignedToMeTasks() {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.04),
+          color: color.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.15)),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8)),
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Icon(icon, color: color, size: 16),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(name,
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: color)),
+              child: Text(
+                name,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: color,
+                ),
+              ),
             ),
-            Icon(Icons.arrow_forward_ios_rounded,
-                size: 12, color: color.withOpacity(0.5)),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 12,
+              color: color.withValues(alpha: 0.5),
+            ),
           ],
         ),
       ),
@@ -2583,146 +3037,171 @@ void _showAssignedToMeTasks() {
 
   void _showSubCategorySelectionDialog(MasterCategory category) async {
     if (!mounted) return;
-  
-  List<SubCategory> freshSubCategories = [];
-  
-  try {
-    final categoryId = int.tryParse(category.id) ?? 0;
-    debugPrint('Fetching subcategories for category ID: $categoryId, Category Name: ${category.name}');
-    
-    if (categoryId > 0) {
-      final response = await MyTasksService.getSubCategoriesByCategoryId(categoryId: categoryId);
-      debugPrint('Subcategories response data: ${response['data']}');
-      
-      if (response['data'] != null && response['data'] is List) {
-        freshSubCategories = (response['data'] as List).map((item) {
-          return SubCategory(
-            id: item['id']?.toString() ?? '',
-            name: item['subCategoryName'] ?? item['name'] ?? '',
-            description: item['description'],
-            categoryId: categoryId.toString(),
-          );
-        }).toList();
+
+    List<SubCategory> freshSubCategories = [];
+
+    try {
+      final categoryId = int.tryParse(category.id) ?? 0;
+      debugPrint(
+        'Fetching subcategories for category ID: $categoryId, Category Name: ${category.name}',
+      );
+
+      if (categoryId > 0) {
+        final response = await MyTasksService.getSubCategoriesByCategoryId(
+          categoryId: categoryId,
+        );
+        debugPrint('Subcategories response data: ${response['data']}');
+
+        if (response['data'] != null && response['data'] is List) {
+          freshSubCategories = (response['data'] as List).map((item) {
+            return SubCategory(
+              id: item['id']?.toString() ?? '',
+              name: item['subCategoryName'] ?? item['name'] ?? '',
+              description: item['description'],
+              categoryId: categoryId.toString(),
+            );
+          }).toList();
+        }
       }
+    } catch (e) {
+      debugPrint('Error fetching subcategories: $e');
+      freshSubCategories = category.subCategories
+          .where((sub) => sub.categoryId == category.id)
+          .toList();
     }
-  } catch (e) {
-    debugPrint('Error fetching subcategories: $e');
-    freshSubCategories = category.subCategories.where((sub) => sub.categoryId == category.id).toList();
-  }
-  
-  debugPrint('Final subcategories count: ${freshSubCategories.length}');
-  
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (ctx) => Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      backgroundColor: _AppColors.surface,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420, maxHeight: 520),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 8, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Select Subcategory',
+
+    debugPrint('Final subcategories count: ${freshSubCategories.length}');
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: _AppColors.surface,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420, maxHeight: 520),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 8, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Select Subcategory',
                             style: TextStyle(
-                                fontSize: 12,
-                                color: _AppColors.textSecondary)),
-                        Text(category.name,
-                            style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: _AppColors.textPrimary)),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    icon: const Icon(Icons.close_rounded,
-                        color: _AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1, color: _AppColors.border),
-            Flexible(
-              child: freshSubCategories.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.category_rounded,
-                                size: 40, color: _AppColors.textTertiary),
-                            const SizedBox(height: 12),
-                            const Text('No subcategories found for this category',
-                                style: TextStyle(
-                                    color: _AppColors.textSecondary)),
-                            const SizedBox(height: 12),
-                            TextButton.icon(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                _showAddSubCategoryForCategoryDialog(category);
-                              },
-                              icon: const Icon(Icons.add_rounded, size: 16),
-                              label: const Text('Add Subcategory'),
+                              fontSize: 12,
+                              color: _AppColors.textSecondary,
                             ),
-                          ],
-                        ),
+                          ),
+                          Text(
+                            category.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: _AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(12),
-                      shrinkWrap: true,
-                      itemCount: freshSubCategories.length,
-                      itemBuilder: (_, i) {
-                        final sub = freshSubCategories[i];
-                        return _categoryDialogItem(
-                          name: sub.name,
-                          color: Colors.blue,
-                          icon: Icons.subdirectory_arrow_right_rounded,
-                          onTap: () {
-                            Navigator.pop(ctx);
-                            _showAddEditTaskDialog(category, sub);
-                          },
-                        );
-                      },
                     ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _showAddEditTaskDialog(category, null);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: _AppColors.accent),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Skip Subcategory',
-                      style: TextStyle(color: _AppColors.accent)),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: _AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+              const Divider(height: 1, color: _AppColors.border),
+              Flexible(
+                child: freshSubCategories.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.category_rounded,
+                                size: 40,
+                                color: _AppColors.textTertiary,
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'No subcategories found for this category',
+                                style: TextStyle(
+                                  color: _AppColors.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              TextButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  _showAddSubCategoryForCategoryDialog(
+                                    category,
+                                  );
+                                },
+                                icon: const Icon(Icons.add_rounded, size: 16),
+                                label: const Text('Add Subcategory'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        shrinkWrap: true,
+                        itemCount: freshSubCategories.length,
+                        itemBuilder: (_, i) {
+                          final sub = freshSubCategories[i];
+                          return _categoryDialogItem(
+                            name: sub.name,
+                            color: Colors.blue,
+                            icon: Icons.subdirectory_arrow_right_rounded,
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _showAddEditTaskDialog(category, sub);
+                            },
+                          );
+                        },
+                      ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _showAddEditTaskDialog(category, null);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: const BorderSide(color: _AppColors.accent),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Skip Subcategory',
+                      style: TextStyle(color: _AppColors.accent),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   void _showAddSubCategoryForCategoryDialog(MasterCategory category) {
     final nameCtrl = TextEditingController();
@@ -2733,32 +3212,50 @@ void _showAssignedToMeTasks() {
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (_, ss) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Add Subcategory to "${category.name}"',
-              style: const TextStyle(color: _AppColors.accent, fontWeight: FontWeight.w700)),
-          content: Column(mainAxisSize: MainAxisSize.min, children: [
-            _styledField(controller: nameCtrl, label: 'Subcategory Name *'),
-            const SizedBox(height: 8),
-            Text(
-              'This subcategory will be linked to "${category.name}"',
-              style: TextStyle(fontSize: 11, color: _AppColors.textSecondary),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Add Subcategory to "${category.name}"',
+            style: const TextStyle(
+              color: _AppColors.accent,
+              fontWeight: FontWeight.w700,
             ),
-            if (isSaving)
-              const Padding(
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _styledField(controller: nameCtrl, label: 'Subcategory Name *'),
+              const SizedBox(height: 8),
+              Text(
+                'This subcategory will be linked to "${category.name}"',
+                style: TextStyle(fontSize: 11, color: _AppColors.textSecondary),
+              ),
+              if (isSaving)
+                const Padding(
                   padding: EdgeInsets.only(top: 12),
-                  child: CircularProgressIndicator(color: _AppColors.accent)),
-          ]),
+                  child: CircularProgressIndicator(color: _AppColors.accent),
+                ),
+            ],
+          ),
           actions: [
             TextButton(
-                onPressed: isSaving ? null : () => Navigator.pop(ctx),
-                child: const Text('Cancel', style: TextStyle(color: _AppColors.textSecondary))),
+              onPressed: isSaving ? null : () => Navigator.pop(ctx),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: _AppColors.textSecondary),
+              ),
+            ),
             ElevatedButton(
               onPressed: isSaving
                   ? null
                   : () async {
                       final name = nameCtrl.text.trim();
                       if (name.isEmpty) {
-                        _showSnackBar('Enter subcategory name', _AppColors.danger);
+                        _showSnackBar(
+                          'Enter subcategory name',
+                          _AppColors.danger,
+                        );
                         return;
                       }
                       ss(() => isSaving = true);
@@ -2767,23 +3264,29 @@ void _showAssignedToMeTasks() {
                         if (categoryId == 0) {
                           throw Exception('Invalid category ID');
                         }
-                        
+
                         final resp = await MyTasksService.saveSubCategory(
                           subCategoryName: name,
                           categoryId: categoryId,
                         );
-                        
+
                         if (resp['success'] == true) {
                           await MyTasksService.clearMasterCategoriesCache();
-                          final updated = await MyTasksService.getMasterCategories();
+                          final updated =
+                              await MyTasksService.getMasterCategories();
                           if (mounted) {
                             Navigator.pop(ctx);
                             _processCategoriesResponse(updated);
-                            _showSnackBar('Subcategory "$name" added successfully', _AppColors.success);
+                            _showSnackBar(
+                              'Subcategory "$name" added successfully',
+                              _AppColors.success,
+                            );
                             await _refreshTasks();
                           }
                         } else {
-                          throw Exception(resp['message'] ?? 'Failed to save subcategory');
+                          throw Exception(
+                            resp['message'] ?? 'Failed to save subcategory',
+                          );
                         }
                       } catch (e) {
                         if (mounted) {
@@ -2793,8 +3296,9 @@ void _showAssignedToMeTasks() {
                       }
                     },
               style: ElevatedButton.styleFrom(
-                  backgroundColor: _AppColors.accent,
-                  foregroundColor: Colors.white),
+                backgroundColor: _AppColors.accent,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Add Subcategory'),
             ),
           ],
@@ -2805,26 +3309,34 @@ void _showAssignedToMeTasks() {
 
   // ─── ADD/EDIT TASK DIALOG ─────────────────────────────────────────────────
 
-  void _showAddEditTaskDialog(MasterCategory category, SubCategory? subCategory, [Task? existingTask]) async {
+  void _showAddEditTaskDialog(
+    MasterCategory category,
+    SubCategory? subCategory, [
+    Task? existingTask,
+  ]) async {
     if (!mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
-    final currentUserName = prefs.getString('userName') ?? prefs.getString('username') ?? '';
+    final currentUserName =
+        prefs.getString('userName') ?? prefs.getString('username') ?? '';
 
     final titleCtrl = TextEditingController(text: existingTask?.title ?? '');
-    final descCtrl = TextEditingController(text: existingTask?.description ?? '');
+    final descCtrl = TextEditingController(
+      text: existingTask?.description ?? '',
+    );
     DateTime selectedDate = existingTask?.dueDate ?? DateTime.now();
     DateTime? alertDate = existingTask?.alertDate;
     DateTime? endDate = existingTask?.endDate;
     Priority selectedPriority = existingTask?.priority ?? Priority.medium;
-    RepeatPattern selectedRepeatPattern = existingTask?.repeatPattern ?? RepeatPattern.never;
+    RepeatPattern selectedRepeatPattern =
+        existingTask?.repeatPattern ?? RepeatPattern.never;
     int customRepeatDays = existingTask?.customRepeatDays ?? 1;
     String? assignedTo = existingTask?.assignedTo;
     String assignedBy = existingTask?.assignedBy ?? currentUserName;
-    
+
     bool isListening = false;
     final pageCtx = context;
-    
+
     final isEdit = existingTask != null;
 
     showDialog(
@@ -2842,12 +3354,14 @@ void _showAssignedToMeTasks() {
                 onPartial: (text) => ss(() {
                   descCtrl.text = text;
                   descCtrl.selection = TextSelection.fromPosition(
-                      TextPosition(offset: descCtrl.text.length));
+                    TextPosition(offset: descCtrl.text.length),
+                  );
                 }),
                 onFinal: (text) => ss(() {
                   descCtrl.text = text;
                   descCtrl.selection = TextSelection.fromPosition(
-                      TextPosition(offset: descCtrl.text.length));
+                    TextPosition(offset: descCtrl.text.length),
+                  );
                   isListening = false;
                 }),
               );
@@ -2859,11 +3373,11 @@ void _showAssignedToMeTasks() {
 
           return Dialog(
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20)),
+              borderRadius: BorderRadius.circular(20),
+            ),
             backgroundColor: _AppColors.surface,
             child: ConstrainedBox(
-              constraints:
-                  const BoxConstraints(maxWidth: 520, maxHeight: 650),
+              constraints: const BoxConstraints(maxWidth: 520, maxHeight: 650),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -2876,36 +3390,49 @@ void _showAssignedToMeTasks() {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: _getCategoryColor(category.name)
-                                .withOpacity(0.1),
+                            color: _getCategoryColor(
+                              category.name,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(Icons.task_alt_rounded,
-                              color: _getCategoryColor(category.name),
-                              size: 20),
+                          child: Icon(
+                            Icons.task_alt_rounded,
+                            color: _getCategoryColor(category.name),
+                            size: 20,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(isEdit ? 'Edit Task' : 'Create New Task',
-                                    style: const TextStyle(
-                                        fontSize: 11,
-                                        color: _AppColors.textSecondary)),
-                                Text(category.name,
-                                    style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                        color: _AppColors.textPrimary),
-                                    overflow: TextOverflow.ellipsis),
-                                if (subCategory != null)
-                                  Text(subCategory.name,
-                                      style: const TextStyle(
-                                          fontSize: 13,
-                                          color: _AppColors.accent),
-                                      overflow: TextOverflow.ellipsis),
-                              ]),
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isEdit ? 'Edit Task' : 'Create New Task',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: _AppColors.textSecondary,
+                                ),
+                              ),
+                              Text(
+                                category.name,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: _AppColors.textPrimary,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (subCategory != null)
+                                Text(
+                                  subCategory.name,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: _AppColors.accent,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
+                          ),
                         ),
                         IconButton(
                           onPressed: () async {
@@ -2915,8 +3442,10 @@ void _showAssignedToMeTasks() {
                             }
                             Navigator.pop(ctx);
                           },
-                          icon: const Icon(Icons.close_rounded,
-                              color: _AppColors.textSecondary),
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: _AppColors.textSecondary,
+                          ),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                         ),
@@ -2924,49 +3453,56 @@ void _showAssignedToMeTasks() {
                     ),
                     const SizedBox(height: 20),
                     _styledField(
-                        controller: titleCtrl, label: 'Task Title *', maxLines: 3),
+                      controller: titleCtrl,
+                      label: 'Task Title *',
+                      maxLines: 3,
+                    ),
                     const SizedBox(height: 12),
                     _styledField(
-  controller: descCtrl,
-  label: 'Description',
-  maxLines: 5,
-  suffix: IconButton(
-    icon: Icon(
-      isListening
-          ? Icons.mic_rounded
-          : Icons.mic_none_rounded,
-      color: isListening
-          ? _AppColors.danger
-          : _AppColors.accent,
-      size: 24,
-    ),
-    onPressed: () async {
-      if (!isListening) {
-        final ok = await SpeechService.instance.init();
-        if (ok) {
-          ss(() => isListening = true);
-          SpeechService.instance.startListening(
-            onPartial: (text) => ss(() {
-              descCtrl.text = text;
-              descCtrl.selection = TextSelection.fromPosition(
-                  TextPosition(offset: descCtrl.text.length));
-            }),
-            onFinal: (text) => ss(() {
-              descCtrl.text = text;
-              descCtrl.selection = TextSelection.fromPosition(
-                  TextPosition(offset: descCtrl.text.length));
-              isListening = false;
-            }),
-          );
-        }
-      } else {
-        await SpeechService.instance.stop();
-        ss(() => isListening = false);
-      }
-    },
-    padding: const EdgeInsets.all(8),
-  ),
-),
+                      controller: descCtrl,
+                      label: 'Description',
+                      maxLines: 5,
+                      suffix: IconButton(
+                        icon: Icon(
+                          isListening
+                              ? Icons.mic_rounded
+                              : Icons.mic_none_rounded,
+                          color: isListening
+                              ? _AppColors.danger
+                              : _AppColors.accent,
+                          size: 24,
+                        ),
+                        onPressed: () async {
+                          if (!isListening) {
+                            final ok = await SpeechService.instance.init();
+                            if (ok) {
+                              ss(() => isListening = true);
+                              SpeechService.instance.startListening(
+                                onPartial: (text) => ss(() {
+                                  descCtrl.text = text;
+                                  descCtrl
+                                      .selection = TextSelection.fromPosition(
+                                    TextPosition(offset: descCtrl.text.length),
+                                  );
+                                }),
+                                onFinal: (text) => ss(() {
+                                  descCtrl.text = text;
+                                  descCtrl
+                                      .selection = TextSelection.fromPosition(
+                                    TextPosition(offset: descCtrl.text.length),
+                                  );
+                                  isListening = false;
+                                }),
+                              );
+                            }
+                          } else {
+                            await SpeechService.instance.stop();
+                            ss(() => isListening = false);
+                          }
+                        },
+                        padding: const EdgeInsets.all(8),
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(14),
@@ -2974,47 +3510,53 @@ void _showAssignedToMeTasks() {
                         color: _AppColors.background,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Column(children: [
-                        _dateRow(
-                          label: 'Due Date',
-                          date: selectedDate,
-                          icon: Icons.calendar_today_rounded,
-                          color: _AppColors.accent,
-                          onTap: () async {
-                            final p = await _pickDate(
-                                dialogCtx, selectedDate);
-                            if (p != null) ss(() => selectedDate = p);
-                          },
-                        ),
-                        const Divider(
-                            height: 12, color: _AppColors.border),
-                        _optionalDateRow(
-                          label: 'Set Alert (Reminder)',
-                          date: alertDate,
-                          icon: Icons.notifications_active_rounded,
-                          color: _AppColors.warning,
-                          onTap: () async {
-                            final p = await _pickDate(dialogCtx,
-                                alertDate ?? selectedDate);
-                            if (p != null) ss(() => alertDate = p);
-                          },
-                          onClear: () => ss(() => alertDate = null),
-                        ),
-                        const Divider(
-                            height: 12, color: _AppColors.border),
-                        _optionalDateRow(
-                          label: 'Alert End Date',
-                          date: endDate,
-                          icon: Icons.event_rounded,
-                          color: Colors.teal,
-                          onTap: () async {
-                            final p = await _pickDate(
-                                dialogCtx, endDate ?? selectedDate);
-                            if (p != null) ss(() => endDate = p);
-                          },
-                          onClear: () => ss(() => endDate = null),
-                        ),
-                      ]),
+                      child: Column(
+                        children: [
+                          _dateRow(
+                            label: 'Due Date',
+                            date: selectedDate,
+                            icon: Icons.calendar_today_rounded,
+                            color: _AppColors.accent,
+                            onTap: () async {
+                              final p = await _pickDate(
+                                dialogCtx,
+                                selectedDate,
+                              );
+                              if (p != null) ss(() => selectedDate = p);
+                            },
+                          ),
+                          const Divider(height: 12, color: _AppColors.border),
+                          _optionalDateRow(
+                            label: 'Set Alert (Reminder)',
+                            date: alertDate,
+                            icon: Icons.notifications_active_rounded,
+                            color: _AppColors.warning,
+                            onTap: () async {
+                              final p = await _pickDate(
+                                dialogCtx,
+                                alertDate ?? selectedDate,
+                              );
+                              if (p != null) ss(() => alertDate = p);
+                            },
+                            onClear: () => ss(() => alertDate = null),
+                          ),
+                          const Divider(height: 12, color: _AppColors.border),
+                          _optionalDateRow(
+                            label: 'Alert End Date',
+                            date: endDate,
+                            icon: Icons.event_rounded,
+                            color: Colors.teal,
+                            onTap: () async {
+                              final p = await _pickDate(
+                                dialogCtx,
+                                endDate ?? selectedDate,
+                              );
+                              if (p != null) ss(() => endDate = p);
+                            },
+                            onClear: () => ss(() => endDate = null),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Container(
@@ -3024,36 +3566,38 @@ void _showAssignedToMeTasks() {
                         border: Border.all(color: _AppColors.border),
                       ),
                       child: ListTile(
-                        leading: Icon(Icons.repeat_rounded,
-                            color: Colors.green.shade600, size: 20),
+                        leading: Icon(
+                          Icons.repeat_rounded,
+                          color: Colors.green.shade600,
+                          size: 20,
+                        ),
                         title: Text(
                           selectedRepeatPattern == RepeatPattern.never
                               ? 'Repeat'
-                              : selectedRepeatPattern ==
-                                      RepeatPattern.custom
-                                  ? 'Every $customRepeatDays days'
-                                  : _getRepeatPatternText(
-                                      selectedRepeatPattern),
+                              : selectedRepeatPattern == RepeatPattern.custom
+                              ? 'Every $customRepeatDays days'
+                              : _getRepeatPatternText(selectedRepeatPattern),
                           style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        trailing:
-                            selectedRepeatPattern != RepeatPattern.never
-                                ? GestureDetector(
-                                    onTap: () => ss(() {
-                                      selectedRepeatPattern =
-                                          RepeatPattern.never;
-                                      customRepeatDays = 1;
-                                    }),
-                                    child: const Icon(
-                                        Icons.close_rounded,
-                                        size: 16,
-                                        color: _AppColors.textSecondary),
-                                  )
-                                : const Icon(
-                                    Icons.keyboard_arrow_right_rounded,
-                                    color: _AppColors.textTertiary),
+                        trailing: selectedRepeatPattern != RepeatPattern.never
+                            ? GestureDetector(
+                                onTap: () => ss(() {
+                                  selectedRepeatPattern = RepeatPattern.never;
+                                  customRepeatDays = 1;
+                                }),
+                                child: const Icon(
+                                  Icons.close_rounded,
+                                  size: 16,
+                                  color: _AppColors.textSecondary,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.keyboard_arrow_right_rounded,
+                                color: _AppColors.textTertiary,
+                              ),
                         onTap: () => _showRepeatDialog(
                           dialogCtx,
                           ss,
@@ -3075,44 +3619,43 @@ void _showAssignedToMeTasks() {
                         final color = _getPriorityColor(p);
                         return Expanded(
                           child: GestureDetector(
-                            onTap: () =>
-                                ss(() => selectedPriority = p),
+                            onTap: () => ss(() => selectedPriority = p),
                             child: Container(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 3),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 10),
+                              margin: const EdgeInsets.symmetric(horizontal: 3),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? color.withOpacity(0.1)
+                                    ? color.withValues(alpha: 0.1)
                                     : _AppColors.background,
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: isSelected
-                                      ? color
-                                      : _AppColors.border,
+                                  color: isSelected ? color : _AppColors.border,
                                 ),
                               ),
-                              child: Column(children: [
-                                Icon(_getPriorityIcon(p),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    _getPriorityIcon(p),
                                     size: 16,
-                                    color: isSelected
-                                        ? color
-                                        : _AppColors.textTertiary),
-                                const SizedBox(height: 3),
-                                Text(
-                                  p.toString().split('.').last,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w700
-                                        : FontWeight.normal,
                                     color: isSelected
                                         ? color
                                         : _AppColors.textTertiary,
                                   ),
-                                ),
-                              ]),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    p.toString().split('.').last,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.normal,
+                                      color: isSelected
+                                          ? color
+                                          : _AppColors.textTertiary,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );
@@ -3128,18 +3671,37 @@ void _showAssignedToMeTasks() {
                       child: Column(
                         children: [
                           ListTile(
-                            leading: Icon(Icons.person_add_rounded,
-                                color: _AppColors.accent, size: 20),
-                            title: const Text('Assigned To',
-                                style: TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w500)),
-                            subtitle: Text(assignedTo?.isNotEmpty == true ? assignedTo! : 'Not assigned',
-                                style: TextStyle(
-                                    fontSize: 12, color: _AppColors.textSecondary)),
-                            trailing: const Icon(Icons.edit_rounded,
-                                size: 18, color: _AppColors.textTertiary),
+                            leading: Icon(
+                              Icons.person_add_rounded,
+                              color: _AppColors.accent,
+                              size: 20,
+                            ),
+                            title: const Text(
+                              'Assigned To',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            subtitle: Text(
+                              assignedTo?.isNotEmpty == true
+                                  ? assignedTo!
+                                  : 'Not assigned',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _AppColors.textSecondary,
+                              ),
+                            ),
+                            trailing: const Icon(
+                              Icons.edit_rounded,
+                              size: 18,
+                              color: _AppColors.textTertiary,
+                            ),
                             onTap: () async {
-                              final result = await _showAssignedToDialog(dialogCtx, assignedTo);
+                              final result = await _showAssignedToDialog(
+                                dialogCtx,
+                                assignedTo,
+                              );
                               if (result != null) {
                                 ss(() => assignedTo = result);
                               }
@@ -3147,253 +3709,319 @@ void _showAssignedToMeTasks() {
                           ),
                           const Divider(height: 1, color: _AppColors.border),
                           ListTile(
-                            leading: Icon(Icons.person_rounded,
-                                color: _AppColors.success, size: 20),
-                            title: const Text('Assigned By',
-                                style: TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w500)),
-                            subtitle: Text(assignedBy.isNotEmpty ? assignedBy : 'Current User',
-                                style: TextStyle(
-                                    fontSize: 12, color: _AppColors.textSecondary)),
-                            trailing: Icon(Icons.info_outline_rounded,
-                                size: 18, color: _AppColors.textTertiary),
+                            leading: Icon(
+                              Icons.person_rounded,
+                              color: _AppColors.success,
+                              size: 20,
+                            ),
+                            title: const Text(
+                              'Assigned By',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            subtitle: Text(
+                              assignedBy.isNotEmpty
+                                  ? assignedBy
+                                  : 'Current User',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _AppColors.textSecondary,
+                              ),
+                            ),
+                            trailing: Icon(
+                              Icons.info_outline_rounded,
+                              size: 18,
+                              color: _AppColors.textTertiary,
+                            ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Row(children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            if (isListening) {
-                              SpeechService.instance.stop();
-                              isListening = false;
-                            }
-                            Navigator.pop(ctx);
-                          },
-                          style: OutlinedButton.styleFrom(
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            side:
-                                const BorderSide(color: _AppColors.border),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              if (isListening) {
+                                SpeechService.instance.stop();
+                                isListening = false;
+                              }
+                              Navigator.pop(ctx);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              side: const BorderSide(color: _AppColors.border),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(color: _AppColors.textSecondary),
+                            ),
                           ),
-                          child: const Text('Cancel',
-                              style: TextStyle(
-                                  color: _AppColors.textSecondary)),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            if (isListening) {
-                              await SpeechService.instance.stop();
-                              isListening = false;
-                            }
-                            if (titleCtrl.text.trim().isEmpty) {
-                              _showSnackBar('Please enter task title',
-                                  _AppColors.danger);
-                              return;
-                            }
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              if (isListening) {
+                                await SpeechService.instance.stop();
+                                isListening = false;
+                              }
+                              if (titleCtrl.text.trim().isEmpty) {
+                                _showSnackBar(
+                                  'Please enter task title',
+                                  _AppColors.danger,
+                                );
+                                return;
+                              }
 
-                            final taskTitle = titleCtrl.text.trim();
-                            final taskDesc = descCtrl.text.trim();
-                            final taskDue = selectedDate;
-                            final taskAlert = alertDate;
-                            final taskEnd = endDate;
-                            final taskPriority = selectedPriority;
-                            final taskRepeat = selectedRepeatPattern;
-                            final taskCustomDays = customRepeatDays;
-                            Navigator.pop(ctx);
+                              final taskTitle = titleCtrl.text.trim();
+                              final taskDesc = descCtrl.text.trim();
+                              final taskDue = selectedDate;
+                              final taskAlert = alertDate;
+                              final taskEnd = endDate;
+                              final taskPriority = selectedPriority;
+                              final taskRepeat = selectedRepeatPattern;
+                              final taskCustomDays = customRepeatDays;
+                              Navigator.pop(ctx);
 
-                            if (!mounted) return;
-                            BuildContext? loadCtx;
-                            showDialog(
-                              context: pageCtx,
-                              barrierDismissible: false,
-                              builder: (c) {
-                                loadCtx = c;
-                                return Center(
-                                  child: Card(
-                                    shape: const RoundedRectangleBorder(
+                              if (!mounted) return;
+                              BuildContext? loadCtx;
+                              showDialog(
+                                context: pageCtx,
+                                barrierDismissible: false,
+                                builder: (c) {
+                                  loadCtx = c;
+                                  return Center(
+                                    child: Card(
+                                      shape: const RoundedRectangleBorder(
                                         borderRadius: BorderRadius.all(
-                                            Radius.circular(16))),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(24),
-                                      child: Column(
+                                          Radius.circular(16),
+                                        ),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(24),
+                                        child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             const CircularProgressIndicator(
-                                                color: _AppColors.accent),
+                                              color: _AppColors.accent,
+                                            ),
                                             const SizedBox(height: 16),
-                                            Text(isEdit ? 'Updating task...' : 'Creating task...'),
-                                          ]),
+                                            Text(
+                                              isEdit
+                                                  ? 'Updating task...'
+                                                  : 'Creating task...',
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                  );
+                                },
+                              );
+
+                              try {
+                                final now = DateTime.now();
+                                final today = DateTime(
+                                  now.year,
+                                  now.month,
+                                  now.day,
                                 );
-                              },
-                            );
-
-                            try {
-                              final now = DateTime.now();
-                              final today = DateTime(
-                                  now.year, now.month, now.day);
-                              final taskDay = DateTime(taskDue.year,
-                                  taskDue.month, taskDue.day);
-                              
-                              String taskStatus;
-                              if (isEdit && existingTask?.isCompleted == true) {
-                                taskStatus = 'COMPLETED';
-                              } else if (taskDay == today) {
-                                taskStatus = 'TODAY';
-                              } else {
-                                taskStatus = 'UPCOMING';
-                              }
-                              
-                              final catId = int.tryParse(category.id) ?? 0;
-                              int? subCatId;
-                              if (subCategory != null && subCategory.id.isNotEmpty) {
-                                subCatId = int.tryParse(subCategory.id);
-                              }
-
-                              String? repeatType;
-                              String? repeatUnit;
-                              int? repeatInterval;
-                              switch (taskRepeat) {
-                                case RepeatPattern.daily:
-                                  repeatType = 'DAILY';
-                                  repeatUnit = 'DAY';
-                                  repeatInterval = 1;
-                                  break;
-                                case RepeatPattern.weekly:
-                                  repeatType = 'WEEKLY';
-                                  repeatUnit = 'WEEK';
-                                  repeatInterval = 1;
-                                  break;
-                                case RepeatPattern.monthly:
-                                  repeatType = 'MONTHLY';
-                                  repeatUnit = 'MONTH';
-                                  repeatInterval = 1;
-                                  break;
-                                case RepeatPattern.quarterly:
-                                  repeatType = 'QUARTERLY';
-                                  repeatUnit = 'MONTH';
-                                  repeatInterval = 3;
-                                  break;
-                                case RepeatPattern.halfYearly:
-                                  repeatType = 'HALF_YEARLY';
-                                  repeatUnit = 'MONTH';
-                                  repeatInterval = 6;
-                                  break;
-                                case RepeatPattern.yearly:
-                                  repeatType = 'YEARLY';
-                                  repeatUnit = 'YEAR';
-                                  repeatInterval = 1;
-                                  break;
-                                case RepeatPattern.custom:
-                                  repeatType = 'CUSTOM';
-                                  repeatUnit = 'DAY';
-                                  repeatInterval = taskCustomDays;
-                                  break;
-                                case RepeatPattern.never:
-                                  break;
-                              }
-
-                            String formatDate(DateTime date) {
-  // Convert local DateTime to UTC to preserve the actual date/time
-  final utcDate = DateTime.utc(
-    date.year,
-    date.month,
-    date.day,
-    date.hour,
-    date.minute,
-    date.second,
-  );
-  return DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(utcDate);
-}
-                              Map<String, dynamic> resp;
-                              
-                              if (isEdit && existingTask?.realId != null) {
-                                resp = await MyTasksService.updateTask(
-                                  taskId: existingTask!.realId!,
-                                  taskName: taskTitle,
-                                  description: taskDesc,
-                                  status: taskStatus,
-                                  priority: taskPriority.toString().split('.').last.toUpperCase(),
-                                  dueDate: formatDate(taskDue),
-                                  reminderDatetime: taskAlert != null ? formatDate(taskAlert) : null,
-                                  repeatType: repeatType,
-                                  repeatInterval: repeatInterval,
-                                  repeatUnit: repeatUnit,
-                                  repeatEndDate: taskEnd != null ? formatDate(taskEnd) : null,
-                                  assignedTo: assignedTo,
-                                  assignedBy: assignedBy.isNotEmpty ? assignedBy : currentUserName,
-                                  taskSubCategoryId: subCatId,
-                                  taskCategoryId: catId,
-                                  roleGroupName: 'Admin',
+                                final taskDay = DateTime(
+                                  taskDue.year,
+                                  taskDue.month,
+                                  taskDue.day,
                                 );
-                              } else {
-                                resp = await MyTasksService.saveTask(
-                                  roleGroupName: 'Admin',
-                                  taskCategoryId: catId,
-                                  taskName: taskTitle,
-                                  description: taskDesc,
-                                  status: taskStatus,
-                                  priority: taskPriority.toString().split('.').last.toUpperCase(),
-                                  dueDate: formatDate(taskDue),
-                                  reminderDatetime: taskAlert != null ? formatDate(taskAlert) : null,
-                                  repeatType: repeatType,
-                                  repeatInterval: repeatInterval,
-                                  repeatUnit: repeatUnit,
-                                  repeatEndDate: taskEnd != null ? formatDate(taskEnd) : null,
-                                  assignedTo: assignedTo,
-                                  assignedBy: assignedBy.isNotEmpty ? assignedBy : currentUserName,
-                                  taskSubCategoryId: subCatId,
-                                );
-                              }
 
-                              if (loadCtx != null && Navigator.canPop(loadCtx!)) {
-                                if (mounted) Navigator.pop(loadCtx!);
-                              }
+                                String taskStatus;
+                                if (isEdit &&
+                                    existingTask?.isCompleted == true) {
+                                  taskStatus = 'COMPLETED';
+                                } else if (taskDay == today) {
+                                  taskStatus = 'TODAY';
+                                } else {
+                                  taskStatus = 'UPCOMING';
+                                }
 
-                              if (!mounted) return;
+                                final catId = int.tryParse(category.id) ?? 0;
+                                int? subCatId;
+                                if (subCategory != null &&
+                                    subCategory.id.isNotEmpty) {
+                                  subCatId = int.tryParse(subCategory.id);
+                                }
 
-                              if (resp['status_code'] == 200 ||
-                                  resp['status_code'] == 201 ||
-                                  resp['success'] == true) {
-                                await _refreshTasks();
-                                _showSnackBar(
-                                    isEdit ? 'Task updated!' : 'Task created!', 
-                                    _AppColors.success);
-                              } else {
-                                throw Exception(resp['message'] ?? 'Failed to save task');
+                                String? repeatType;
+                                String? repeatUnit;
+                                int? repeatInterval;
+                                switch (taskRepeat) {
+                                  case RepeatPattern.daily:
+                                    repeatType = 'DAILY';
+                                    repeatUnit = 'DAY';
+                                    repeatInterval = 1;
+                                    break;
+                                  case RepeatPattern.weekly:
+                                    repeatType = 'WEEKLY';
+                                    repeatUnit = 'WEEK';
+                                    repeatInterval = 1;
+                                    break;
+                                  case RepeatPattern.monthly:
+                                    repeatType = 'MONTHLY';
+                                    repeatUnit = 'MONTH';
+                                    repeatInterval = 1;
+                                    break;
+                                  case RepeatPattern.quarterly:
+                                    repeatType = 'QUARTERLY';
+                                    repeatUnit = 'MONTH';
+                                    repeatInterval = 3;
+                                    break;
+                                  case RepeatPattern.halfYearly:
+                                    repeatType = 'HALF_YEARLY';
+                                    repeatUnit = 'MONTH';
+                                    repeatInterval = 6;
+                                    break;
+                                  case RepeatPattern.yearly:
+                                    repeatType = 'YEARLY';
+                                    repeatUnit = 'YEAR';
+                                    repeatInterval = 1;
+                                    break;
+                                  case RepeatPattern.custom:
+                                    repeatType = 'CUSTOM';
+                                    repeatUnit = 'DAY';
+                                    repeatInterval = taskCustomDays;
+                                    break;
+                                  case RepeatPattern.never:
+                                    break;
+                                }
+
+                                String formatDate(DateTime date) {
+                                  // Convert local DateTime to UTC to preserve the actual date/time
+                                  final utcDate = DateTime.utc(
+                                    date.year,
+                                    date.month,
+                                    date.day,
+                                    date.hour,
+                                    date.minute,
+                                    date.second,
+                                  );
+                                  return DateFormat(
+                                    "yyyy-MM-dd'T'HH:mm:ss",
+                                  ).format(utcDate);
+                                }
+
+                                Map<String, dynamic> resp;
+
+                                if (isEdit && existingTask?.realId != null) {
+                                  resp = await MyTasksService.updateTask(
+                                    taskId: existingTask!.realId!,
+                                    taskName: taskTitle,
+                                    description: taskDesc,
+                                    status: taskStatus,
+                                    priority: taskPriority
+                                        .toString()
+                                        .split('.')
+                                        .last
+                                        .toUpperCase(),
+                                    dueDate: formatDate(taskDue),
+                                    reminderDatetime: taskAlert != null
+                                        ? formatDate(taskAlert)
+                                        : null,
+                                    repeatType: repeatType,
+                                    repeatInterval: repeatInterval,
+                                    repeatUnit: repeatUnit,
+                                    repeatEndDate: taskEnd != null
+                                        ? formatDate(taskEnd)
+                                        : null,
+                                    assignedTo: assignedTo,
+                                    assignedBy: assignedBy.isNotEmpty
+                                        ? assignedBy
+                                        : currentUserName,
+                                    taskSubCategoryId: subCatId,
+                                    taskCategoryId: catId,
+                                    roleGroupName: 'Admin',
+                                  );
+                                } else {
+                                  resp = await MyTasksService.saveTask(
+                                    roleGroupName: 'Admin',
+                                    taskCategoryId: catId,
+                                    taskName: taskTitle,
+                                    description: taskDesc,
+                                    status: taskStatus,
+                                    priority: taskPriority
+                                        .toString()
+                                        .split('.')
+                                        .last
+                                        .toUpperCase(),
+                                    dueDate: formatDate(taskDue),
+                                    reminderDatetime: taskAlert != null
+                                        ? formatDate(taskAlert)
+                                        : null,
+                                    repeatType: repeatType,
+                                    repeatInterval: repeatInterval,
+                                    repeatUnit: repeatUnit,
+                                    repeatEndDate: taskEnd != null
+                                        ? formatDate(taskEnd)
+                                        : null,
+                                    assignedTo: assignedTo,
+                                    assignedBy: assignedBy.isNotEmpty
+                                        ? assignedBy
+                                        : currentUserName,
+                                    taskSubCategoryId: subCatId,
+                                  );
+                                }
+
+                                if (loadCtx != null &&
+                                    Navigator.canPop(loadCtx!)) {
+                                  if (mounted) Navigator.pop(loadCtx!);
+                                }
+
+                                if (!mounted) return;
+
+                                if (resp['status_code'] == 200 ||
+                                    resp['status_code'] == 201 ||
+                                    resp['success'] == true) {
+                                  await _refreshTasks();
+                                  _showSnackBar(
+                                    isEdit ? 'Task updated!' : 'Task created!',
+                                    _AppColors.success,
+                                  );
+                                } else {
+                                  throw Exception(
+                                    resp['message'] ?? 'Failed to save task',
+                                  );
+                                }
+                              } catch (e) {
+                                if (loadCtx != null &&
+                                    Navigator.canPop(loadCtx!)) {
+                                  if (mounted) Navigator.pop(loadCtx!);
+                                }
+                                if (mounted)
+                                  _showSnackBar('Error: $e', _AppColors.danger);
                               }
-                            } catch (e) {
-                              if (loadCtx != null && Navigator.canPop(loadCtx!)) {
-                                if (mounted) Navigator.pop(loadCtx!);
-                              }
-                              if (mounted)
-                                _showSnackBar(
-                                    'Error: $e', _AppColors.danger);
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _AppColors.accent,
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: Text(isEdit ? 'Update Task' : 'Create Task',
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _AppColors.accent,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              isEdit ? 'Update Task' : 'Create Task',
                               style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600)),
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ]),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -3403,160 +4031,190 @@ void _showAssignedToMeTasks() {
       ),
     );
   }
-Future<String?> _showAssignedToDialog(BuildContext context, String? currentValue) async {
-  List<Map<String, dynamic>> userList = [];
-  
-  try {
-    final response = await MyTasksService.getClinicUserList();
-    debugPrint('Raw assign dialog response keys: ${response.keys.toList()}');
-    
-    List<dynamic>? rawList;
 
-    // Structure: { "data": [ { "userlist": [...] } ] }
-    if (response['data'] != null && response['data'] is List) {
-      final dataList = response['data'] as List;
-      if (dataList.isNotEmpty && dataList[0] is Map) {
-        final firstItem = dataList[0] as Map;
-        if (firstItem['userlist'] != null && firstItem['userlist'] is List) {
-          rawList = firstItem['userlist'] as List;
+  Future<String?> _showAssignedToDialog(
+    BuildContext context,
+    String? currentValue,
+  ) async {
+    List<Map<String, dynamic>> userList = [];
+
+    try {
+      final response = await MyTasksService.getClinicUserList();
+      debugPrint('Raw assign dialog response keys: ${response.keys.toList()}');
+
+      List<dynamic>? rawList;
+
+      // Structure: { "data": [ { "userlist": [...] } ] }
+      if (response['data'] != null && response['data'] is List) {
+        final dataList = response['data'] as List;
+        if (dataList.isNotEmpty && dataList[0] is Map) {
+          final firstItem = dataList[0] as Map;
+          if (firstItem['userlist'] != null && firstItem['userlist'] is List) {
+            rawList = firstItem['userlist'] as List;
+          }
         }
       }
-    }
 
-    // Fallback: { "userlist": [...] } directly
-    if (rawList == null && response['userlist'] != null && response['userlist'] is List) {
-      rawList = response['userlist'] as List;
-    }
+      // Fallback: { "userlist": [...] } directly
+      if (rawList == null &&
+          response['userlist'] != null &&
+          response['userlist'] is List) {
+        rawList = response['userlist'] as List;
+      }
 
-    // Last resort: find any List anywhere in response
-    if (rawList == null) {
-      for (final value in response.values) {
-        if (value is List && value.isNotEmpty) {
-          rawList = value;
-          break;
+      // Last resort: find any List anywhere in response
+      if (rawList == null) {
+        for (final value in response.values) {
+          if (value is List && value.isNotEmpty) {
+            rawList = value;
+            break;
+          }
         }
       }
+
+      debugPrint('rawList found: ${rawList?.length} items');
+
+      if (rawList != null) {
+        userList = rawList
+            .map((user) {
+              final name =
+                  user['username']?.toString() ??
+                  user['name']?.toString() ??
+                  user['userName']?.toString() ??
+                  user['fullName']?.toString() ??
+                  '';
+              return <String, dynamic>{
+                'id': user['id']?.toString() ?? '',
+                'name': name,
+                'userid': user['userid']?.toString() ?? '',
+              };
+            })
+            .where((user) => (user['name'] as String).isNotEmpty)
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error fetching user list: $e');
     }
 
-    debugPrint('rawList found: ${rawList?.length} items');
+    debugPrint('Final userList count: ${userList.length}');
+    if (userList.isNotEmpty) debugPrint('First user: ${userList.first}');
 
-    if (rawList != null) {
-      userList = rawList.map((user) {
-        final name = user['username']?.toString() ??
-            user['name']?.toString() ??
-            user['userName']?.toString() ??
-            user['fullName']?.toString() ?? '';
-        return <String, dynamic>{
-          'id': user['id']?.toString() ?? '',
-          'name': name,
-          'userid': user['userid']?.toString() ?? '',
-        };
-      }).where((user) => (user['name'] as String).isNotEmpty).toList();
-    }
-  } catch (e) {
-    debugPrint('Error fetching user list: $e');
-  }
+    if (!mounted) return null;
 
-  debugPrint('Final userList count: ${userList.length}');
-  if (userList.isNotEmpty) debugPrint('First user: ${userList.first}');
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (ctx, ss) {
+            final filtered = searchQuery.isEmpty
+                ? userList
+                : userList
+                      .where(
+                        (u) => (u['name'] as String).toLowerCase().contains(
+                          searchQuery,
+                        ),
+                      )
+                      .toList();
 
-  if (!mounted) return null;
-
-  return showDialog<String>(
-    context: context,
-    builder: (ctx) {
-      String searchQuery = '';
-      return StatefulBuilder(
-        builder: (ctx, ss) {
-          final filtered = searchQuery.isEmpty
-              ? userList
-              : userList
-                  .where((u) =>
-                      (u['name'] as String).toLowerCase().contains(searchQuery))
-                  .toList();
-
-          return AlertDialog(
-            title: const Text('Assign Task To',
+            return AlertDialog(
+              title: const Text(
+                'Assign Task To',
                 style: TextStyle(
-                    color: _AppColors.accent, fontWeight: FontWeight.w700)),
-            content: Container(
-              width: double.maxFinite,
-              constraints: const BoxConstraints(maxHeight: 400),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    onChanged: (value) =>
-                        ss(() => searchQuery = value.toLowerCase()),
-                    decoration: InputDecoration(
-                      hintText: 'Search users...',
-                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  color: _AppColors.accent,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              content: Container(
+                width: double.maxFinite,
+                constraints: const BoxConstraints(maxHeight: 400),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      onChanged: (value) =>
+                          ss(() => searchQuery = value.toLowerCase()),
+                      decoration: InputDecoration(
+                        hintText: 'Search users...',
+                        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: userList.isEmpty
-                        ? const Center(
-                            child: Text('No users found',
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: userList.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No users found',
                                 style: TextStyle(
-                                    color: _AppColors.textSecondary)),
-                          )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: filtered.length,
-                            itemBuilder: (_, index) {
-                              final user = filtered[index];
-                              final userName = user['name'] as String;
-                              final userId = user['userid'] as String;
-                              return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor:
-                                      _AppColors.accent.withOpacity(0.1),
-                                  radius: 18,
-                                  child: Text(
-                                    userName.isNotEmpty
-                                        ? userName[0].toUpperCase()
-                                        : '?',
-                                    style: const TextStyle(
-                                        color: _AppColors.accent,
-                                        fontWeight: FontWeight.bold),
-                                  ),
+                                  color: _AppColors.textSecondary,
                                 ),
-                                title: Text(userName,
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: filtered.length,
+                              itemBuilder: (_, index) {
+                                final user = filtered[index];
+                                final userName = user['name'] as String;
+                                final userId = user['userid'] as String;
+                                return ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: _AppColors.accent
+                                        .withValues(alpha: 0.1),
+                                    radius: 18,
+                                    child: Text(
+                                      userName.isNotEmpty
+                                          ? userName[0].toUpperCase()
+                                          : '?',
+                                      style: const TextStyle(
+                                        color: _AppColors.accent,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    userName,
                                     style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500)),
-                                subtitle: userId.isNotEmpty
-                                    ? Text('@$userId',
-                                        style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  subtitle: userId.isNotEmpty
+                                      ? Text(
+                                          '@$userId',
+                                          style: const TextStyle(
                                             fontSize: 11,
-                                            color: _AppColors.textSecondary))
-                                    : null,
-                                onTap: () => Navigator.pop(ctx, userName),
-                              );
-                            },
-                          ),
-                  ),
-                ],
+                                            color: _AppColors.textSecondary,
+                                          ),
+                                        )
+                                      : null,
+                                  onTap: () => Navigator.pop(ctx, userName),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-}
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   Future<DateTime?> _pickDate(BuildContext ctx, DateTime initial) {
     return showDatePicker(
@@ -3566,10 +4224,33 @@ Future<String?> _showAssignedToDialog(BuildContext context, String? currentValue
       lastDate: DateTime.now().add(const Duration(days: 3650)),
       builder: (context, child) => Theme(
         data: ThemeData.light().copyWith(
-          colorScheme:
-              const ColorScheme.light(primary: _AppColors.accent),
+          useMaterial3: false,
+          visualDensity: VisualDensity.compact,
+          dialogTheme: DialogThemeData(
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 32,
+              vertical: 20,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
+            ),
+          ),
+          datePickerTheme: DatePickerThemeData(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(22),
+            ),
+            dayStyle: const TextStyle(fontSize: 14),
+            weekdayStyle: const TextStyle(fontSize: 13),
+            yearStyle: const TextStyle(fontSize: 14),
+          ),
+          colorScheme: const ColorScheme.light(primary: _AppColors.accent),
         ),
-        child: child!,
+        child: MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(0.9)),
+          child: child!,
+        ),
       ),
     );
   }
@@ -3586,24 +4267,35 @@ Future<String?> _showAssignedToDialog(BuildContext context, String? currentValue
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 10),
-          Text(label,
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 10),
+            Text(
+              label,
               style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: _AppColors.textPrimary)),
-          const Spacer(),
-          Text(DateFormat('MMM dd, yyyy').format(date),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: _AppColors.textPrimary,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              DateFormat('MMM dd, yyyy').format(date),
               style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: color)),
-          const SizedBox(width: 4),
-          const Icon(Icons.chevron_right_rounded,
-              size: 16, color: _AppColors.textTertiary),
-        ]),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 16,
+              color: _AppColors.textTertiary,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -3621,35 +4313,67 @@ Future<String?> _showAssignedToDialog(BuildContext context, String? currentValue
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(children: [
-          Icon(icon,
+        child: Row(
+          children: [
+            Icon(
+              icon,
               size: 16,
-              color: date != null ? color : _AppColors.textTertiary),
-          const SizedBox(width: 10),
-          Text(label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color:
-                    date != null ? color : _AppColors.textSecondary,
-              )),
-          const Spacer(),
-          if (date != null) ...[
-            Text(DateFormat('MMM dd, yyyy').format(date),
+              color: date != null ? color : _AppColors.textTertiary,
+            ),
+
+            const SizedBox(width: 10),
+
+            // Label gets the available space
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: date != null ? color : _AppColors.textSecondary,
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            if (date != null) ...[
+              // Date
+              Flexible(
+                child: Text(
+                  DateFormat('MMM dd, yyyy').format(date),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: color)),
-            const SizedBox(width: 6),
-            GestureDetector(
-              onTap: onClear,
-              child: const Icon(Icons.close_rounded,
-                  size: 14, color: _AppColors.textTertiary),
-            ),
-          ] else
-            const Icon(Icons.add_rounded,
-                size: 16, color: _AppColors.textTertiary),
-        ]),
+                    color: color,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 6),
+
+              // Clear button
+              GestureDetector(
+                onTap: onClear,
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 14,
+                  color: _AppColors.textTertiary,
+                ),
+              ),
+            ] else
+              const Icon(
+                Icons.add_rounded,
+                size: 16,
+                color: _AppColors.textTertiary,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -3663,41 +4387,52 @@ Future<String?> _showAssignedToDialog(BuildContext context, String? currentValue
     showDialog(
       context: ctx,
       builder: (c) => AlertDialog(
-        title: const Text('Repeat',
-            style: TextStyle(
-                color: _AppColors.accent, fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Repeat',
+          style: TextStyle(
+            color: _AppColors.accent,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         content: SingleChildScrollView(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            ...RepeatPattern.values.map((p) {
-              if (p == RepeatPattern.custom) {
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...RepeatPattern.values.map((p) {
+                if (p == RepeatPattern.custom) {
+                  return ListTile(
+                    title: const Text('Custom'),
+                    leading: Radio<RepeatPattern>(
+                      value: p,
+                      groupValue: current,
+                      onChanged: (v) {
+                        Navigator.pop(c);
+                        _showCustomDaysDialog(
+                          ctx,
+                          (days) => onSelected(v!, days),
+                        );
+                      },
+                    ),
+                  );
+                }
                 return ListTile(
-                  title: const Text('Custom'),
+                  title: Text(
+                    p == RepeatPattern.never
+                        ? 'Never'
+                        : p.toString().split('.').last,
+                  ),
                   leading: Radio<RepeatPattern>(
                     value: p,
                     groupValue: current,
                     onChanged: (v) {
                       Navigator.pop(c);
-                      _showCustomDaysDialog(
-                          ctx, (days) => onSelected(v!, days));
+                      if (v != null) onSelected(v, null);
                     },
                   ),
                 );
-              }
-              return ListTile(
-                title: Text(p == RepeatPattern.never
-                    ? 'Never'
-                    : p.toString().split('.').last),
-                leading: Radio<RepeatPattern>(
-                  value: p,
-                  groupValue: current,
-                  onChanged: (v) {
-                    Navigator.pop(c);
-                    if (v != null) onSelected(v, null);
-                  },
-                ),
-              );
-            }),
-          ]),
+              }),
+            ],
+          ),
         ),
       ),
     );
@@ -3708,683 +4443,845 @@ Future<String?> _showAssignedToDialog(BuildContext context, String? currentValue
     showDialog(
       context: ctx,
       builder: (c) => AlertDialog(
-        title: const Text('Custom Repeat',
-            style: TextStyle(
-                color: _AppColors.accent, fontWeight: FontWeight.w700)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Repeat every'),
-          const SizedBox(height: 16),
-          Row(children: [
-            Expanded(
-              child: TextField(
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  hintText: 'Days',
+        title: const Text(
+          'Custom Repeat',
+          style: TextStyle(
+            color: _AppColors.accent,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Repeat every'),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      hintText: 'Days',
+                    ),
+                    onChanged: (v) => days = int.tryParse(v) ?? 1,
+                  ),
                 ),
-                onChanged: (v) => days = int.tryParse(v) ?? 1,
-              ),
+                const SizedBox(width: 8),
+                const Text('days'),
+              ],
             ),
-            const SizedBox(width: 8),
-            const Text('days'),
-          ]),
-        ]),
+          ],
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(c),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(c),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(c);
               onSelected(days);
             },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: _AppColors.accent),
+            style: ElevatedButton.styleFrom(backgroundColor: _AppColors.accent),
             child: const Text('Set'),
           ),
         ],
       ),
     );
   }
-void _showTaskDetails(Task task) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    isDismissible: true,
-    enableDrag: true,
-    builder: (context) => DraggableScrollableSheet(
-      initialChildSize: 0.85,
-      maxChildSize: 0.95,
-      minChildSize: 0.5,
-      snap: true,
-      snapSizes: const [0.5, 0.85, 0.95],
-      builder: (_, controller) => Container(
-        decoration: const BoxDecoration(
-          color: _AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              color: _AppColors.surface,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 36,
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: _AppColors.border,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 8, 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  FocusScope.of(context).unfocus();
-                                  _toggleStarred(task);
-                                },
-                                child: Icon(
-                                  _isStarred(task) ? Icons.star_rounded : Icons.star_outline_rounded,
-                                  color: _isStarred(task) ? _AppColors.starColor : _AppColors.textTertiary,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  task.title,
-                                  style: const TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w700,
-                                    color: _AppColors.textPrimary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (task.isCompleted)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: _AppColors.success.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Text(
-                                    'Completed',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: _AppColors.success,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close_rounded, color: _AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 1, color: _AppColors.border),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Scrollbar(
-                controller: controller,
-                thumbVisibility: true,
-                child: SingleChildScrollView(
-                  controller: controller,
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.only(
-                    left: 20,
-                    right: 20,
-                    top: 16,
-                    bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: _getCategoryColor(task.category).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.category_rounded, size: 18, color: _getCategoryColor(task.category)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                task.category,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: _getCategoryColor(task.category),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+
+  void _showTaskDetails(Task task) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: true,
+      enableDrag: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        snap: true,
+        snapSizes: const [0.5, 0.85, 0.95],
+        builder: (_, controller) => Container(
+          decoration: const BoxDecoration(
+            color: _AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                color: _AppColors.surface,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _AppColors.border,
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 8, 12),
+                      child: Row(
                         children: [
-                          Container(
-                            width: 5,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: _getCategoryColor(task.category),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Row(
                               children: [
-                                Text(
-                                  task.title,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: task.isCompleted ? _AppColors.textTertiary : _AppColors.textPrimary,
-                                    decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                                GestureDetector(
+                                  onTap: () {
+                                    FocusScope.of(context).unfocus();
+                                    _toggleStarred(task);
+                                  },
+                                  child: Icon(
+                                    _isStarred(task)
+                                        ? Icons.star_rounded
+                                        : Icons.star_outline_rounded,
+                                    color: _isStarred(task)
+                                        ? _AppColors.starColor
+                                        : _AppColors.textTertiary,
+                                    size: 24,
                                   ),
                                 ),
-                                const SizedBox(height: 6),
-                                Wrap(
-                                  spacing: 6,
-                                  children: [
-                                    if (task.subCategory != null && task.subCategory!.isNotEmpty)
-                                      _metaChip(
-                                        text: task.subCategory!,
-                                        color: Colors.blue,
-                                        icon: Icons.subdirectory_arrow_right_rounded,
-                                      ),
-                                    _metaChip(
-                                      text: task.priority.toString().split('.').last,
-                                      color: _getPriorityColor(task.priority),
-                                      icon: _getPriorityIcon(task.priority),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    task.title,
+                                    style: const TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      color: _AppColors.textPrimary,
                                     ),
-                                  ],
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
+                                if (task.isCompleted)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _AppColors.success.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      'Completed',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: _AppColors.success,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              color: _AppColors.textSecondary,
+                            ),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      if (task.assignedTo != null && task.assignedTo!.isNotEmpty)
-                        _detailRow(
-                          icon: Icons.person_add_rounded,
-                          label: 'Assigned To',
-                          value: task.assignedTo!,
-                          color: _AppColors.accent,
-                        ),
-                      if (task.assignedBy != null && task.assignedBy!.isNotEmpty)
-                        _detailRow(
-                          icon: Icons.person_rounded,
-                          label: 'Assigned By',
-                          value: task.assignedBy!,
-                          color: _AppColors.success,
-                        ),
-                      if (task.description.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Description',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: _AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
+                    ),
+                    const Divider(height: 1, color: _AppColors.border),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Scrollbar(
+                  controller: controller,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: controller,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.only(
+                      left: 20,
+                      right: 20,
+                      top: 16,
+                      bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 12,
+                          ),
                           decoration: BoxDecoration(
-                            color: _AppColors.background,
+                            color: _getCategoryColor(
+                              task.category,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Text(
-                            task.description,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: _AppColors.textPrimary,
-                              height: 1.5,
-                            ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.category_rounded,
+                                size: 18,
+                                color: _getCategoryColor(task.category),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  task.category,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: _getCategoryColor(task.category),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 16),
-                      ],
-                      Container(
-                        decoration: BoxDecoration(
-                          color: _AppColors.background,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _detailRow(
-                              icon: Icons.calendar_today_rounded,
-                              label: 'Due Date',
-                              value: DateFormat('EEEE, MMMM dd, yyyy').format(task.dueDate),
-                              color: _AppColors.accent,
-                            ),
-                            const Divider(height: 1, color: _AppColors.border),
-                            _detailRow(
-                              icon: Icons.notifications_active_rounded,
-                              label: 'Alert Date',
-                              value: task.alertDate != null
-                                  ? DateFormat('EEEE, MMMM dd, yyyy - hh:mm a').format(task.alertDate!)
-                                  : 'No alert set',
-                              color: task.alertDate != null ? _AppColors.warning : _AppColors.textTertiary,
-                            ),
-                            const Divider(height: 1, color: _AppColors.border),
-                            _detailRow(
-                              icon: Icons.event_rounded,
-                              label: 'End Date',
-                              value: task.endDate != null
-                                  ? DateFormat('EEEE, MMMM dd, yyyy').format(task.endDate!)
-                                  : 'No end date set',
-                              color: task.endDate != null ? Colors.teal : _AppColors.textTertiary,
-                            ),
-                            if (task.repeatPattern != RepeatPattern.never) ...[
-                              const Divider(height: 1, color: _AppColors.border),
-                              _detailRow(
-                                icon: Icons.repeat_rounded,
-                                label: 'Repeat',
-                                value: task.repeatPattern == RepeatPattern.custom
-                                    ? 'Every ${task.customRepeatDays} days'
-                                    : _getRepeatPatternText(task.repeatPattern),
-                                color: Colors.green,
+                            Container(
+                              width: 5,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: _getCategoryColor(task.category),
+                                borderRadius: BorderRadius.circular(3),
                               ),
-                            ],
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    task.title,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: task.isCompleted
+                                          ? _AppColors.textTertiary
+                                          : _AppColors.textPrimary,
+                                      decoration: task.isCompleted
+                                          ? TextDecoration.lineThrough
+                                          : null,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Wrap(
+                                    spacing: 6,
+                                    children: [
+                                      if (task.subCategory != null &&
+                                          task.subCategory!.isNotEmpty)
+                                        _metaChip(
+                                          text: task.subCategory!,
+                                          color: Colors.blue,
+                                          icon: Icons
+                                              .subdirectory_arrow_right_rounded,
+                                        ),
+                                      _metaChip(
+                                        text: task.priority
+                                            .toString()
+                                            .split('.')
+                                            .last,
+                                        color: _getPriorityColor(task.priority),
+                                        icon: _getPriorityIcon(task.priority),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                final category = _masterCategories.firstWhere(
-                                  (c) => c.name == task.category,
-                                  orElse: () => MasterCategory(
-                                    id: '0',
-                                    name: task.category,
-                                    isActive: true,
-                                  ),
-                                );
-                                final subCategory = category.subCategories.firstWhere(
-                                  (s) => s.name == task.subCategory,
-                                  orElse: () => SubCategory(id: '', name: '', categoryId: ''),
-                                );
-                                _showAddEditTaskDialog(
-                                  category,
-                                  subCategory.name.isNotEmpty ? subCategory : null,
-                                  task,
-                                );
-                              },
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                side: const BorderSide(color: _AppColors.accent),
-                              ),
-                              icon: const Icon(Icons.edit_rounded, size: 18, color: _AppColors.accent),
-                              label: const Text('Edit Task', style: TextStyle(color: _AppColors.accent)),
+                        const SizedBox(height: 16),
+                        if (task.assignedTo != null &&
+                            task.assignedTo!.isNotEmpty)
+                          _detailRow(
+                            icon: Icons.person_add_rounded,
+                            label: 'Assigned To',
+                            value: task.assignedTo!,
+                            color: _AppColors.accent,
+                          ),
+                        if (task.assignedBy != null &&
+                            task.assignedBy!.isNotEmpty)
+                          _detailRow(
+                            icon: Icons.person_rounded,
+                            label: 'Assigned By',
+                            value: task.assignedBy!,
+                            color: _AppColors.success,
+                          ),
+                        if (task.description.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Description',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _AppColors.textSecondary,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: task.realId == null
-                                  ? null
-                                  : () {
-                                      _updateTaskStatus(task, !task.isCompleted);
-                                      Navigator.pop(context);
-                                    },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: task.isCompleted ? _AppColors.textTertiary : _AppColors.accent,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              child: Text(
-                                task.realId == null
-                                    ? 'No ID'
-                                    : (task.isCompleted ? 'Mark Pending' : 'Mark Complete'),
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                          const SizedBox(height: 6),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _AppColors.background,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              task.description,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: _AppColors.textPrimary,
+                                height: 1.5,
                               ),
                             ),
                           ),
+                          const SizedBox(height: 16),
                         ],
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Comments',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: _AppColors.textPrimary,
+                        Container(
+                          decoration: BoxDecoration(
+                            color: _AppColors.background,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              _detailRow(
+                                icon: Icons.calendar_today_rounded,
+                                label: 'Due Date',
+                                value: DateFormat(
+                                  'EEEE, MMMM dd, yyyy',
+                                ).format(task.dueDate),
+                                color: _AppColors.accent,
+                              ),
+                              const Divider(
+                                height: 1,
+                                color: _AppColors.border,
+                              ),
+                              _detailRow(
+                                icon: Icons.notifications_active_rounded,
+                                label: 'Alert Date',
+                                value: task.alertDate != null
+                                    ? DateFormat(
+                                        'EEEE, MMMM dd, yyyy - hh:mm a',
+                                      ).format(task.alertDate!)
+                                    : 'No alert set',
+                                color: task.alertDate != null
+                                    ? _AppColors.warning
+                                    : _AppColors.textTertiary,
+                              ),
+                              const Divider(
+                                height: 1,
+                                color: _AppColors.border,
+                              ),
+                              _detailRow(
+                                icon: Icons.event_rounded,
+                                label: 'End Date',
+                                value: task.endDate != null
+                                    ? DateFormat(
+                                        'EEEE, MMMM dd, yyyy',
+                                      ).format(task.endDate!)
+                                    : 'No end date set',
+                                color: task.endDate != null
+                                    ? Colors.teal
+                                    : _AppColors.textTertiary,
+                              ),
+                              if (task.repeatPattern !=
+                                  RepeatPattern.never) ...[
+                                const Divider(
+                                  height: 1,
+                                  color: _AppColors.border,
+                                ),
+                                _detailRow(
+                                  icon: Icons.repeat_rounded,
+                                  label: 'Repeat',
+                                  value:
+                                      task.repeatPattern == RepeatPattern.custom
+                                      ? 'Every ${task.customRepeatDays} days'
+                                      : _getRepeatPatternText(
+                                          task.repeatPattern,
+                                        ),
+                                  color: Colors.green,
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      _buildAddCommentSection(task),
-                      const SizedBox(height: 10),
-                      if (task.comments != null && task.comments!.isNotEmpty)
-                        ...task.comments!.map(_buildCommentCard),
-                      const SizedBox(height: 20),
-                    ],
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  final category = _masterCategories.firstWhere(
+                                    (c) => c.name == task.category,
+                                    orElse: () => MasterCategory(
+                                      id: '0',
+                                      name: task.category,
+                                      isActive: true,
+                                    ),
+                                  );
+                                  final subCategory = category.subCategories
+                                      .firstWhere(
+                                        (s) => s.name == task.subCategory,
+                                        orElse: () => SubCategory(
+                                          id: '',
+                                          name: '',
+                                          categoryId: '',
+                                        ),
+                                      );
+                                  _showAddEditTaskDialog(
+                                    category,
+                                    subCategory.name.isNotEmpty
+                                        ? subCategory
+                                        : null,
+                                    task,
+                                  );
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  side: const BorderSide(
+                                    color: _AppColors.accent,
+                                  ),
+                                ),
+                                icon: const Icon(
+                                  Icons.edit_rounded,
+                                  size: 18,
+                                  color: _AppColors.accent,
+                                ),
+                                label: const Text(
+                                  'Edit Task',
+                                  style: TextStyle(color: _AppColors.accent),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: task.realId == null
+                                    ? null
+                                    : () {
+                                        _updateTaskStatus(
+                                          task,
+                                          !task.isCompleted,
+                                        );
+                                        Navigator.pop(context);
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: task.isCompleted
+                                      ? _AppColors.textTertiary
+                                      : _AppColors.accent,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  task.realId == null
+                                      ? 'No ID'
+                                      : (task.isCompleted
+                                            ? 'Mark Pending'
+                                            : 'Mark Complete'),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'Comments',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: _AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _buildAddCommentSection(task),
+                        const SizedBox(height: 10),
+                        if (task.comments != null && task.comments!.isNotEmpty)
+                          ...task.comments!.map(_buildCommentCard),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-Widget _detailRow({
-  required IconData icon,
-  required String label,
-  required String value,
-  required Color color,
-}) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: color),
-        const SizedBox(width: 12),
-        SizedBox(
-          width: 100,
-          child: Text('$label:',
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: _AppColors.textSecondary)),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-                fontSize: 13, 
-                color: value.contains('No ') ? _AppColors.textTertiary : _AppColors.textPrimary,
-                fontWeight: value.contains('No ') ? FontWeight.normal : FontWeight.w500),
-            overflow: TextOverflow.visible,
-            softWrap: true,
+            ],
           ),
         ),
-      ],
-    ),
-  );
-}
-  // ─── COMMENT SECTION ──────────────────────────────────────────────────────
-Widget _buildAddCommentSection(Task task) {
-  final commentCtrl = TextEditingController();
-  bool isListening = false;
-  bool isGettingLocation = false;
-  String? currentLocation;
-  Position? currentPosition;
-  final FocusNode commentFocusNode = FocusNode();
-
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final dueDay =
-      DateTime(task.dueDate.year, task.dueDate.month, task.dueDate.day);
-  bool canAddComment = !task.isCompleted;
-
-  if (task.repeatPattern != RepeatPattern.never && !task.isCompleted) {
-    if (task.repeatPattern == RepeatPattern.weekly) {
-      canAddComment = dueDay.weekday == today.weekday;
-    } else if (task.repeatPattern == RepeatPattern.monthly) {
-      canAddComment = dueDay.day == today.day;
-    } else if (task.repeatPattern == RepeatPattern.yearly) {
-      canAddComment =
-          dueDay.month == today.month && dueDay.day == today.day;
-    }
+      ),
+    );
   }
 
-  return StatefulBuilder(
-    builder: (ctx, ss) {
-      void listen() async {
-        if (!isListening) {
-          final ok = await SpeechService.instance.init();
-          if (ok) {
-            ss(() => isListening = true);
-            SpeechService.instance.startListening(
-              onPartial: (text) => ss(() {
-                commentCtrl.text = text;
-                commentCtrl.selection = TextSelection.fromPosition(
-                    TextPosition(offset: commentCtrl.text.length));
-              }),
-              onFinal: (text) => ss(() {
-                commentCtrl.text = text;
-                commentCtrl.selection = TextSelection.fromPosition(
-                    TextPosition(offset: commentCtrl.text.length));
-                isListening = false;
-              }),
-            );
-          }
-        } else {
-          await SpeechService.instance.stop();
-          ss(() => isListening = false);
-        }
-      }
+  Widget _detailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: _AppColors.textSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                color: value.contains('No ')
+                    ? _AppColors.textTertiary
+                    : _AppColors.textPrimary,
+                fontWeight: value.contains('No ')
+                    ? FontWeight.normal
+                    : FontWeight.w500,
+              ),
+              overflow: TextOverflow.visible,
+              softWrap: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-      void getLocation() async {
-        ss(() => isGettingLocation = true);
-        try {
-          PermissionStatus permissionStatus = await Permission.location.status;
-          
-          if (!permissionStatus.isGranted) {
-            permissionStatus = await Permission.location.request();
-          }
-          
-          if (permissionStatus.isGranted) {
-            final enabled = await Geolocator.isLocationServiceEnabled();
-            if (!enabled) {
-              _showSnackBar(
-                  'Please enable location services in your device settings', 
-                  _AppColors.warning);
-              await Geolocator.openLocationSettings();
-              ss(() => isGettingLocation = false);
-              return;
+  // ─── COMMENT SECTION ──────────────────────────────────────────────────────
+  Widget _buildAddCommentSection(Task task) {
+    final commentCtrl = TextEditingController();
+    bool isListening = false;
+    bool isGettingLocation = false;
+    String? currentLocation;
+    Position? currentPosition;
+    final FocusNode commentFocusNode = FocusNode();
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dueDay = DateTime(
+      task.dueDate.year,
+      task.dueDate.month,
+      task.dueDate.day,
+    );
+    bool canAddComment = !task.isCompleted;
+
+    if (task.repeatPattern != RepeatPattern.never && !task.isCompleted) {
+      if (task.repeatPattern == RepeatPattern.weekly) {
+        canAddComment = dueDay.weekday == today.weekday;
+      } else if (task.repeatPattern == RepeatPattern.monthly) {
+        canAddComment = dueDay.day == today.day;
+      } else if (task.repeatPattern == RepeatPattern.yearly) {
+        canAddComment = dueDay.month == today.month && dueDay.day == today.day;
+      }
+    }
+
+    return StatefulBuilder(
+      builder: (ctx, ss) {
+        void listen() async {
+          if (!isListening) {
+            final ok = await SpeechService.instance.init();
+            if (ok) {
+              ss(() => isListening = true);
+              SpeechService.instance.startListening(
+                onPartial: (text) => ss(() {
+                  commentCtrl.text = text;
+                  commentCtrl.selection = TextSelection.fromPosition(
+                    TextPosition(offset: commentCtrl.text.length),
+                  );
+                }),
+                onFinal: (text) => ss(() {
+                  commentCtrl.text = text;
+                  commentCtrl.selection = TextSelection.fromPosition(
+                    TextPosition(offset: commentCtrl.text.length),
+                  );
+                  isListening = false;
+                }),
+              );
             }
-            
-            LocationSettings locationSettings = const LocationSettings(
-              accuracy: LocationAccuracy.high,
-              distanceFilter: 0,
-            );
-            
-            currentPosition = await Geolocator.getCurrentPosition(
-              locationSettings: locationSettings,
-            ).timeout(const Duration(seconds: 30));
-            
-            final placemarks = await placemarkFromCoordinates(
-              currentPosition!.latitude,
-              currentPosition!.longitude,
-            );
-            
-            if (placemarks.isNotEmpty) {
-              final pm = placemarks.first;
-              currentLocation = [
-                pm.name,
-                pm.subLocality,
-                pm.locality,
-                pm.administrativeArea,
-                pm.country,
-              ].where((part) => part != null && part.isNotEmpty).join(', ');
-              
-              if (currentLocation!.isEmpty) {
-                currentLocation = '${currentPosition!.latitude.toStringAsFixed(4)}, ${currentPosition!.longitude.toStringAsFixed(4)}';
-              }
-            } else {
-              currentLocation = '${currentPosition!.latitude.toStringAsFixed(4)}, ${currentPosition!.longitude.toStringAsFixed(4)}';
-            }
-            
-            ss(() {});
-            _showSnackBar('Location captured: $currentLocation', _AppColors.success);
           } else {
-            _showSnackBar(
-                'Location permission denied. Please enable location permission in app settings.', 
-                _AppColors.danger);
-            await openAppSettings();
+            await SpeechService.instance.stop();
+            ss(() => isListening = false);
           }
-        } catch (e) {
-          debugPrint('Error getting location: $e');
-          _showSnackBar('Error getting location: ${e.toString()}', _AppColors.danger);
-        } finally {
-          ss(() => isGettingLocation = false);
         }
-      }
 
-      if (!canAddComment) {
+        void getLocation() async {
+          ss(() => isGettingLocation = true);
+          try {
+            PermissionStatus permissionStatus =
+                await Permission.location.status;
+
+            if (!permissionStatus.isGranted) {
+              permissionStatus = await Permission.location.request();
+            }
+
+            if (permissionStatus.isGranted) {
+              final enabled = await Geolocator.isLocationServiceEnabled();
+              if (!enabled) {
+                _showSnackBar(
+                  'Please enable location services in your device settings',
+                  _AppColors.warning,
+                );
+                await Geolocator.openLocationSettings();
+                ss(() => isGettingLocation = false);
+                return;
+              }
+
+              LocationSettings locationSettings = const LocationSettings(
+                accuracy: LocationAccuracy.high,
+                distanceFilter: 0,
+              );
+
+              currentPosition = await Geolocator.getCurrentPosition(
+                locationSettings: locationSettings,
+              ).timeout(const Duration(seconds: 30));
+
+              final placemarks = await placemarkFromCoordinates(
+                currentPosition!.latitude,
+                currentPosition!.longitude,
+              );
+
+              if (placemarks.isNotEmpty) {
+                final pm = placemarks.first;
+                currentLocation = [
+                  pm.name,
+                  pm.subLocality,
+                  pm.locality,
+                  pm.administrativeArea,
+                  pm.country,
+                ].where((part) => part != null && part.isNotEmpty).join(', ');
+
+                if (currentLocation!.isEmpty) {
+                  currentLocation =
+                      '${currentPosition!.latitude.toStringAsFixed(4)}, ${currentPosition!.longitude.toStringAsFixed(4)}';
+                }
+              } else {
+                currentLocation =
+                    '${currentPosition!.latitude.toStringAsFixed(4)}, ${currentPosition!.longitude.toStringAsFixed(4)}';
+              }
+
+              ss(() {});
+              _showSnackBar(
+                'Location captured: $currentLocation',
+                _AppColors.success,
+              );
+            } else {
+              _showSnackBar(
+                'Location permission denied. Please enable location permission in app settings.',
+                _AppColors.danger,
+              );
+              await openAppSettings();
+            }
+          } catch (e) {
+            debugPrint('Error getting location: $e');
+            _showSnackBar(
+              'Error getting location: ${e.toString()}',
+              _AppColors.danger,
+            );
+          } finally {
+            ss(() => isGettingLocation = false);
+          }
+        }
+
+        if (!canAddComment) {
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _AppColors.background,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  color: _AppColors.textSecondary,
+                  size: 16,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Comments only on ${task.repeatPattern.toString().split('.').last} basis',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: _AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: _AppColors.background,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Row(children: [
-            const Icon(Icons.info_outline_rounded,
-                color: _AppColors.textSecondary, size: 16),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Comments only on ${task.repeatPattern.toString().split('.').last} basis',
-                style: const TextStyle(
-                    fontSize: 12, color: _AppColors.textSecondary),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: commentCtrl,
+                      focusNode: commentFocusNode,
+                      maxLines: 3,
+                      minLines: 1,
+                      keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.done,
+                      decoration: const InputDecoration(
+                        hintText: 'Add a comment...',
+                        border: InputBorder.none,
+                        hintStyle: TextStyle(
+                          fontSize: 13,
+                          color: _AppColors.textTertiary,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 12,
+                        ),
+                      ),
+                      style: const TextStyle(fontSize: 13),
+                      onEditingComplete: () {
+                        commentFocusNode.unfocus();
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                      color: isListening
+                          ? _AppColors.danger
+                          : _AppColors.accent,
+                      size: 24,
+                    ),
+                    onPressed: listen,
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                  IconButton(
+                    icon: isGettingLocation
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: _AppColors.accent,
+                            ),
+                          )
+                        : Icon(
+                            Icons.location_on_rounded,
+                            color: currentLocation != null
+                                ? _AppColors.success
+                                : _AppColors.textTertiary,
+                            size: 24,
+                          ),
+                    onPressed: getLocation,
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.send_rounded,
+                      color: _AppColors.accent,
+                      size: 24,
+                    ),
+                    onPressed: () {
+                      final comment = commentCtrl.text.trim();
+                      if (comment.isNotEmpty || currentLocation != null) {
+                        _addCommentToTask(
+                          task,
+                          comment,
+                          currentLocation,
+                          currentPosition,
+                        );
+                        commentCtrl.clear();
+                        commentFocusNode.unfocus();
+                        ss(() {
+                          currentLocation = null;
+                          currentPosition = null;
+                        });
+                        Navigator.pop(ctx);
+                      } else {
+                        _showSnackBar(
+                          'Enter a comment or add location',
+                          _AppColors.warning,
+                        );
+                      }
+                    },
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(8),
+                  ),
+                ],
               ),
-            ),
-          ]),
+              if (currentLocation != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_rounded,
+                        size: 12,
+                        color: _AppColors.success,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          currentLocation!,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: _AppColors.success,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         );
-      }
+      },
+    );
+  }
 
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: _AppColors.background,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(children: [
-          Row(children: [
-            Expanded(
-              child: TextField(
-                controller: commentCtrl,
-                focusNode: commentFocusNode,
-                maxLines: 3,
-                minLines: 1,
-                keyboardType: TextInputType.multiline,
-                textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                  hintText: 'Add a comment...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(
-                      fontSize: 13, color: _AppColors.textTertiary),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                ),
-                style: const TextStyle(fontSize: 13),
-                onEditingComplete: () {
-                  commentFocusNode.unfocus();
-                },
-              ),
-            ),
-            IconButton(
-              icon: Icon(
-                  isListening
-                      ? Icons.mic_rounded
-                      : Icons.mic_none_rounded,
-                  color: isListening
-                      ? _AppColors.danger
-                      : _AppColors.accent,
-                  size: 24),
-              onPressed: listen,
-              constraints: const BoxConstraints(),
-              padding: const EdgeInsets.all(8),
-            ),
-            IconButton(
-              icon: isGettingLocation
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: _AppColors.accent))
-                  : Icon(Icons.location_on_rounded,
-                      color: currentLocation != null
-                          ? _AppColors.success
-                          : _AppColors.textTertiary,
-                      size: 24),
-              onPressed: getLocation,
-              constraints: const BoxConstraints(),
-              padding: const EdgeInsets.all(8),
-            ),
-            IconButton(
-              icon: const Icon(Icons.send_rounded,
-                  color: _AppColors.accent, size: 24),
-              onPressed: () {
-                final comment = commentCtrl.text.trim();
-                if (comment.isNotEmpty || currentLocation != null) {
-                  _addCommentToTask(
-                      task, comment, currentLocation, currentPosition);
-                  commentCtrl.clear();
-                  commentFocusNode.unfocus();
-                  ss(() {
-                    currentLocation = null;
-                    currentPosition = null;
-                  });
-                  Navigator.pop(ctx);
-                } else {
-                  _showSnackBar(
-                      'Enter a comment or add location',
-                      _AppColors.warning);
-                }
-              },
-              constraints: const BoxConstraints(),
-              padding: const EdgeInsets.all(8),
-            ),
-          ]),
-          if (currentLocation != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Row(children: [
-                Icon(Icons.location_on_rounded,
-                    size: 12, color: _AppColors.success),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(currentLocation!,
-                      style: const TextStyle(
-                          fontSize: 11, color: _AppColors.success),
-                      overflow: TextOverflow.ellipsis),
-                ),
-              ]),
-            ),
-        ]),
-      );
-    },
-  );
-}
   Widget _buildCommentCard(TaskComment comment) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -4393,52 +5290,85 @@ Widget _buildAddCommentSection(Task task) {
         color: _AppColors.background,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(
-            child: Text(comment.text,
-                style: const TextStyle(
-                    fontSize: 13, color: _AppColors.textPrimary)),
-          ),
-          Text(DateFormat('MMM dd, HH:mm').format(comment.createdAt),
-              style: const TextStyle(
-                  fontSize: 10, color: _AppColors.textTertiary)),
-        ]),
-        if (comment.location != null && comment.location!.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Row(children: [
-              Icon(Icons.location_on_rounded,
-                  size: 11, color: _AppColors.success),
-              const SizedBox(width: 3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
               Expanded(
-                child: Text(comment.location!,
-                    style: const TextStyle(
-                        fontSize: 11, color: _AppColors.success),
-                    overflow: TextOverflow.ellipsis),
+                child: Text(
+                  comment.text,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: _AppColors.textPrimary,
+                  ),
+                ),
               ),
-            ]),
-          ),
-        if (comment.latitude != null && comment.longitude != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Row(children: [
-              Icon(Icons.pin_drop_rounded,
-                  size: 11, color: _AppColors.textTertiary),
-              const SizedBox(width: 3),
               Text(
-                '${comment.latitude!.toStringAsFixed(4)}, ${comment.longitude!.toStringAsFixed(4)}',
+                DateFormat('MMM dd, HH:mm').format(comment.createdAt),
                 style: const TextStyle(
-                    fontSize: 10, color: _AppColors.textTertiary),
+                  fontSize: 10,
+                  color: _AppColors.textTertiary,
+                ),
               ),
-            ]),
+            ],
           ),
-      ]),
+          if (comment.location != null && comment.location!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.location_on_rounded,
+                    size: 11,
+                    color: _AppColors.success,
+                  ),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text(
+                      comment.location!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: _AppColors.success,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (comment.latitude != null && comment.longitude != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.pin_drop_rounded,
+                    size: 11,
+                    color: _AppColors.textTertiary,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '${comment.latitude!.toStringAsFixed(4)}, ${comment.longitude!.toStringAsFixed(4)}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: _AppColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
     );
   }
 
-  Future<void> _addCommentToTask(Task task, String comment,
-      String? location, Position? position) async {
+  Future<void> _addCommentToTask(
+    Task task,
+    String comment,
+    String? location,
+    Position? position,
+  ) async {
     if (!mounted) return;
     try {
       double? lat, lng;
@@ -4473,7 +5403,9 @@ Widget _buildAddCommentSection(Task task) {
         }
       } else {
         _showSnackBar(
-            'Cannot add comment: Task ID missing', _AppColors.warning);
+          'Cannot add comment: Task ID missing',
+          _AppColors.warning,
+        );
       }
     } catch (e) {
       _showSnackBar('Error: $e', _AppColors.danger);
@@ -4495,14 +5427,18 @@ Widget _buildAddCommentSection(Task task) {
         return const Center(
           child: Card(
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(16))),
+              borderRadius: BorderRadius.all(Radius.circular(16)),
+            ),
             child: Padding(
               padding: EdgeInsets.all(24),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                CircularProgressIndicator(color: _AppColors.accent),
-                SizedBox(height: 16),
-                Text('Updating task...'),
-              ]),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: _AppColors.accent),
+                  SizedBox(height: 16),
+                  Text('Updating task...'),
+                ],
+              ),
             ),
           ),
         );
@@ -4512,7 +5448,11 @@ Widget _buildAddCommentSection(Task task) {
     try {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      final dueDay = DateTime(task.dueDate.year, task.dueDate.month, task.dueDate.day);
+      final dueDay = DateTime(
+        task.dueDate.year,
+        task.dueDate.month,
+        task.dueDate.day,
+      );
 
       String newStatus;
       if (markComplete) {
@@ -4523,7 +5463,7 @@ Widget _buildAddCommentSection(Task task) {
         } else if (task.dueDate.isAfter(now)) {
           newStatus = 'UPCOMING';
         } else {
-          newStatus = 'TODAY'; 
+          newStatus = 'TODAY';
         }
       }
 
@@ -4532,25 +5472,39 @@ Widget _buildAddCommentSection(Task task) {
       int? repeatInterval;
       switch (task.repeatPattern) {
         case RepeatPattern.daily:
-          repeatType = 'DAILY'; repeatUnit = 'DAY'; repeatInterval = 1;
+          repeatType = 'DAILY';
+          repeatUnit = 'DAY';
+          repeatInterval = 1;
           break;
         case RepeatPattern.weekly:
-          repeatType = 'WEEKLY'; repeatUnit = 'WEEK'; repeatInterval = 1;
+          repeatType = 'WEEKLY';
+          repeatUnit = 'WEEK';
+          repeatInterval = 1;
           break;
         case RepeatPattern.monthly:
-          repeatType = 'MONTHLY'; repeatUnit = 'MONTH'; repeatInterval = 1;
+          repeatType = 'MONTHLY';
+          repeatUnit = 'MONTH';
+          repeatInterval = 1;
           break;
         case RepeatPattern.quarterly:
-          repeatType = 'QUARTERLY'; repeatUnit = 'MONTH'; repeatInterval = 3;
+          repeatType = 'QUARTERLY';
+          repeatUnit = 'MONTH';
+          repeatInterval = 3;
           break;
         case RepeatPattern.halfYearly:
-          repeatType = 'HALF_YEARLY'; repeatUnit = 'MONTH'; repeatInterval = 6;
+          repeatType = 'HALF_YEARLY';
+          repeatUnit = 'MONTH';
+          repeatInterval = 6;
           break;
         case RepeatPattern.yearly:
-          repeatType = 'YEARLY'; repeatUnit = 'YEAR'; repeatInterval = 1;
+          repeatType = 'YEARLY';
+          repeatUnit = 'YEAR';
+          repeatInterval = 1;
           break;
         case RepeatPattern.custom:
-          repeatType = 'CUSTOM'; repeatUnit = 'DAY'; repeatInterval = task.customRepeatDays;
+          repeatType = 'CUSTOM';
+          repeatUnit = 'DAY';
+          repeatInterval = task.customRepeatDays;
           break;
         case RepeatPattern.never:
           break;
@@ -4566,15 +5520,17 @@ Widget _buildAddCommentSection(Task task) {
         status: newStatus,
         priority: task.priority.toString().split('.').last.toUpperCase(),
         dueDate: formatDate(task.dueDate),
-        reminderDatetime: task.alertDate != null ? formatDate(task.alertDate!) : null,
+        reminderDatetime: task.alertDate != null
+            ? formatDate(task.alertDate!)
+            : null,
         repeatType: repeatType,
         repeatInterval: repeatInterval,
         repeatUnit: repeatUnit,
         repeatEndDate: task.endDate != null ? formatDate(task.endDate!) : null,
         assignedTo: task.assignedTo,
         assignedBy: task.assignedBy,
-        taskCategoryId: null,   
-        taskSubCategoryId: null, 
+        taskCategoryId: null,
+        taskSubCategoryId: null,
         roleGroupName: 'Admin',
       );
 
@@ -4588,7 +5544,9 @@ Widget _buildAddCommentSection(Task task) {
         if (mounted) {
           await _refreshTasks();
           _showSnackBar(
-            markComplete ? 'Task marked as completed' : 'Task marked as pending',
+            markComplete
+                ? 'Task marked as completed'
+                : 'Task marked as pending',
             _AppColors.success,
           );
         }
@@ -4620,27 +5578,32 @@ Widget _buildAddCommentSection(Task task) {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(
-            fontSize: 13, color: _AppColors.textSecondary),
+          fontSize: 13,
+          color: _AppColors.textSecondary,
+        ),
         suffixIcon: suffix,
         filled: true,
         fillColor: _AppColors.background,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: _AppColors.border)),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: _AppColors.border),
+        ),
         enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: _AppColors.border)),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: _AppColors.border),
+        ),
         focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide:
-                const BorderSide(color: _AppColors.accent, width: 1.5)),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: _AppColors.accent, width: 1.5),
+        ),
       ),
     );
   }
-
-  }
+}
 
 // ─── MODEL CLASSES ────────────────────────────────────────────────────────────
 
@@ -4697,12 +5660,14 @@ class MasterCategory {
     List<SubCategory> subs = [];
     if (json['subCategories'] != null && json['subCategories'] is List) {
       subs = (json['subCategories'] as List)
-          .map((item) => SubCategory(
-                id: item['id']?.toString() ?? '',
-                name: item['name'] ?? item['subCategoryName'] ?? '',
-                description: item['description'],
-                categoryId: item['categoryId']?.toString() ?? '',
-              ))
+          .map(
+            (item) => SubCategory(
+              id: item['id']?.toString() ?? '',
+              name: item['name'] ?? item['subCategoryName'] ?? '',
+              description: item['description'],
+              categoryId: item['categoryId']?.toString() ?? '',
+            ),
+          )
           .toList();
     }
     return MasterCategory(
@@ -4756,7 +5721,8 @@ class Task {
   factory Task.fromJson(Map<String, dynamic> json, String statusFromApi) {
     DateTime dueDate;
     try {
-      final rawDate = json['dueDate'] ??
+      final rawDate =
+          json['dueDate'] ??
           json['taskDate'] ??
           json['reminderDatetime'] ??
           json['createdDate'] ??
@@ -4767,8 +5733,10 @@ class Task {
         dueDate = DateTime.parse(rawDate.toString());
       } else {
         dueDate = DateTime.now();
-        debugPrint('⚠️ No date found for task "${json['taskName']}". '
-            'Available keys: ${json.keys.toList()}');
+        debugPrint(
+          '⚠️ No date found for task "${json['taskName']}". '
+          'Available keys: ${json.keys.toList()}',
+        );
       }
     } catch (e) {
       debugPrint('Error parsing dueDate: $e, raw value: ${json['dueDate']}');
@@ -4776,7 +5744,8 @@ class Task {
     }
 
     DateTime? alertDate;
-    final rawAlertDate = json['reminderDatetime'] ?? json['alertDate'] ?? json['alertDatetime'];
+    final rawAlertDate =
+        json['reminderDatetime'] ?? json['alertDate'] ?? json['alertDatetime'];
     if (rawAlertDate != null) {
       try {
         alertDate = DateTime.parse(rawAlertDate.toString());
@@ -4797,23 +5766,33 @@ class Task {
     RepeatPattern repeatPattern = RepeatPattern.never;
     if (json['repeatPattern'] != null) {
       final p = json['repeatPattern'].toString().toLowerCase();
-      if (p.contains('daily')) repeatPattern = RepeatPattern.daily;
-      else if (p.contains('weekly')) repeatPattern = RepeatPattern.weekly;
-      else if (p.contains('monthly')) repeatPattern = RepeatPattern.monthly;
-      else if (p.contains('half')) repeatPattern = RepeatPattern.halfYearly;
-      else if (p.contains('quarter')) repeatPattern = RepeatPattern.quarterly;
-      else if (p.contains('yearly')) repeatPattern = RepeatPattern.yearly;
-      else if (p.contains('custom')) repeatPattern = RepeatPattern.custom;
+      if (p.contains('daily'))
+        repeatPattern = RepeatPattern.daily;
+      else if (p.contains('weekly'))
+        repeatPattern = RepeatPattern.weekly;
+      else if (p.contains('monthly'))
+        repeatPattern = RepeatPattern.monthly;
+      else if (p.contains('half'))
+        repeatPattern = RepeatPattern.halfYearly;
+      else if (p.contains('quarter'))
+        repeatPattern = RepeatPattern.quarterly;
+      else if (p.contains('yearly'))
+        repeatPattern = RepeatPattern.yearly;
+      else if (p.contains('custom'))
+        repeatPattern = RepeatPattern.custom;
     }
 
     int customRepeatDays = json['customRepeatDays'] ?? 1;
 
     Priority priority = Priority.medium;
     final ps = json['priority']?.toString().toLowerCase() ?? '';
-    if (ps.contains('high')) priority = Priority.high;
-    else if (ps.contains('low')) priority = Priority.low;
+    if (ps.contains('high'))
+      priority = Priority.high;
+    else if (ps.contains('low'))
+      priority = Priority.low;
 
-    bool isCompleted = statusFromApi == 'COMPLETED' ||
+    bool isCompleted =
+        statusFromApi == 'COMPLETED' ||
         json['status']?.toString().toLowerCase() == 'completed' ||
         json['isCompleted'] == true;
 
@@ -4827,31 +5806,37 @@ class Task {
     List<TaskComment>? comments;
     if (json['comments'] != null && json['comments'] is List) {
       comments = (json['comments'] as List)
-          .map((item) => TaskComment(
-                id: item['id']?.toString() ?? '',
-                text: item['text'] ?? item['comment'] ?? '',
-                location: item['location'],
-                latitude: item['latitude'] != null
-                    ? double.tryParse(item['latitude'].toString())
-                    : null,
-                longitude: item['longitude'] != null
-                    ? double.tryParse(item['longitude'].toString())
-                    : null,
-                createdAt: item['createdAt'] != null
-                    ? DateTime.parse(item['createdAt'].toString())
-                    : DateTime.now(),
-              ))
+          .map(
+            (item) => TaskComment(
+              id: item['id']?.toString() ?? '',
+              text: item['text'] ?? item['comment'] ?? '',
+              location: item['location'],
+              latitude: item['latitude'] != null
+                  ? double.tryParse(item['latitude'].toString())
+                  : null,
+              longitude: item['longitude'] != null
+                  ? double.tryParse(item['longitude'].toString())
+                  : null,
+              createdAt: item['createdAt'] != null
+                  ? DateTime.parse(item['createdAt'].toString())
+                  : DateTime.now(),
+            ),
+          )
           .toList();
     }
 
     String categoryName = 'General';
-    if (json['categoryName'] != null && json['categoryName'].toString().isNotEmpty) {
+    if (json['categoryName'] != null &&
+        json['categoryName'].toString().isNotEmpty) {
       categoryName = json['categoryName'].toString();
-    } else if (json['category'] != null && json['category'].toString().isNotEmpty) {
+    } else if (json['category'] != null &&
+        json['category'].toString().isNotEmpty) {
       categoryName = json['category'].toString();
-    } else if (json['taskCategory'] != null && json['taskCategory'].toString().isNotEmpty) {
+    } else if (json['taskCategory'] != null &&
+        json['taskCategory'].toString().isNotEmpty) {
       categoryName = json['taskCategory'].toString();
-    } else if (json['taskCategoryName'] != null && json['taskCategoryName'].toString().isNotEmpty) {
+    } else if (json['taskCategoryName'] != null &&
+        json['taskCategoryName'].toString().isNotEmpty) {
       categoryName = json['taskCategoryName'].toString();
     }
 
@@ -4863,11 +5848,13 @@ class Task {
 
     return Task(
       realId: realId,
-      title: safeString(json['taskName']) ??
+      title:
+          safeString(json['taskName']) ??
           safeString(json['title']) ??
           safeString(json['name']) ??
           'Untitled Task',
-      description: safeString(json['description']) ??
+      description:
+          safeString(json['description']) ??
           safeString(json['discription']) ??
           '',
       dueDate: dueDate,
@@ -4879,7 +5866,8 @@ class Task {
       isCompleted: isCompleted,
       status: statusFromApi.toLowerCase(),
       category: categoryName,
-      subCategory: safeString(json['subCategoryName']) ??
+      subCategory:
+          safeString(json['subCategoryName']) ??
           safeString(json['subCategory']),
       comments: comments,
       assignedTo: json['assignedTo']?.toString(),
@@ -4889,5 +5877,16 @@ class Task {
 }
 
 enum Priority { high, medium, low }
-enum RepeatPattern { never, daily, weekly, monthly, halfYearly, quarterly, yearly, custom }
+
+enum RepeatPattern {
+  never,
+  daily,
+  weekly,
+  monthly,
+  halfYearly,
+  quarterly,
+  yearly,
+  custom,
+}
+
 enum TaskStatus { today, upcoming, completed, overdue, dueSoon, pending }

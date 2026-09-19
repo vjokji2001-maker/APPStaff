@@ -69,7 +69,9 @@ class HREmployee {
   factory HREmployee.fromJson(Map<String, dynamic> json) {
     return HREmployee(
       id: json['id']?.toString() ?? '',
-      name: json['firstName'] != null ? '${json['firstName']} ${json['lastName'] ?? ''}'.trim() : (json['name'] ?? ''),
+      name: json['firstName'] != null
+          ? '${json['firstName']} ${json['lastName'] ?? ''}'.trim()
+          : (json['name'] ?? ''),
       designation: json['designation'] ?? '',
       department: json['department'] ?? '',
       employeeCode: json['employeeCode'] ?? '',
@@ -94,19 +96,42 @@ class HREmployee {
       emergencyContact: json['emergencyContact'] ?? '',
       emergencyRelation: json['emergencyRelation'] ?? '',
       emergencyPhone: json['emergencyPhone'] ?? '',
-      avatarInitials: json['firstName'] != null && json['firstName'].isNotEmpty ? json['firstName'][0] : 'U',
+      avatarInitials:
+          json['firstName'] != null && json['firstName'].toString().isNotEmpty
+          ? json['firstName'].toString()[0].toUpperCase()
+          : 'U',
     );
   }
 
   factory HREmployee.empty() {
     return const HREmployee(
-      id: '', name: 'Loading...', designation: '', department: '',
-      employeeCode: '', email: '', phone: '', dob: '', gender: '',
-      bloodGroup: '', maritalStatus: '', joiningDate: '', employmentType: '',
-      workLocation: '', reportingManager: '', shift: '', grade: '',
-      pfNumber: '', uanNumber: '', esiNumber: '', panNumber: '',
-      aadhaarLast4: '', address: '', emergencyContact: '',
-      emergencyRelation: '', emergencyPhone: '', avatarInitials: '',
+      id: '',
+      name: 'Staff Member',
+      designation: '',
+      department: '',
+      employeeCode: '',
+      email: '',
+      phone: '',
+      dob: '',
+      gender: '',
+      bloodGroup: '',
+      maritalStatus: '',
+      joiningDate: '',
+      employmentType: '',
+      workLocation: '',
+      reportingManager: '',
+      shift: '',
+      grade: '',
+      pfNumber: '',
+      uanNumber: '',
+      esiNumber: '',
+      panNumber: '',
+      aadhaarLast4: '',
+      address: '',
+      emergencyContact: '',
+      emergencyRelation: '',
+      emergencyPhone: '',
+      avatarInitials: '',
     );
   }
 }
@@ -202,22 +227,34 @@ class AttendanceRecord {
     final shiftOut = json['shiftOutTime']?.toString() ?? '';
     final lateMark = (json['lateInMark'] ?? 0).toString();
     final earlyMark = (json['earlyOutMark'] ?? 0).toString();
-    
+
     // Map dayType (e.g. ABS, PR, WO) to a readable status
-    String rawDayType = (json['dayType'] ?? json['dayType1'] ?? '').toString().toUpperCase();
-    String mappedStatus = json['status'] ?? 'Unknown';
-    if (rawDayType == 'ABS') mappedStatus = 'Absent';
-    else if (rawDayType == 'PR') mappedStatus = 'Present';
-    else if (rawDayType == 'WO') mappedStatus = 'Holiday';
-    else if (rawDayType == 'HD') mappedStatus = 'Half Day';
-    else if (rawDayType == 'LV') mappedStatus = 'Leave';
-    else if (rawDayType.isNotEmpty) mappedStatus = rawDayType;
+    String rawDayType = (json['dayType'] ?? json['dayType1'] ?? '')
+        .toString()
+        .toUpperCase();
+    String mappedStatus = json['status']?.toString() ?? 'Unknown';
+    if (rawDayType == 'ABS')
+      mappedStatus = 'Absent';
+    else if (rawDayType == 'PR')
+      mappedStatus = 'Present';
+    else if (rawDayType == 'WO')
+      mappedStatus = 'Holiday';
+    else if (rawDayType == 'HD')
+      mappedStatus = 'Half Day';
+    else if (rawDayType == 'LV')
+      mappedStatus = 'Leave';
+    else if (rawDayType.isNotEmpty)
+      mappedStatus = rawDayType;
 
     // Use empInTime if valid, do NOT fallback to shiftInTime because that implies they punched in when they didn't
     final finalPunchIn = (empIn.isNotEmpty && empIn != 'null') ? empIn : '–';
-    final finalPunchOut = (empOut.isNotEmpty && empOut != 'null') ? empOut : '–';
+    final finalPunchOut = (empOut.isNotEmpty && empOut != 'null')
+        ? empOut
+        : '–';
 
-    print('DEBUG: Final mapped values -> punchIn: $finalPunchIn, punchOut: $finalPunchOut, status: $mappedStatus');
+    print(
+      'DEBUG: Final mapped values -> punchIn: $finalPunchIn, punchOut: $finalPunchOut, status: $mappedStatus',
+    );
 
     return AttendanceRecord(
       date: json['date'] ?? '',
@@ -230,7 +267,8 @@ class AttendanceRecord {
       dayType: rawDayType,
       workHours: json['totalHours'] ?? '–',
       isLate: double.tryParse(lateMark) != null && double.parse(lateMark) > 0,
-      isEarlyExit: double.tryParse(earlyMark) != null && double.parse(earlyMark) > 0,
+      isEarlyExit:
+          double.tryParse(earlyMark) != null && double.parse(earlyMark) > 0,
       extraHours: json['extraHours']?.toString() ?? '00:00:00',
     );
   }
@@ -291,17 +329,39 @@ class AttendanceSummary {
 
   factory AttendanceSummary.fromRecords(List<AttendanceRecord> records) {
     final total = records.length;
-    final present = records.where((r) => r.status.toLowerCase() == 'present').length;
-    final absent = records.where((r) => r.status.toLowerCase() == 'absent').length;
+    final present = records
+        .where((r) => r.status.toLowerCase() == 'present')
+        .length;
+    final absent = records
+        .where((r) => r.status.toLowerCase() == 'absent')
+        .length;
     final late = records.where((r) => r.isLate).length;
     final earlyExit = records.where((r) => r.isEarlyExit).length;
-    final halfDay = records.where((r) => r.status.toLowerCase().contains('half')).length;
-    final holidays = records.where((r) => r.status.toLowerCase() == 'holiday' || r.status.toLowerCase() == 'wo').length;
-    final leaves = records.where((r) => r.status.toLowerCase() == 'leave').length;
-    
+    final halfDay = records
+        .where((r) => r.status.toLowerCase().contains('half'))
+        .length;
+    final holidays = records
+        .where(
+          (r) =>
+              r.status.toLowerCase() == 'holiday' ||
+              r.status.toLowerCase() == 'wo',
+        )
+        .length;
+    final leaves = records
+        .where((r) => r.status.toLowerCase() == 'leave')
+        .length;
+
     // Only count days that are not holidays/weekends for total working days
-    final workingDays = records.where((r) => r.status.toLowerCase() != 'holiday' && r.status.toLowerCase() != 'wo').length;
-    final attendancePercentage = workingDays == 0 ? 0.0 : (present / workingDays) * 100;
+    final workingDays = records
+        .where(
+          (r) =>
+              r.status.toLowerCase() != 'holiday' &&
+              r.status.toLowerCase() != 'wo',
+        )
+        .length;
+    final attendancePercentage = workingDays == 0
+        ? 0.0
+        : (present / workingDays) * 100;
 
     return AttendanceSummary(
       totalWorkingDays: workingDays,
@@ -318,8 +378,15 @@ class AttendanceSummary {
 
   factory AttendanceSummary.empty() {
     return const AttendanceSummary(
-      totalWorkingDays: 0, present: 0, absent: 0, late: 0, earlyExit: 0,
-      halfDay: 0, holidays: 0, leavesTaken: 0, attendancePercentage: 0.0,
+      totalWorkingDays: 0,
+      present: 0,
+      absent: 0,
+      late: 0,
+      earlyExit: 0,
+      halfDay: 0,
+      holidays: 0,
+      leavesTaken: 0,
+      attendancePercentage: 0.0,
     );
   }
 }
@@ -349,13 +416,16 @@ class LeaveBalance {
 
   factory LeaveBalance.fromJson(Map<String, dynamic> json) {
     return LeaveBalance(
-      leaveType: json['leaveType'] ?? json['leaveName'] ?? json['name'] ?? 'Unknown',
+      leaveType:
+          json['leaveType'] ?? json['leaveName'] ?? json['name'] ?? 'Unknown',
       total: (json['total'] ?? 0).toInt(),
       used: (json['used'] ?? 0).toInt(),
       pending: (json['pending'] ?? 0).toInt(),
       available: (json['available'] ?? json['balance'] ?? 0).toInt(),
       colorHex: json['colorHex'] ?? '#1565C0',
-      leaveNameId: json['leaveNameId'] != null ? (json['leaveNameId'] as num).toInt() : null,
+      leaveNameId: json['leaveNameId'] != null
+          ? (json['leaveNameId'] as num).toInt()
+          : null,
     );
   }
 }
@@ -367,7 +437,7 @@ class LeaveApplication {
   final String toDate;
   final int days;
   final String reason;
-  final String status;  // Pending, Approved, Rejected
+  final String status; // Pending, Approved, Rejected
   final String appliedOn;
   final String? approvedBy;
   final String? remarks;
@@ -405,7 +475,7 @@ class HRHoliday {
   final String name;
   final String date;
   final String day;
-  final String type;   // National, Regional, Optional
+  final String type; // National, Regional, Optional
   final bool isOptional;
 
   const HRHoliday({
@@ -451,7 +521,7 @@ class SalarySlip {
   final double loanDeduction;
   final double totalDeductions;
   final double netSalary;
-  final String status;     // Paid, Pending
+  final String status; // Paid, Pending
   final String creditDate;
   final int workingDays;
   final int presentDays;
@@ -519,10 +589,7 @@ class ShiftRosterColumn {
   final String label;
   final String field;
 
-  const ShiftRosterColumn({
-    required this.label,
-    required this.field,
-  });
+  const ShiftRosterColumn({required this.label, required this.field});
 
   factory ShiftRosterColumn.fromJson(Map<String, dynamic> json) {
     return ShiftRosterColumn(
@@ -538,7 +605,9 @@ class ShiftRosterRow {
   const ShiftRosterRow({required this.values});
 
   factory ShiftRosterRow.fromJson(Map<String, dynamic> json) {
-    return ShiftRosterRow(values: json.map((key, value) => MapEntry(key.toString(), value)));
+    return ShiftRosterRow(
+      values: json.map((key, value) => MapEntry(key.toString(), value)),
+    );
   }
 }
 
@@ -564,12 +633,25 @@ class ShiftRosterPagination {
   }
 
   factory ShiftRosterPagination.fromJson(Map<String, dynamic> json) {
-    final currentPage = _parseInt(json['currentPage'] ?? json['current_page'] ?? json['page'] ?? 1);
-    final pageSize = _parseInt(json['pageSize'] ?? json['page_size'] ?? json['size'] ?? 10);
-    final totalRecords = _parseInt(
-      json['totalRecords'] ?? json['total_records'] ?? json['totalItems'] ?? json['total'] ?? 0,
+    final currentPage = _parseInt(
+      json['currentPage'] ?? json['current_page'] ?? json['page'] ?? 1,
     );
-    final totalPages = _parseInt(json['totalPages'] ?? json['total_pages'] ?? json['totalPage'] ?? (pageSize > 0 ? ((totalRecords + pageSize - 1) ~/ pageSize) : 1));
+    final pageSize = _parseInt(
+      json['pageSize'] ?? json['page_size'] ?? json['size'] ?? 10,
+    );
+    final totalRecords = _parseInt(
+      json['totalRecords'] ??
+          json['total_records'] ??
+          json['totalItems'] ??
+          json['total'] ??
+          0,
+    );
+    final totalPages = _parseInt(
+      json['totalPages'] ??
+          json['total_pages'] ??
+          json['totalPage'] ??
+          (pageSize > 0 ? ((totalRecords + pageSize - 1) ~/ pageSize) : 1),
+    );
     return ShiftRosterPagination(
       currentPage: currentPage,
       pageSize: pageSize,
@@ -631,7 +713,9 @@ class ShiftTemplate {
   factory ShiftTemplate.fromJson(Map<String, dynamic> json) {
     final rules = <Map<String, dynamic>>[];
     if (json['lateMarkRuleDTOList'] is List) {
-      rules.addAll((json['lateMarkRuleDTOList'] as List).cast<Map<String, dynamic>>());
+      rules.addAll(
+        (json['lateMarkRuleDTOList'] as List).cast<Map<String, dynamic>>(),
+      );
     }
     return ShiftTemplate(
       id: json['id']?.toString() ?? '',
@@ -639,7 +723,10 @@ class ShiftTemplate {
       code: json['code']?.toString() ?? json['shiftCode']?.toString() ?? '',
       inTime: json['inTime']?.toString() ?? '',
       outTime: json['outTime']?.toString() ?? '',
-      totalHours: json['totalWorkingHours']?.toString() ?? json['totalHours']?.toString() ?? '',
+      totalHours:
+          json['totalWorkingHours']?.toString() ??
+          json['totalHours']?.toString() ??
+          '',
       nightShift: _parseBool(json['nightShift']),
       halfDay: _parseBool(json['halfDayApplicable'] ?? json['halfDay']),
       hourBased: _parseBool(json['hourBased']),
@@ -663,7 +750,7 @@ class ShiftSchedule {
   final String startTime;
   final String endTime;
   final String ward;
-  final String type;    // Regular, Emergency, On-Call
+  final String type; // Regular, Emergency, On-Call
   final bool isToday;
 
   const ShiftSchedule({
@@ -708,9 +795,9 @@ class HRDocument {
   final String type;
   final String uploadedOn;
   final String expiryDate;
-  final String status;     // Verified, Pending, Expired
+  final String status; // Verified, Pending, Expired
   final String fileSize;
-  final String category;   // ID Proof, License, Certificate, etc.
+  final String category; // ID Proof, License, Certificate, etc.
   final bool isExpiringSoon;
 
   const HRDocument({
@@ -738,7 +825,7 @@ class PerformanceGoal {
   final double achievedValue;
   final String deadline;
   final String status;
-  final String category;   // KPI, KRA, Objective
+  final String category; // KPI, KRA, Objective
 
   const PerformanceGoal({
     required this.id,
@@ -803,8 +890,8 @@ class TrainingCourse {
   final String startDate;
   final String endDate;
   final String duration;
-  final String mode;     // Online, Classroom, Blended
-  final String status;   // Upcoming, Ongoing, Completed
+  final String mode; // Online, Classroom, Blended
+  final String status; // Upcoming, Ongoing, Completed
   final double progress;
   final bool hasCertificate;
   final String? certificateDate;
@@ -836,7 +923,7 @@ class HRAsset {
   final String assetCode;
   final String assignedDate;
   final String condition;
-  final String status;      // Active, Returned, Lost
+  final String status; // Active, Returned, Lost
   final String? serialNumber;
   final String? model;
   final String? brand;
@@ -863,7 +950,7 @@ class HRAsset {
 
 class LoanDetail {
   final String id;
-  final String loanType;     // Personal Loan, Salary Advance
+  final String loanType; // Personal Loan, Salary Advance
   final double principalAmount;
   final double interestRate;
   final int tenureMonths;
@@ -893,7 +980,7 @@ class EMIPayment {
   final int installmentNo;
   final String dueDate;
   final double amount;
-  final String status;    // Paid, Upcoming, Overdue
+  final String status; // Paid, Upcoming, Overdue
   final String? paidDate;
 
   const EMIPayment({
@@ -1006,7 +1093,7 @@ class HRNotification {
   final String id;
   final String title;
   final String body;
-  final String type;    // Announcement, Circular, Reminder, Alert
+  final String type; // Announcement, Circular, Reminder, Alert
   final String time;
   final bool isRead;
   final String? actionRoute;
@@ -1032,7 +1119,7 @@ class DashboardAnnouncement {
   final String content;
   final String date;
   final String postedBy;
-  final String priority;  // High, Medium, Low
+  final String priority; // High, Medium, Low
 
   const DashboardAnnouncement({
     required this.id,
@@ -1044,7 +1131,6 @@ class DashboardAnnouncement {
   });
 }
 // Placeholder classes for missing types
-class Birthday extends BirthdayItem {}
 
 class HRAnnouncement {}
 
@@ -1052,9 +1138,15 @@ class RotaShift {}
 
 class QuickTask {}
 
-class PendingApproval { final String status; PendingApproval({this.status = 'Pending'}); }
+class PendingApproval {
+  final String status;
+  PendingApproval({this.status = 'Pending'});
+}
 
-class CheckInOutStatus { bool isCheckedIn = false; String punchTime = ''; }
+class CheckInOutStatus {
+  bool isCheckedIn = false;
+  String punchTime = '';
+}
 
 class BirthdayItem {
   final String name;

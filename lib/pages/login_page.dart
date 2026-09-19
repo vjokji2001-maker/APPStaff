@@ -94,7 +94,9 @@ class _LoginPageState extends State<LoginPage> {
 
         final subscriptionDays = innerData['subscription_remaining_days'] ?? 0;
         if (subscriptionDays <= 0) {
-          _showErrorDialog("Your subscription has expired. Please contact support.");
+          _showErrorDialog(
+            "Your subscription has expired. Please contact support.",
+          );
           setState(() => _isLoading = false);
           return;
         }
@@ -110,8 +112,12 @@ class _LoginPageState extends State<LoginPage> {
 
         // Hit /smartcaremain/userinformation immediately after login status is 200
         try {
-          final token = ApiService.accessToken ?? _loginResponseData!['token'] ?? '';
-          final clinicId = _loginResponseData!['clinicid'] ?? _loginResponseData!['clinicId'] ?? '';
+          final token =
+              ApiService.accessToken ?? _loginResponseData!['token'] ?? '';
+          final clinicId =
+              _loginResponseData!['clinicid'] ??
+              _loginResponseData!['clinicId'] ??
+              '';
           final userId = _loginResponseData!['userId'] ?? '';
           final zoneId = _loginResponseData!['zoneid'] ?? 'Asia/Kolkata';
 
@@ -123,7 +129,9 @@ class _LoginPageState extends State<LoginPage> {
             zoneid: zoneId,
             branchId: 1,
           );
-          debugPrint('✅ Pre-OTP: User information successfully fetched and stored.');
+          debugPrint(
+            '✅ Pre-OTP: User information successfully fetched and stored.',
+          );
         } catch (e) {
           debugPrint('⚠️ Pre-OTP User info fetch failed: $e');
         }
@@ -134,12 +142,16 @@ class _LoginPageState extends State<LoginPage> {
         setState(() => _isLoading = false);
         _showOTPVerificationDialog();
       } else {
-        _showErrorDialog("Login failed. Please check your credentials and try again.");
+        _showErrorDialog(
+          "Login failed. Please check your credentials and try again.",
+        );
         setState(() => _isLoading = false);
       }
     } catch (e) {
       if (!mounted) return;
-      _showErrorDialog("Network error. Please check your connection and try again.");
+      _showErrorDialog(
+        "Network error. Please check your connection and try again.",
+      );
       setState(() => _isLoading = false);
     }
   }
@@ -150,11 +162,13 @@ class _LoginPageState extends State<LoginPage> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return OTPVerificationDialog(
-          userId: _loginResponseData?['userId'] ??
+          userId:
+              _loginResponseData?['userId'] ??
               _loginResponseData?['userid'] ??
               _loginResponseData?['user_id'] ??
               '',
-          clinicId: _loginResponseData?['clinicid'] ??
+          clinicId:
+              _loginResponseData?['clinicid'] ??
               _loginResponseData?['clinicId'] ??
               _loginResponseData?['clinic_id'] ??
               '',
@@ -174,8 +188,10 @@ class _LoginPageState extends State<LoginPage> {
 
   void _goToDashboard() {
     if (!mounted) return;
-    Navigator.of(context, rootNavigator: true)
-        .pushNamedAndRemoveUntil('/dashboard', (route) => false);
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).pushNamedAndRemoveUntil('/dashboard', (route) => false);
   }
 
   Future<void> _completeLogin() async {
@@ -183,18 +199,50 @@ class _LoginPageState extends State<LoginPage> {
       if (_loginResponseData != null) {
         await SessionManager.saveSession(
           bearer: SessionManager.authScheme,
-          token: (_loginResponseData!['token'] ?? _loginResponseData!['accessToken'] ?? '').toString(),
-          clinicId: (_loginResponseData!['clinicid'] ?? _loginResponseData!['clinicId'] ?? '').toString(),
-          subscriptionRemainingDays: int.tryParse(
-                (_loginResponseData!['subscription_remaining_days'] ?? 0).toString(),
+          token:
+              (_loginResponseData!['token'] ??
+                      _loginResponseData!['accessToken'] ??
+                      '')
+                  .toString(),
+          clinicId:
+              (_loginResponseData!['clinicid'] ??
+                      _loginResponseData!['clinicId'] ??
+                      '')
+                  .toString(),
+          subscriptionRemainingDays:
+              int.tryParse(
+                (_loginResponseData!['subscription_remaining_days'] ?? 0)
+                    .toString(),
               ) ??
               0,
-          userId: (_loginResponseData!['userId'] ?? _loginResponseData!['UserId'] ?? '').toString(),
-          zoneid: (_loginResponseData!['zoneid'] ?? _loginResponseData!['ZONEID'] ?? 'Asia/Kolkata').toString(),
-          expiryTime: (_loginResponseData!['expirytime'] ?? _loginResponseData!['expiryTime'] ?? '').toString(),
-          branchId: int.tryParse((_loginResponseData!['branch_id'] ?? 1).toString()) ?? 1,
-          email: (_loginResponseData!['email'] ?? _loginResponseData!['emailId'] ?? '').toString(),
-          refreshToken: ApiService.refreshToken ?? _loginResponseData!['refreshToken']?.toString(),
+          userId:
+              (_loginResponseData!['userId'] ??
+                      _loginResponseData!['UserId'] ??
+                      '')
+                  .toString(),
+          zoneid:
+              (_loginResponseData!['zoneid'] ??
+                      _loginResponseData!['ZONEID'] ??
+                      'Asia/Kolkata')
+                  .toString(),
+          expiryTime:
+              (_loginResponseData!['expirytime'] ??
+                      _loginResponseData!['expiryTime'] ??
+                      '')
+                  .toString(),
+          branchId:
+              int.tryParse(
+                (_loginResponseData!['branch_id'] ?? 1).toString(),
+              ) ??
+              1,
+          email:
+              (_loginResponseData!['email'] ??
+                      _loginResponseData!['emailId'] ??
+                      '')
+                  .toString(),
+          refreshToken:
+              ApiService.refreshToken ??
+              _loginResponseData!['refreshToken']?.toString(),
           tokenExpiry: ApiService.tokenExpiryTime,
         );
 
@@ -244,9 +292,12 @@ class _LoginPageState extends State<LoginPage> {
       );
       final firstName = userData['firstName']?.toString();
       final userId = (_loginResponseData!['userId'] ?? '').toString();
-      
+
       // Auto-resolve HR Employee ID from shift roster
-      await HRApiService.resolveAndSaveEmpIdFromRoster(userId, firstName: firstName);
+      await HRApiService.resolveAndSaveEmpIdFromRoster(
+        userId,
+        firstName: firstName,
+      );
     } catch (userError) {
       debugPrint("User information fetch failed: $userError");
     }
@@ -318,12 +369,18 @@ class _LoginPageState extends State<LoginPage> {
           Positioned(
             top: -size.width * 0.2,
             right: -size.width * 0.2,
-            child: _buildCircle(size.width * 0.8, Colors.white.withOpacity(0.05)),
+            child: _buildCircle(
+              size.width * 0.8,
+              Colors.white.withValues(alpha: 0.05),
+            ),
           ),
           Positioned(
             top: size.height * 0.2,
             left: -size.width * 0.1,
-            child: _buildCircle(size.width * 0.4, Colors.white.withOpacity(0.03)),
+            child: _buildCircle(
+              size.width * 0.4,
+              Colors.white.withValues(alpha: 0.03),
+            ),
           ),
           Column(
             children: [
@@ -346,10 +403,12 @@ class _LoginPageState extends State<LoginPage> {
                                 padding: EdgeInsets.all(size.width * 0.05),
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       blurRadius: 20,
                                       spreadRadius: 5,
                                     ),
@@ -464,7 +523,8 @@ class _LoginPageState extends State<LoginPage> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const ForgotPasswordPage(),
+                                        builder: (context) =>
+                                            const ForgotPasswordPage(),
                                       ),
                                     );
                                   },
@@ -503,10 +563,7 @@ class _LoginPageState extends State<LoginPage> {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color,
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
     );
   }
 
@@ -522,7 +579,7 @@ class _LoginPageState extends State<LoginPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),
@@ -541,7 +598,7 @@ class _LoginPageState extends State<LoginPage> {
           ),
           prefixIcon: Icon(
             icon,
-            color: AppColors.primaryDarkBlue.withOpacity(0.7),
+            color: AppColors.primaryDarkBlue.withValues(alpha: 0.7),
             size: 22,
           ),
           suffixIcon: isPassword
@@ -585,7 +642,7 @@ class _LoginPageState extends State<LoginPage> {
           backgroundColor: AppColors.primaryDarkBlue,
           foregroundColor: AppColors.whiteColor,
           elevation: 8,
-          shadowColor: AppColors.primaryDarkBlue.withOpacity(0.4),
+          shadowColor: AppColors.primaryDarkBlue.withValues(alpha: 0.4),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),

@@ -26,22 +26,22 @@ Future<void> updateAppTheme(bool isDarkMode) async {
 
 class _SettingsPageState extends State<SettingsPage> {
   double _fontSize = 16.0;
-  double _tempFontSize = 16.0; 
+  double _tempFontSize = 16.0;
   static const double _minFontSize = 12.0;
   static const double _maxFontSize = 24.0;
   bool _fontSizeChanged = false;
-  
+
   Color _selectedColor = const Color(0xFF1A237E);
   final List<Color> _colorOptions = [
-    const Color(0xFF1A237E), 
-    const Color(0xFF283593), 
-    const Color(0xFF00C897), 
-    const Color(0xFF66D7EE), 
-    const Color(0xFFE53935), 
+    const Color(0xFF1A237E),
+    const Color(0xFF283593),
+    const Color(0xFF00C897),
+    const Color(0xFF66D7EE),
+    const Color(0xFFE53935),
     Colors.purple,
     Colors.green,
   ];
-  
+
   bool _isDarkMode = false;
   bool _enableBiometric = false;
   bool _enableFaceID = false;
@@ -53,23 +53,23 @@ class _SettingsPageState extends State<SettingsPage> {
     "15 minutes",
     "30 minutes",
     "1 hour",
-    "Never"
+    "Never",
   ];
-  
+
   @override
   void initState() {
     super.initState();
     _loadSettings();
-    
+
     darkModeNotifier.addListener(_onThemeChanged);
   }
-  
+
   @override
   void dispose() {
     darkModeNotifier.removeListener(_onThemeChanged);
     super.dispose();
   }
-  
+
   void _onThemeChanged() {
     if (mounted) {
       setState(() {
@@ -77,7 +77,7 @@ class _SettingsPageState extends State<SettingsPage> {
       });
     }
   }
-  
+
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -90,41 +90,46 @@ class _SettingsPageState extends State<SettingsPage> {
       _enableFaceID = prefs.getBool('enableFaceID') ?? false;
       _appLockTimeout = prefs.getString('appLockTimeout') ?? "30 minutes";
     });
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-    statusBarColor: _selectedColor,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-  ));
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        statusBarColor: _selectedColor,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+    );
   }
-  
+
   Future<void> _saveFontSize() async {
     await updateAppFontSize(_fontSize);
-    setState(() {
-      _fontSizeChanged = false;
-    });
-    
+
+    if (mounted) {
+      setState(() {
+        _fontSizeChanged = false;
+      });
+    }
+
     _showSnackBar('Font size updated to ${_fontSize.toInt()}px');
   }
-  
+
   Future<void> _saveThemeMode() async {
     await updateAppTheme(_isDarkMode);
     _showSnackBar('Theme changed to ${_isDarkMode ? 'Dark' : 'Light'} mode');
   }
-  
+
   Future<void> _saveThemeColor() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('themeColor', _selectedColor.value);
   }
-  
+
   Future<void> _saveBiometricSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('enableBiometric', _enableBiometric);
     await prefs.setBool('enableFaceID', _enableFaceID);
     await prefs.setString('appLockTimeout', _appLockTimeout);
-    
+
     _showSnackBar('Security settings updated');
   }
-  
+
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -135,27 +140,27 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
   }
-  
+
   Color _getBackgroundColor() {
     return _isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F7FA);
   }
-  
+
   Color _getCardColor() {
     return _isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
   }
-  
+
   Color _getTextColor() {
     return _isDarkMode ? Colors.white : const Color(0xFF1A237E);
   }
-  
+
   Color _getBodyTextColor() {
     return _isDarkMode ? const Color(0xFFB0BEC5) : const Color(0xFF90A4AE);
   }
-  
+
   Color _getWarningColor() {
     return _isDarkMode ? Colors.orange.shade300 : Colors.orange.shade700;
   }
-  
+
   void _showTimeoutDialog() {
     showDialog(
       context: context,
@@ -177,12 +182,7 @@ class _SettingsPageState extends State<SettingsPage> {
               itemBuilder: (context, index) {
                 final option = _timeoutOptions[index];
                 return ListTile(
-                  title: Text(
-                    option,
-                    style: TextStyle(
-                      color: _getTextColor(),
-                    ),
-                  ),
+                  title: Text(option, style: TextStyle(color: _getTextColor())),
                   trailing: _appLockTimeout == option
                       ? Icon(Icons.check, color: _selectedColor)
                       : null,
@@ -217,10 +217,7 @@ class _SettingsPageState extends State<SettingsPage> {
       appBar: AppBar(
         title: const Text(
           'Settings',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: _selectedColor,
@@ -238,8 +235,6 @@ class _SettingsPageState extends State<SettingsPage> {
           padding: const EdgeInsets.all(16.0),
           children: [
             // _buildSectionHeader("4.1 Appearance"),
-            
-            
             _buildSettingCard(
               icon: Icons.format_size_rounded,
               title: 'Font Size',
@@ -247,9 +242,12 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 6,
+                      horizontal: 12,
+                    ),
                     decoration: BoxDecoration(
-                      color: _selectedColor.withOpacity(0.1),
+                      color: _selectedColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -273,9 +271,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 10),
-                  
+
                   Row(
                     children: [
                       IconButton(
@@ -296,7 +294,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         constraints: const BoxConstraints(),
                         tooltip: 'Decrease',
                       ),
-                      
+
                       Expanded(
                         child: Slider(
                           value: _tempFontSize,
@@ -305,7 +303,9 @@ class _SettingsPageState extends State<SettingsPage> {
                           divisions: 12,
                           label: '${_tempFontSize.toInt()}px',
                           activeColor: _selectedColor,
-                          inactiveColor: _isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                          inactiveColor: _isDarkMode
+                              ? Colors.grey[700]
+                              : Colors.grey[300],
                           onChanged: (value) {
                             setState(() {
                               _tempFontSize = value;
@@ -314,7 +314,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           },
                         ),
                       ),
-                      
+
                       IconButton(
                         onPressed: () {
                           if (_tempFontSize < _maxFontSize) {
@@ -324,20 +324,16 @@ class _SettingsPageState extends State<SettingsPage> {
                             });
                           }
                         },
-                        icon: Icon(
-                          Icons.add,
-                          color: _selectedColor,
-                          size: 20,
-                        ),
+                        icon: Icon(Icons.add, color: _selectedColor, size: 20),
                         padding: const EdgeInsets.all(6),
                         constraints: const BoxConstraints(),
                         tooltip: 'Increase',
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 6),
-                  
+
                   // Size labels
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -365,9 +361,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  
+
                   // Save button for font size
                   if (_fontSizeChanged)
                     SizedBox(
@@ -401,14 +397,17 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Dark/Light Theme Setting
             _buildSettingCard(
-              icon: _isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+              icon: _isDarkMode
+                  ? Icons.dark_mode_rounded
+                  : Icons.light_mode_rounded,
               title: 'App Theme',
-              subtitle: 'Switch between dark and light mode (Applies to entire app)',
+              subtitle:
+                  'Switch between dark and light mode (Applies to entire app)',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -429,8 +428,8 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              _isDarkMode 
-                                  ? 'Easier on eyes in low light' 
+                              _isDarkMode
+                                  ? 'Easier on eyes in low light'
                                   : 'Clear visibility in bright light',
                               style: TextStyle(
                                 color: _getBodyTextColor(),
@@ -443,7 +442,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       Switch(
                         value: _isDarkMode,
                         activeColor: _selectedColor,
-                        inactiveTrackColor: _isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                        inactiveTrackColor: _isDarkMode
+                            ? Colors.grey[700]
+                            : Colors.grey[300],
                         onChanged: (value) {
                           setState(() {
                             _isDarkMode = value;
@@ -457,12 +458,16 @@ class _SettingsPageState extends State<SettingsPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: _selectedColor.withOpacity(0.1),
+                      color: _selectedColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline, size: 16, color: _selectedColor),
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: _selectedColor,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -479,9 +484,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // // Color Theme Setting (Commented but visible)
             // _buildSettingCard(
             //   icon: Icons.color_lens_rounded,
@@ -510,8 +515,8 @@ class _SettingsPageState extends State<SettingsPage> {
             //               color: color,
             //               shape: BoxShape.circle,
             //               border: Border.all(
-            //                 color: _selectedColor == color 
-            //                     ? Colors.white 
+            //                 color: _selectedColor == color
+            //                     ? Colors.white
             //                     : Colors.transparent,
             //                 width: 2,
             //               ),
@@ -533,12 +538,11 @@ class _SettingsPageState extends State<SettingsPage> {
             //     ],
             //   ),
             // ),
-            
             const SizedBox(height: 20),
-            
+
             // Section: 4.2 Security
             // _buildSectionHeader("4.2 Security"),
-            
+
             // Biometric Authentication
             _buildSettingCard(
               icon: Icons.fingerprint_rounded,
@@ -547,121 +551,137 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Enable Biometric Login',
-                              style: TextStyle(
-                                color: _getTextColor(),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
+                  // ---------------- BIOMETRIC LOGIN ----------------
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Enable Biometric Login',
+                                style: TextStyle(
+                                  color: _getTextColor(),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Use fingerprint or device biometrics for quick login',
-                              style: TextStyle(
-                                color: _getBodyTextColor(),
-                                fontSize: 12,
+                              const SizedBox(height: 2),
+                              Text(
+                                'Use fingerprint or device biometrics for quick login',
+                                style: TextStyle(
+                                  color: _getBodyTextColor(),
+                                  fontSize: 12,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      Switch(
-                        value: _enableBiometric,
-                        activeColor: _selectedColor,
-                        inactiveTrackColor: _isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                        onChanged: (value) {
-                          setState(() {
-                            _enableBiometric = value;
-                          });
-                          _saveBiometricSettings();
-                        },
-                      ),
-                    ],
+
+                        const SizedBox(width: 8),
+
+                        Switch(
+                          value: _enableBiometric,
+                          activeColor: _selectedColor,
+                          inactiveTrackColor: _isDarkMode
+                              ? Colors.grey[700]
+                              : Colors.grey[300],
+                          onChanged: (value) {
+                            setState(() {
+                              _enableBiometric = value;
+                            });
+                            _saveBiometricSettings();
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  
-                  // Face ID / Face Authentication (only if biometric is enabled)
+
+                  // ---------------- FACE AUTHENTICATION ----------------
                   if (_enableBiometric)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.face_retouching_natural, 
-                                        size: 18, 
-                                        color: _getBodyTextColor(),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Enable Face ID / Face Authentication',
+                                      style: TextStyle(
+                                        color: _getTextColor(),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        'Enable Face ID / Face Authentication',
-                                        style: TextStyle(
-                                          color: _getTextColor(),
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 24.0),
-                                    child: Text(
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
                                       'Use facial recognition for authentication',
                                       style: TextStyle(
                                         color: _getBodyTextColor(),
                                         fontSize: 12,
                                       ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                            Switch(
-                              value: _enableFaceID,
-                              activeColor: _selectedColor,
-                              inactiveTrackColor: _isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                              onChanged: (value) {
-                                setState(() {
-                                  _enableFaceID = value;
-                                });
-                                _saveBiometricSettings();
-                              },
-                            ),
-                          ],
+
+                              const SizedBox(width: 8),
+
+                              Switch(
+                                value: _enableFaceID,
+                                activeColor: _selectedColor,
+                                inactiveTrackColor: _isDarkMode
+                                    ? Colors.grey[700]
+                                    : Colors.grey[300],
+                                onChanged: (value) {
+                                  setState(() {
+                                    _enableFaceID = value;
+                                  });
+                                  _saveBiometricSettings();
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                        
+
                         const SizedBox(height: 8),
-                        
-                        // Info message about biometrics
+
+                        // ---------------- INFO MESSAGE ----------------
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: _selectedColor.withOpacity(0.1),
+                            color: _selectedColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: _selectedColor.withOpacity(0.3),
+                              color: _selectedColor.withValues(alpha: 0.3),
                             ),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.info_outline, 
-                                size: 18, 
+                              Icon(
+                                Icons.info_outline,
+                                size: 18,
                                 color: _selectedColor,
                               ),
                               const SizedBox(width: 8),
@@ -682,10 +702,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                 ],
               ),
-            ),
-            
+            ), // <-- IMPORTANT: closes _buildSettingCard
+
             const SizedBox(height: 12),
-            
+
             // App Lock Timeout
             _buildSettingCard(
               icon: Icons.lock_clock_rounded,
@@ -695,7 +715,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Column(
@@ -720,43 +740,56 @@ class _SettingsPageState extends State<SettingsPage> {
                           ],
                         ),
                       ),
-                      InkWell(
-                        onTap: _showTimeoutDialog,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: _selectedColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: _selectedColor.withOpacity(0.3),
+
+                      const SizedBox(width: 8),
+
+                      Flexible(
+                        child: InkWell(
+                          onTap: _showTimeoutDialog,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
                             ),
-                          ),
-                          child: Row(
-                            children: [
-                              Text(
-                                _appLockTimeout,
-                                style: TextStyle(
-                                  color: _getTextColor(),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
+                            decoration: BoxDecoration(
+                              color: _selectedColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: _selectedColor.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    _appLockTimeout,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      color: _getTextColor(),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                              Icon(
-                                Icons.arrow_drop_down,
-                                color: _getBodyTextColor(),
-                                size: 20,
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.arrow_drop_down,
+                                  color: _getBodyTextColor(),
+                                  size: 20,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 8),
-                  
+
                   // Description of current timeout
                   Container(
                     padding: const EdgeInsets.all(10),
@@ -765,9 +798,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      _appLockTimeout == "Immediately" 
-                        ? 'App will lock immediately when minimized'
-                        : _appLockTimeout == "Never"
+                      _appLockTimeout == "Immediately"
+                          ? 'App will lock immediately when minimized'
+                          : _appLockTimeout == "Never"
                           ? 'App will never auto-lock (less secure)'
                           : 'App will lock after $_appLockTimeout of inactivity',
                       style: TextStyle(
@@ -776,24 +809,25 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 8),
-                  
+
                   // Security warning for "Never" option
                   if (_appLockTimeout == "Never")
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: _getWarningColor().withOpacity(0.1),
+                        color: _getWarningColor().withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: _getWarningColor().withOpacity(0.3),
+                          color: _getWarningColor().withValues(alpha: 0.3),
                         ),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.warning_amber_rounded, 
-                            size: 18, 
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            size: 18,
                             color: _getWarningColor(),
                           ),
                           const SizedBox(width: 8),
@@ -814,9 +848,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Apply All Changes Button
             Center(
               child: ElevatedButton.icon(
@@ -829,11 +863,11 @@ class _SettingsPageState extends State<SettingsPage> {
                     });
                     await _saveFontSize();
                   }
-                  
+
                   // Save all other settings
                   await _saveThemeMode();
                   await _saveBiometricSettings();
-                  
+
                   _showSnackBar('All settings applied successfully');
                 },
                 icon: const Icon(Icons.save_rounded, size: 20),
@@ -852,9 +886,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
+            // Reset Settings Button
             // Reset Settings Button
             Center(
               child: ElevatedButton.icon(
@@ -872,9 +907,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       content: Text(
                         'Are you sure you want to reset all settings to default?',
-                        style: TextStyle(
-                          color: _getBodyTextColor(),
-                        ),
+                        style: TextStyle(color: _getBodyTextColor()),
                       ),
                       actions: [
                         TextButton(
@@ -887,14 +920,17 @@ class _SettingsPageState extends State<SettingsPage> {
                         ElevatedButton(
                           onPressed: () async {
                             Navigator.pop(context);
+
                             final prefs = await SharedPreferences.getInstance();
+
                             await prefs.clear();
-                            
+
                             // Reset global notifiers
                             fontSizeNotifier.value = 16.0;
                             darkModeNotifier.value = false;
-                            
+
                             _loadSettings();
+
                             _showSnackBar('All settings reset to default');
                           },
                           style: ElevatedButton.styleFrom(
@@ -910,7 +946,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 icon: const Icon(Icons.restart_alt_rounded, size: 20),
                 label: const Text('Reset to Default'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                  backgroundColor: _isDarkMode
+                      ? Colors.grey[700]
+                      : Colors.grey[300],
                   foregroundColor: _getTextColor(),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
@@ -928,7 +966,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
   }
-  
+
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -942,7 +980,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
   }
-  
+
   Widget _buildSettingCard({
     required IconData icon,
     required String title,
@@ -952,9 +990,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Card(
       elevation: 2,
       color: _getCardColor(),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Column(
@@ -965,14 +1001,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: _selectedColor.withOpacity(0.1),
+                    color: _selectedColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    icon,
-                    color: _selectedColor,
-                    size: 20,
-                  ),
+                  child: Icon(icon, color: _selectedColor, size: 20),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -1001,10 +1033,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ],
             ),
             const SizedBox(height: 12),
-            const Divider(
-              height: 1,
-              color: Color(0xFFE0E0E0),
-            ),
+            const Divider(height: 1, color: Color(0xFFE0E0E0)),
             const SizedBox(height: 12),
             child,
           ],

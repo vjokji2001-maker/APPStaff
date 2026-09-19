@@ -57,12 +57,12 @@ class AppColors {
 }
 
 class SmartCareHomeScreen extends StatefulWidget {
-   final VoidCallback? onNavigateToTasks;
+  final VoidCallback? onNavigateToTasks;
   final ValueChanged<int>? onTabChange;
-  
+
   const SmartCareHomeScreen({
     super.key,
-  this.onNavigateToTasks,
+    this.onNavigateToTasks,
     this.onTabChange,
   });
 
@@ -80,21 +80,21 @@ class SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
   String address = '';
   String accessGroup = 'Admin Staff';
   String location = 'Main Hospital - Floor 3';
-  
+
   bool isLoading = true;
-  bool _isLoggingOut = false; 
+  bool _isLoggingOut = false;
   bool _loadingBirthdays = true;
   bool _loadingShifts = true;
   String currentDate = '';
-  
-  List<StaffDOB> todayBirthdays = []; 
+
+  List<StaffDOB> todayBirthdays = [];
   List<Birthday> upcomingBirthdays = [];
   List<Training> trainings = [];
   List<RotaShift> rotaShifts = [];
   List<QuickTask> quickTasks = [];
   List<PendingApproval> pendingApprovals = [];
   CheckInOutStatus checkInOutStatus = CheckInOutStatus();
-  
+
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -144,74 +144,74 @@ class SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
     upcomingBirthdays = [];
   }
 
-Future<void> _loadTodayBirthdays() async {
-  if (mounted) {
-    setState(() {
-      _loadingBirthdays = true;
-      todayBirthdays.clear();
-    });
-  }
-  
-  try {
-    final today = DateTime.now();
-    final dobString = _formatDateForAPI(today);
-    
-    final response = await HomeService.getStaffByDob(dobString);
-    
-    if (response.containsKey('data')) {
-      final data = response['data'];
-      
-      if (data is List) {
-        if (data.isNotEmpty) {
-          for (int i = 0; i < data.length; i++) {
-            if (data[i] is Map) {
-              final Map<String, dynamic> staffData;
-              if (data[i] is Map<String, dynamic>) {
-                staffData = data[i] as Map<String, dynamic>;
-              } else {
-                staffData = {};
-                (data[i] as Map).forEach((key, value) {
-                  staffData[key.toString()] = value;
-                });
-              }
-              
-              try {
-                final staff = StaffDOB.fromApiResponse(staffData);
-                todayBirthdays.add(staff);
-              } catch (e) {
-                debugPrint('Error parsing staff $i: $e');
+  Future<void> _loadTodayBirthdays() async {
+    if (mounted) {
+      setState(() {
+        _loadingBirthdays = true;
+        todayBirthdays.clear();
+      });
+    }
+
+    try {
+      final today = DateTime.now();
+      final dobString = _formatDateForAPI(today);
+
+      final response = await HomeService.getStaffByDob(dobString);
+
+      if (response.containsKey('data')) {
+        final data = response['data'];
+
+        if (data is List) {
+          if (data.isNotEmpty) {
+            for (int i = 0; i < data.length; i++) {
+              if (data[i] is Map) {
+                final Map<String, dynamic> staffData;
+                if (data[i] is Map<String, dynamic>) {
+                  staffData = data[i] as Map<String, dynamic>;
+                } else {
+                  staffData = {};
+                  (data[i] as Map).forEach((key, value) {
+                    staffData[key.toString()] = value;
+                  });
+                }
+
+                try {
+                  final staff = StaffDOB.fromApiResponse(staffData);
+                  todayBirthdays.add(staff);
+                } catch (e) {
+                  debugPrint('Error parsing staff $i: $e');
+                }
               }
             }
           }
         }
       }
-    }
-    
-    if (mounted) {
-      setState(() {
-        _loadingBirthdays = false;
-      });
-    }
-  } catch (e) {
-    debugPrint('=== ERROR LOADING BIRTHDAYS ===');
-    debugPrint('Error message: $e');
-    
-    if (mounted) {
-      setState(() {
-        _loadingBirthdays = false;
-        todayBirthdays = [];
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to load birthday data: ${e.toString()}'),
-          backgroundColor: AppColors.errorRed,
-          duration: const Duration(seconds: 5),
-        ),
-      );
+
+      if (mounted) {
+        setState(() {
+          _loadingBirthdays = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('=== ERROR LOADING BIRTHDAYS ===');
+      debugPrint('Error message: $e');
+
+      if (mounted) {
+        setState(() {
+          _loadingBirthdays = false;
+          todayBirthdays = [];
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load birthday data: ${e.toString()}'),
+            backgroundColor: AppColors.errorRed,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
-}
 
   Future<void> _loadDynamicTasks() async {
     try {
@@ -225,37 +225,43 @@ Future<void> _loadTodayBirthdays() async {
       // Combine and reverse the list so the last items from the API come first
       final allTasksData = [...todayData, ...upcomingData].reversed.toList();
 
-      debugPrint('HOME: Today tasks: ${todayData.length}, Upcoming: ${upcomingData.length}');
+      debugPrint(
+        'HOME: Today tasks: ${todayData.length}, Upcoming: ${upcomingData.length}',
+      );
 
       final List<QuickTask> loaded = [];
       for (var item in allTasksData) {
         if (item is Map<String, dynamic>) {
-          final String title = item['taskName']?.toString() ??
+          final String title =
+              item['taskName']?.toString() ??
               item['title']?.toString() ??
               'Unnamed Task';
-          final String priorityStr =
-              item['priority']?.toString() ?? 'Medium';
+          final String priorityStr = item['priority']?.toString() ?? 'Medium';
 
           String timeStr = '--';
           if (item['dueDate'] != null || item['taskDate'] != null) {
             try {
               final parsedDate = DateTime.parse(
-                  (item['dueDate'] ?? item['taskDate']).toString());
+                (item['dueDate'] ?? item['taskDate']).toString(),
+              );
               timeStr = DateFormat('h:mm a').format(parsedDate);
             } catch (_) {}
           }
 
-          final bool completed = item['completed'] == true ||
+          final bool completed =
+              item['completed'] == true ||
               item['isCompleted'] == true ||
               item['status']?.toString().toLowerCase() == 'completed';
 
           if (!completed) {
-            loaded.add(QuickTask(
-              title: title,
-              priority: priorityStr,
-              time: timeStr,
-              completed: false,
-            ));
+            loaded.add(
+              QuickTask(
+                title: title,
+                priority: priorityStr,
+                time: timeStr,
+                completed: false,
+              ),
+            );
           }
         }
       }
@@ -307,7 +313,7 @@ Future<void> _loadTodayBirthdays() async {
 
       final data = response is Map ? response['data'] ?? response : null;
       if (data == null) return;
-      
+
       final dataList = data['dataList'] ?? data['content'] ?? data['records'];
       if (dataList is! List || dataList.isEmpty) return;
 
@@ -324,32 +330,40 @@ Future<void> _loadTodayBirthdays() async {
       try {
         final userData = GlobalUserData().userData;
         if (userData != null) {
-          userCode = userData['userId']?.toString() ?? userData['empId']?.toString();
+          userCode =
+              userData['userId']?.toString() ?? userData['empId']?.toString();
         }
       } catch (_) {}
 
-      final dynamic foundRow = flatList.firstWhere(
-        (r) {
-          if (r is! Map) return false;
-          final code = r['employeeCode']?.toString().toLowerCase() ?? '';
-          return code.isNotEmpty && code == userCode?.toLowerCase();
-        },
-        orElse: () => flatList.first,
-      );
+      final dynamic foundRow = flatList.firstWhere((r) {
+        if (r is! Map) return false;
+        final code = r['employeeCode']?.toString().toLowerCase() ?? '';
+        return code.isNotEmpty && code == userCode?.toLowerCase();
+      }, orElse: () => flatList.first);
 
       if (foundRow is! Map) return;
-      final List<dynamic> empShiftList = foundRow['empShiftList'] is List ? foundRow['empShiftList'] : [];
-      
+      final List<dynamic> empShiftList = foundRow['empShiftList'] is List
+          ? foundRow['empShiftList']
+          : [];
+
       final List<RotaShift> loadedRota = [];
       for (final s in empShiftList) {
         if (s is Map) {
-          final String sName = s['shiftName']?.toString() ?? s['shiftCode']?.toString() ?? '';
-          if (sName.isNotEmpty && sName.toLowerCase() != 'off' && sName.toLowerCase() != 'weekly off') {
-            loadedRota.add(RotaShift(
-              date: s['date']?.toString() ?? '',
-              shift: sName,
-              location: s['ward']?.toString() ?? s['location']?.toString() ?? 'Main Hospital',
-            ));
+          final String sName =
+              s['shiftName']?.toString() ?? s['shiftCode']?.toString() ?? '';
+          if (sName.isNotEmpty &&
+              sName.toLowerCase() != 'off' &&
+              sName.toLowerCase() != 'weekly off') {
+            loadedRota.add(
+              RotaShift(
+                date: s['date']?.toString() ?? '',
+                shift: sName,
+                location:
+                    s['ward']?.toString() ??
+                    s['location']?.toString() ??
+                    'Main Hospital',
+              ),
+            );
           }
         }
       }
@@ -366,14 +380,14 @@ Future<void> _loadTodayBirthdays() async {
     }
   }
 
-String _formatDateForAPI(DateTime date) {
-  final day = date.day.toString().padLeft(2, '0');
-  final month = date.month.toString().padLeft(2, '0');
-  final year = date.year.toString();
-  
-  final formatted = '$day-$month-$year';
-  return formatted;
-}
+  String _formatDateForAPI(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year.toString();
+
+    final formatted = '$day-$month-$year';
+    return formatted;
+  }
 
   Future<void> _loadUserData() async {
     try {
@@ -389,7 +403,8 @@ String _formatDateForAPI(DateTime date) {
         return;
       }
 
-      final profileInfo = await UserInformationService.getUserProfileForDisplay();
+      final profileInfo =
+          await UserInformationService.getUserProfileForDisplay();
       if (profileInfo.isNotEmpty) {
         setState(() {
           fullName = profileInfo['fullName'] ?? 'Dr. Staff Member';
@@ -417,22 +432,22 @@ String _formatDateForAPI(DateTime date) {
       String first = data['firstName']?.toString() ?? '';
       String last = data['lastName']?.toString() ?? '';
       String init = data['initial']?.toString() ?? '';
-      
+
       // Use pre-saved fullName, else build from parts
       fullName = data['fullName']?.toString() ?? '';
       if (fullName.isEmpty) fullName = '$init $first $last'.trim();
       if (fullName.isEmpty) fullName = userId;
-      
+
       clinicName = data['clinicName']?.toString() ?? 'Smart Care Hospital';
       String job = data['jobtitle']?.toString() ?? '';
       userRole = job.isNotEmpty ? job : 'Medical Staff';
-      
+
       email = data['email']?.toString() ?? '';
       phoneNumber = data['mobileNo']?.toString() ?? '';
       address = data['address']?.toString() ?? '';
       accessGroup = data['accessGroup']?.toString() ?? 'Admin Staff';
       location = data['location']?.toString() ?? 'Main Hospital - Floor 3';
-      
+
       isLoading = false;
     });
   }
@@ -453,7 +468,7 @@ String _formatDateForAPI(DateTime date) {
       clinicName = userInfo['clinicName']?.toString() ?? 'Smart Care Hospital';
       String job = userInfo['jobtitle']?.toString() ?? '';
       userRole = job.isNotEmpty ? job : 'Medical Staff';
-      
+
       email = userInfo['email']?.toString() ?? '';
       phoneNumber = userInfo['mobileNo']?.toString() ?? '';
       address = userInfo['address']?.toString() ?? '';
@@ -472,16 +487,22 @@ String _formatDateForAPI(DateTime date) {
       bool? confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text("Logout", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+          title: Text(
+            "Logout",
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          ),
           content: const Text("Are you sure you want to log out?"),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false), 
-              child: const Text("Cancel")
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel"),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(context, true), 
-              child: Text("Logout", style: GoogleFonts.poppins(color: AppColors.errorRed)),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(
+                "Logout",
+                style: GoogleFonts.poppins(color: AppColors.errorRed),
+              ),
             ),
           ],
         ),
@@ -496,7 +517,7 @@ String _formatDateForAPI(DateTime date) {
       ApiService.clearSession();
 
       if (!mounted) return;
-      
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
@@ -513,7 +534,7 @@ String _formatDateForAPI(DateTime date) {
   void _showBirthdayDetails() {
     final today = DateTime.now();
     final todayFormatted = DateFormat('dd-MM-yyyy').format(today);
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -547,10 +568,14 @@ String _formatDateForAPI(DateTime date) {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.pink.withOpacity(0.1),
+                      color: AppColors.pink.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.cake, color: AppColors.pink, size: 24),
+                    child: const Icon(
+                      Icons.cake,
+                      color: AppColors.pink,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -577,9 +602,12 @@ String _formatDateForAPI(DateTime date) {
                   ),
                   if (todayBirthdays.isNotEmpty)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
-                        color: AppColors.pink.withOpacity(0.1),
+                        color: AppColors.pink.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -594,7 +622,7 @@ String _formatDateForAPI(DateTime date) {
                 ],
               ),
               const SizedBox(height: 16),
-              
+
               if (_loadingBirthdays)
                 const Center(
                   child: Padding(
@@ -639,11 +667,13 @@ String _formatDateForAPI(DateTime date) {
                   child: ListView(
                     controller: scrollController,
                     children: [
-                      ...todayBirthdays.map((staff) => _buildStaffBirthdayCard(staff)),
+                      ...todayBirthdays.map(
+                        (staff) => _buildStaffBirthdayCard(staff),
+                      ),
                     ],
                   ),
                 ),
-              
+
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -673,120 +703,118 @@ String _formatDateForAPI(DateTime date) {
     );
   }
 
-Widget _buildStaffBirthdayCard(StaffDOB staff) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.grey.shade200),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withOpacity(0.1),
-          blurRadius: 8,
-          offset: const Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: AppColors.pink.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
+  Widget _buildStaffBirthdayCard(StaffDOB staff) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
-          child: const Icon(Icons.cake, color: AppColors.pink, size: 24),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                staff.fullName.isNotEmpty ? staff.fullName : 'Staff Member',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textDark,
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.pink.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.cake, color: AppColors.pink, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  staff.fullName.isNotEmpty ? staff.fullName : 'Staff Member',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              
-              if (staff.initial != null && staff.initial!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: Text(
-                    "👤 ${staff.initial!}",
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: AppColors.textBodyColor,
+                const SizedBox(height: 4),
+
+                if (staff.initial != null && staff.initial!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      "👤 ${staff.initial!}",
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: AppColors.textBodyColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                if (staff.dob != null && staff.dob!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      "🎂 ${staff.dob!}",
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: AppColors.textBodyColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.pink.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "🎂",
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    color: AppColors.pink,
                   ),
                 ),
-              
-              if (staff.dob != null && staff.dob!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: Text(
-                    "🎂 ${staff.dob!}",
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: AppColors.textBodyColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                const SizedBox(height: 2),
+                Text(
+                  "Today",
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.pink,
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.pink.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                "🎂",
-                style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  color: AppColors.pink,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                "Today",
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.pink,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
   void _navigateToTraining(BuildContext context, {int tab = 0}) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TrainingModuleScreen(
-          initialTab: tab,
-        ),
+        builder: (context) => TrainingModuleScreen(initialTab: tab),
       ),
     );
   }
@@ -805,15 +833,19 @@ Widget _buildStaffBirthdayCard(StaffDOB staff) {
 
   void _showEventDetails(String title) {
     List<Widget> content = [];
-    
+
     if (title == "Birthdays") {
-      content = upcomingBirthdays.map((bday) => _buildDetailCard(
-        icon: Icons.cake,
-        title: bday.name,
-        subtitle: bday.department,
-        trailing: bday.time,
-        color: AppColors.pink,
-      )).toList();
+      content = upcomingBirthdays
+          .map(
+            (bday) => _buildDetailCard(
+              icon: Icons.cake,
+              title: bday.name,
+              subtitle: bday.department,
+              trailing: bday.time,
+              color: AppColors.pink,
+            ),
+          )
+          .toList();
     } else if (title == "Attendance") {
       Navigator.push(
         context,
@@ -823,41 +855,55 @@ Widget _buildStaffBirthdayCard(StaffDOB staff) {
     } else if (title == "My Rota") {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => RotaPage(),
-        ),
+        MaterialPageRoute(builder: (context) => RotaPage()),
       );
-      content = rotaShifts.map((rota) => _buildDetailCard(
-        icon: Icons.schedule,
-        title: rota.shift,
-        subtitle: rota.location,
-        trailing: rota.date,
-        color: AppColors.purple,
-      )).toList();
-return;
+      content = rotaShifts
+          .map(
+            (rota) => _buildDetailCard(
+              icon: Icons.schedule,
+              title: rota.shift,
+              subtitle: rota.location,
+              trailing: rota.date,
+              color: AppColors.purple,
+            ),
+          )
+          .toList();
+      return;
     } else if (title == "My Tasks") {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => MyTasksPage(),
-        ),
+        MaterialPageRoute(builder: (context) => MyTasksPage()),
       );
-      content = quickTasks.map((task) => _buildDetailCard(
-        icon: task.completed ? Icons.check_circle : Icons.assignment,
-        title: task.title,
-        subtitle: "${task.time} • ${task.priority} Priority",
-        trailing: task.completed ? "Completed" : "Pending",
-        color: task.completed ? AppColors.successGreen : _getPriorityColor(task.priority),
-      )).toList();
+      content = quickTasks
+          .map(
+            (task) => _buildDetailCard(
+              icon: task.completed ? Icons.check_circle : Icons.assignment,
+              title: task.title,
+              subtitle: "${task.time} • ${task.priority} Priority",
+              trailing: task.completed ? "Completed" : "Pending",
+              color: task.completed
+                  ? AppColors.successGreen
+                  : _getPriorityColor(task.priority),
+            ),
+          )
+          .toList();
       return;
     } else if (title == "Approvals") {
-      content = pendingApprovals.map((approval) => _buildDetailCard(
-        icon: Icons.pending_actions,
-        title: "${approval.type} - ${approval.name}",
-        subtitle: approval.days.isNotEmpty ? approval.days : (approval.hours.isNotEmpty ? approval.hours : approval.items),
-        trailing: approval.status,
-        color: AppColors.warningOrange,
-      )).toList();
+      content = pendingApprovals
+          .map(
+            (approval) => _buildDetailCard(
+              icon: Icons.pending_actions,
+              title: "${approval.type} - ${approval.name}",
+              subtitle: approval.days.isNotEmpty
+                  ? approval.days
+                  : (approval.hours.isNotEmpty
+                        ? approval.hours
+                        : approval.items),
+              trailing: approval.status,
+              color: AppColors.warningOrange,
+            ),
+          )
+          .toList();
     }
 
     showModalBottomSheet(
@@ -948,7 +994,7 @@ return;
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -960,7 +1006,7 @@ return;
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -992,7 +1038,7 @@ return;
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -1047,17 +1093,17 @@ return;
         onPressed: _openChatbot,
         backgroundColor: AppColors.chatbotBlue,
         elevation: 8,
-        child: const Icon(
-          Icons.support_agent,
-          color: Colors.white,
-          size: 28,
-        ),
+        child: const Icon(Icons.support_agent, color: Colors.white, size: 28),
         tooltip: 'Support Chatbot',
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
-        child: isLoading 
-            ? const Center(child: CircularProgressIndicator(color: AppColors.primaryDarkBlue))
+        child: isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.primaryDarkBlue,
+                ),
+              )
             : Column(
                 children: [
                   Container(
@@ -1070,40 +1116,51 @@ return;
                     ),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AppColors.primaryDarkBlue, AppColors.midDarkBlue],
+                        colors: [
+                          AppColors.primaryDarkBlue,
+                          AppColors.midDarkBlue,
+                        ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(20),
-                        bottomRight: Radius.circular(20),
+                        bottomLeft: Radius.circular(30),
+                        bottomRight: Radius.circular(30),
                       ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-            Row(
-  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  children: [
-    Builder(
-      builder: (context) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: IconButton(
-            onPressed: () => Scaffold.of(context).openDrawer(),
-            icon: const Icon(Icons.menu, color: Colors.white, size: 20),
-            padding: const EdgeInsets.all(8),
-          ),
-        );
-      }
-    ),
-       Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Builder(
+                              builder: (context) {
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: IconButton(
+                                    onPressed: () =>
+                                        Scaffold.of(context).openDrawer(),
+                                    icon: const Icon(
+                                      Icons.menu,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    padding: const EdgeInsets.all(8),
+                                  ),
+                                );
+                              },
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.15),
+                                color: Colors.white.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
@@ -1121,7 +1178,7 @@ return;
                         Text(
                           "Welcome,",
                           style: GoogleFonts.poppins(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 14,
                           ),
                         ),
@@ -1148,7 +1205,7 @@ return;
                       ],
                     ),
                   ),
-            
+
                   Expanded(
                     child: NotificationListener<ScrollNotification>(
                       onNotification: (scrollInfo) {
@@ -1163,21 +1220,24 @@ return;
                           return Column(
                             children: [
                               const SizedBox(height: 16),
-                              
+
                               _buildCompactSectionHeader(
                                 title: "Today's Events",
                                 icon: Icons.event,
                                 context: context,
                               ),
-                              
+
                               const SizedBox(height: 12),
-                              
+
                               SizedBox(
                                 height: 135,
                                 child: ListView(
                                   scrollDirection: Axis.horizontal,
                                   physics: const BouncingScrollPhysics(),
-                                  padding: const EdgeInsets.only(left: 2, right: 2),
+                                  padding: const EdgeInsets.only(
+                                    left: 2,
+                                    right: 2,
+                                  ),
                                   children: [
                                     _buildCompactEventCard(
                                       title: "Birthdays",
@@ -1197,7 +1257,10 @@ return;
                                       onTap: () {
                                         Navigator.push(
                                           context,
-                                          MaterialPageRoute(builder: (context) => const EventManagementPortalScreen()),
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const EventManagementPortalScreen(),
+                                          ),
                                         );
                                       },
                                     ),
@@ -1211,7 +1274,10 @@ return;
                                       onTap: () {
                                         Navigator.push(
                                           context,
-                                          MaterialPageRoute(builder: (context) => const HRAttendanceScreen()),
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const HRAttendanceScreen(),
+                                          ),
                                         );
                                       },
                                     ),
@@ -1225,16 +1291,19 @@ return;
                                       onTap: () {
                                         Navigator.push(
                                           context,
-                                          MaterialPageRoute(builder: (context) => const HRShiftScreen()),
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const HRShiftScreen(),
+                                          ),
                                         );
                                       },
                                     ),
                                   ],
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 20),
-                              
+
                               // My Tasks Section - Shows 2-3 tasks
                               _buildShadowBox(
                                 child: Column(
@@ -1248,7 +1317,9 @@ return;
                                     const SizedBox(height: 12),
                                     if (quickTasks.isEmpty)
                                       Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 24),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 24,
+                                        ),
                                         child: Center(
                                           child: Text(
                                             "All caught up! No pending tasks.",
@@ -1261,17 +1332,25 @@ return;
                                         ),
                                       )
                                     else
-                                      ...quickTasks.take(3).map((task) => 
-                                        GestureDetector(
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(builder: (context) => const MyTasksPage()),
-                                            );
-                                          },
-                                          child: _buildCompactTaskItem(task, context),
-                                        )
-                                      ),
+                                      ...quickTasks
+                                          .take(3)
+                                          .map(
+                                            (task) => GestureDetector(
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        const MyTasksPage(),
+                                                  ),
+                                                );
+                                              },
+                                              child: _buildCompactTaskItem(
+                                                task,
+                                                context,
+                                              ),
+                                            ),
+                                          ),
                                     const SizedBox(height: 12),
                                     _buildSeeAllButton(
                                       onTap: () {
@@ -1280,7 +1359,10 @@ return;
                                         } else {
                                           Navigator.push(
                                             context,
-                                            MaterialPageRoute(builder: (context) => const MyTasksPage()),
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const MyTasksPage(),
+                                            ),
                                           );
                                         }
                                       },
@@ -1289,9 +1371,9 @@ return;
                                   ],
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 20),
-                              
+
                               // Approvals Pending Section
                               // _buildShadowBox(
                               //   child: Column(
@@ -1303,7 +1385,7 @@ return;
                               //         context: context,
                               //       ),
                               //       const SizedBox(height: 12),
-                              //       ...pendingApprovals.take(3).map((approval) => 
+                              //       ...pendingApprovals.take(3).map((approval) =>
                               //         _buildCompactApprovalItem(approval, context)
                               //       ),
                               //       const SizedBox(height: 12),
@@ -1319,15 +1401,14 @@ return;
                               //     ],
                               //   ),
                               // ),
-                              
                               const SizedBox(height: 20),
-                              
+
                               _buildShadowBox(
                                 child: _buildCompactCheckInOutWidget(context),
                               ),
-                              
+
                               const SizedBox(height: 20),
-                              
+
                               _buildShadowBox(
                                 child: _buildCustomExpansionSection(
                                   title: "Today's Birthdays",
@@ -1337,29 +1418,36 @@ return;
                                           const Center(
                                             child: Padding(
                                               padding: EdgeInsets.all(16.0),
-                                              child: CircularProgressIndicator(color: AppColors.pink),
+                                              child: CircularProgressIndicator(
+                                                color: AppColors.pink,
+                                              ),
                                             ),
-                                          )
+                                          ),
                                         ]
                                       : todayBirthdays.isEmpty
-                                          ? [
-                                              _buildEmptyBirthdayState()
-                                            ]
-                                          : todayBirthdays.take(3).map((staff) => 
-                                              _buildCompactStaffListItem(staff, context)
-                                            ).toList(),
+                                      ? [_buildEmptyBirthdayState()]
+                                      : todayBirthdays
+                                            .take(3)
+                                            .map(
+                                              (staff) =>
+                                                  _buildCompactStaffListItem(
+                                                    staff,
+                                                    context,
+                                                  ),
+                                            )
+                                            .toList(),
                                   context: context,
                                   onSeeAll: _showBirthdayDetails,
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 12),
-                              
+
                               // _buildShadowBox(
                               //   child: _buildCustomExpansionSection(
                               //     title: "Trainings",
                               //     icon: Icons.school,
-                              //     children: trainings.take(3).map((training) => 
+                              //     children: trainings.take(3).map((training) =>
                               //       GestureDetector(
                               //         onTap: () => _navigateToTraining(context),
                               //         child: _buildCompactListItem(
@@ -1376,9 +1464,8 @@ return;
                               //     onSeeAll: () => _navigateToTraining(context),
                               //   ),
                               // ),
-                              
                               const SizedBox(height: 12),
-                              
+
                               _buildShadowBox(
                                 child: _buildCustomExpansionSection(
                                   title: "My Shift",
@@ -1386,60 +1473,73 @@ return;
                                   children: _loadingShifts
                                       ? [
                                           const Padding(
-                                            padding: EdgeInsets.symmetric(vertical: 16),
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
                                             child: Center(
                                               child: CircularProgressIndicator(
                                                 color: AppColors.purple,
                                                 strokeWidth: 2,
                                               ),
                                             ),
-                                          )
+                                          ),
                                         ]
                                       : rotaShifts.isEmpty
-                                          ? [
-                                              Padding(
-                                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                                child: Center(
-                                                  child: Column(
-                                                    children: [
-                                                      Icon(Icons.schedule_outlined,
-                                                          size: 36,
-                                                          color: AppColors.textBodyColor.withOpacity(0.5)),
-                                                      const SizedBox(height: 8),
-                                                      Text(
-                                                        'No shifts this week',
-                                                        style: GoogleFonts.poppins(
-                                                          fontSize: 12,
-                                                          color: AppColors.textBodyColor,
-                                                        ),
-                                                      ),
-                                                    ],
+                                      ? [
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
+                                            child: Center(
+                                              child: Column(
+                                                children: [
+                                                  Icon(
+                                                    Icons.schedule_outlined,
+                                                    size: 36,
+                                                    color: AppColors
+                                                        .textBodyColor
+                                                        .withValues(alpha: 0.5),
                                                   ),
-                                                ),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    'No shifts this week',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 12,
+                                                      color: AppColors
+                                                          .textBodyColor,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                            ]
-                                          : rotaShifts.take(3).map((rota) =>
-                                              _buildCompactListItem(
+                                            ),
+                                          ),
+                                        ]
+                                      : rotaShifts
+                                            .take(3)
+                                            .map(
+                                              (rota) => _buildCompactListItem(
                                                 icon: Icons.schedule,
                                                 title: rota.shift,
                                                 subtitle: rota.location,
                                                 trailing: rota.date,
                                                 color: AppColors.purple,
                                                 context: context,
-                                              )
-                                            ).toList(),
+                                              ),
+                                            )
+                                            .toList(),
                                   context: context,
                                   onSeeAll: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const HRShiftScreen(),
+                                        builder: (context) =>
+                                            const HRShiftScreen(),
                                       ),
                                     );
                                   },
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 32),
                             ],
                           );
@@ -1460,17 +1560,14 @@ return;
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.15),
+            color: Colors.grey.withValues(alpha: 0.15),
             blurRadius: 12,
             offset: const Offset(0, 4),
             spreadRadius: 2,
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: child,
-      ),
+      child: Padding(padding: const EdgeInsets.all(16), child: child),
     );
   }
 
@@ -1488,10 +1585,14 @@ return;
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: AppColors.pink.withOpacity(0.1),
+              color: AppColors.pink.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.cake_outlined, color: AppColors.pink, size: 16),
+            child: const Icon(
+              Icons.cake_outlined,
+              color: AppColors.pink,
+              size: 16,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1521,72 +1622,72 @@ return;
     );
   }
 
-Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      color: AppColors.lightGreyColor,
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: AppColors.pink.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+  Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.lightGreyColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.pink.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.cake, color: AppColors.pink, size: 16),
           ),
-          child: const Icon(Icons.cake, color: AppColors.pink, size: 16),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                staff.fullName.isNotEmpty ? staff.fullName : 'Staff Member',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textDark,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (staff.initial != null && staff.initial!.isNotEmpty)
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  staff.initial!,
+                  staff.fullName.isNotEmpty ? staff.fullName : 'Staff Member',
                   style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    color: AppColors.textBodyColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textDark,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-            ],
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.pink.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            "Today",
-            style: GoogleFonts.poppins(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: AppColors.pink,
+                if (staff.initial != null && staff.initial!.isNotEmpty)
+                  Text(
+                    staff.initial!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: AppColors.textBodyColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.pink.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              "Today",
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: AppColors.pink,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildCompactSectionHeader({
     required String title,
@@ -1598,7 +1699,7 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: AppColors.primaryDarkBlue.withOpacity(0.1),
+            color: AppColors.primaryDarkBlue.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: AppColors.primaryDarkBlue, size: 18),
@@ -1625,7 +1726,7 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
     required VoidCallback onTap,
   }) {
     final double screenWidth = MediaQuery.of(context).size.width;
-    
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1636,7 +1737,7 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -1651,7 +1752,7 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(icon, color: color, size: 20),
@@ -1686,7 +1787,11 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.arrow_forward, size: 12, color: AppColors.textBodyColor),
+                Icon(
+                  Icons.arrow_forward,
+                  size: 12,
+                  color: AppColors.textBodyColor,
+                ),
               ],
             ),
           ],
@@ -1710,12 +1815,16 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: _getPriorityColor(task.priority).withOpacity(0.1),
+              color: _getPriorityColor(task.priority).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(9),
             ),
             child: Icon(
-              task.completed ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: task.completed ? AppColors.successGreen : _getPriorityColor(task.priority),
+              task.completed
+                  ? Icons.check_circle
+                  : Icons.radio_button_unchecked,
+              color: task.completed
+                  ? AppColors.successGreen
+                  : _getPriorityColor(task.priority),
               size: 18,
             ),
           ),
@@ -1748,7 +1857,10 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
     );
   }
 
-  Widget _buildCompactApprovalItem(PendingApproval approval, BuildContext context) {
+  Widget _buildCompactApprovalItem(
+    PendingApproval approval,
+    BuildContext context,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
@@ -1763,7 +1875,7 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: AppColors.warningOrange.withOpacity(0.1),
+              color: AppColors.warningOrange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(9),
             ),
             child: const Icon(
@@ -1799,7 +1911,7 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.warningOrange.withOpacity(0.1),
+              color: AppColors.warningOrange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -1825,7 +1937,7 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.primaryDarkBlue.withOpacity(0.05),
+          color: AppColors.primaryDarkBlue.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -1840,7 +1952,11 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.arrow_forward, size: 14, color: AppColors.primaryDarkBlue),
+            const Icon(
+              Icons.arrow_forward,
+              size: 14,
+              color: AppColors.primaryDarkBlue,
+            ),
           ],
         ),
       ),
@@ -1859,10 +1975,14 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: AppColors.accentTeal.withOpacity(0.1),
+                color: AppColors.accentTeal.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.login, color: AppColors.accentTeal, size: 18),
+              child: const Icon(
+                Icons.login,
+                color: AppColors.accentTeal,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 10),
             Text(
@@ -1876,7 +1996,7 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
           ],
         ),
         const SizedBox(height: 14),
-        
+
         if (isSmallScreen)
           Column(
             children: [
@@ -2012,15 +2132,15 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
               ),
             ],
           ),
-        
+
         const SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
             onPressed: _toggleCheckInOut,
             style: ElevatedButton.styleFrom(
-              backgroundColor: checkInOutStatus.checkedIn 
-                  ? AppColors.errorRed 
+              backgroundColor: checkInOutStatus.checkedIn
+                  ? AppColors.errorRed
                   : AppColors.successGreen,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
@@ -2045,9 +2165,9 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: checkInOutStatus.checkedIn 
-            ? AppColors.successGreen.withOpacity(0.1)
-            : AppColors.errorRed.withOpacity(0.1),
+        color: checkInOutStatus.checkedIn
+            ? AppColors.successGreen.withValues(alpha: 0.1)
+            : AppColors.errorRed.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -2056,8 +2176,8 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
           Icon(
             checkInOutStatus.checkedIn ? Icons.check_circle : Icons.circle,
             size: 10,
-            color: checkInOutStatus.checkedIn 
-                ? AppColors.successGreen 
+            color: checkInOutStatus.checkedIn
+                ? AppColors.successGreen
                 : AppColors.errorRed,
           ),
           const SizedBox(width: 4),
@@ -2066,8 +2186,8 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
             style: GoogleFonts.poppins(
               fontSize: 11,
               fontWeight: FontWeight.w500,
-              color: checkInOutStatus.checkedIn 
-                  ? AppColors.successGreen 
+              color: checkInOutStatus.checkedIn
+                  ? AppColors.successGreen
                   : AppColors.errorRed,
             ),
           ),
@@ -2094,7 +2214,7 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryDarkBlue.withOpacity(0.1),
+                    color: AppColors.primaryDarkBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, color: AppColors.primaryDarkBlue, size: 18),
@@ -2123,7 +2243,11 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.arrow_forward, size: 14, color: AppColors.primaryDarkBlue),
+                  const Icon(
+                    Icons.arrow_forward,
+                    size: 14,
+                    color: AppColors.primaryDarkBlue,
+                  ),
                 ],
               ),
             ),
@@ -2156,7 +2280,7 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 16),
@@ -2187,7 +2311,7 @@ Widget _buildCompactStaffListItem(StaffDOB staff, BuildContext context) {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
@@ -2319,8 +2443,6 @@ class UserProfileDrawer extends StatefulWidget {
 }
 
 class _UserProfileDrawerState extends State<UserProfileDrawer> {
-
-  bool _hrExpanded = false;
   bool _trainingExpanded = false;
   bool _myTasksExpanded = false;
   bool _isLogoutHovering = false;
@@ -2331,9 +2453,7 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TrainingModuleScreen(
-          initialTab: tab,
-        ),
+        builder: (context) => TrainingModuleScreen(initialTab: tab),
       ),
     );
   }
@@ -2354,7 +2474,9 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    final String initial = widget.fullName.isNotEmpty ? widget.fullName[0].toUpperCase() : 'S';
+    final String initial = widget.fullName.isNotEmpty
+        ? widget.fullName[0].toUpperCase()
+        : 'S';
 
     return Drawer(
       width: size.width * 0.85,
@@ -2437,7 +2559,10 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 16,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -2447,22 +2572,29 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.08),
+                            color: Colors.grey.withValues(alpha: 0.08),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
                         ],
                       ),
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         leading: Container(
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: AppColors.iconBlue.withOpacity(0.1),
+                            color: AppColors.iconBlue.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.person_outline, color: AppColors.iconBlue, size: 22),
+                          child: const Icon(
+                            Icons.person_outline,
+                            color: AppColors.iconBlue,
+                            size: 22,
+                          ),
                         ),
                         title: Text(
                           "My Profile",
@@ -2472,7 +2604,11 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                             color: AppColors.textDark,
                           ),
                         ),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textBodyColor),
+                        trailing: const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: AppColors.textBodyColor,
+                        ),
                         onTap: () => _navigateToProfile(context),
                       ),
                     ),
@@ -2482,7 +2618,9 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                     _buildMenuSection(
                       title: "Training",
                       isExpanded: _trainingExpanded,
-                      onTap: () => setState(() => _trainingExpanded = !_trainingExpanded),
+                      onTap: () => setState(
+                        () => _trainingExpanded = !_trainingExpanded,
+                      ),
                       icon: Icons.school_outlined,
                       iconColor: AppColors.purple,
                       children: [
@@ -2545,7 +2683,8 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                     _buildMenuSection(
                       title: "My Tasks",
                       isExpanded: _myTasksExpanded,
-                      onTap: () => setState(() => _myTasksExpanded = !_myTasksExpanded),
+                      onTap: () =>
+                          setState(() => _myTasksExpanded = !_myTasksExpanded),
                       icon: Icons.task_alt_outlined,
                       iconColor: AppColors.accentTeal,
                       children: [
@@ -2601,26 +2740,15 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
 
                     const SizedBox(height: 16),
 
-                    _buildMenuSection(
-                      title: "My HR (Coming Soon)",
-                      isExpanded: _hrExpanded,
-                      onTap: () {
-                        _showComingSoonDialog(context, "My HR");
-                      },
-                      icon: Icons.work_outline,
-                      iconColor: AppColors.iconGreen,
-                      children: [],
-                    ),
-
                     const SizedBox(height: 24),
-                    
+
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.08),
+                            color: Colors.grey.withValues(alpha: 0.08),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -2634,20 +2762,30 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                             icon: Icons.lock_reset_outlined,
                             showBorder: false,
                           ),
-                          Divider(height: 1, color: AppColors.dividerColor, indent: 16),
+                          Divider(
+                            height: 1,
+                            color: AppColors.dividerColor,
+                            indent: 16,
+                          ),
                           _buildMenuItem(
                             label: "Settings",
                             onTap: () {
                               Navigator.pop(context);
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => const SettingsPage()),
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsPage(),
+                                ),
                               );
                             },
                             icon: Icons.settings_outlined,
                             showBorder: false,
                           ),
-                          Divider(height: 1, color: AppColors.dividerColor, indent: 16),
+                          Divider(
+                            height: 1,
+                            color: AppColors.dividerColor,
+                            indent: 16,
+                          ),
                           _buildMenuItem(
                             label: "Help & Support",
                             onTap: () => _showHelpSupport(context),
@@ -2659,7 +2797,7 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                     ),
 
                     const SizedBox(height: 24),
-                    
+
                     // Logout button in same flow without separate box
                     MouseRegion(
                       onEnter: (_) => setState(() => _isLogoutHovering = true),
@@ -2672,27 +2810,36 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                         child: Container(
                           decoration: BoxDecoration(
                             color: _isLogoutHovering
-                                ? AppColors.errorRed.withOpacity(0.1)
+                                ? AppColors.errorRed.withValues(alpha: 0.1)
                                 : Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withOpacity(0.08),
+                                color: Colors.grey.withValues(alpha: 0.08),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
                           child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                             leading: Container(
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: AppColors.errorRed.withOpacity(0.1),
+                                color: AppColors.errorRed.withValues(
+                                  alpha: 0.1,
+                                ),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Icon(Icons.logout_outlined, color: AppColors.errorRed, size: 22),
+                              child: const Icon(
+                                Icons.logout_outlined,
+                                color: AppColors.errorRed,
+                                size: 22,
+                              ),
                             ),
                             title: Text(
                               "Logout",
@@ -2702,7 +2849,11 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                                 color: AppColors.errorRed,
                               ),
                             ),
-                            trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.errorRed),
+                            trailing: const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                              color: AppColors.errorRed,
+                            ),
                             onTap: widget.onLogout,
                           ),
                         ),
@@ -2710,7 +2861,7 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                     ),
 
                     const SizedBox(height: 16),
-                    
+
                     // Privacy Policy, Terms, Version in same flow
                     Container(
                       decoration: BoxDecoration(
@@ -2718,7 +2869,7 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.08),
+                            color: Colors.grey.withValues(alpha: 0.08),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -2732,25 +2883,44 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                             icon: Icons.privacy_tip_outlined,
                             showBorder: false,
                           ),
-                          Divider(height: 1, color: AppColors.dividerColor, indent: 16),
+                          Divider(
+                            height: 1,
+                            color: AppColors.dividerColor,
+                            indent: 16,
+                          ),
                           _buildMenuItem(
                             label: "Terms of Service",
                             onTap: () => _showTerms(context),
                             icon: Icons.description_outlined,
                             showBorder: false,
                           ),
-                          Divider(height: 1, color: AppColors.dividerColor, indent: 16),
+                          Divider(
+                            height: 1,
+                            color: AppColors.dividerColor,
+                            indent: 16,
+                          ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
                             child: Row(
                               children: [
-                                Icon(Icons.info_outline, size: 20, color: AppColors.textBodyColor),
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 20,
+                                  color: AppColors.textBodyColor,
+                                ),
                                 const SizedBox(width: 12),
-                                Text(
-                                  "Version 1.0 • SmartMate © 2026",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: AppColors.textBodyColor,
+                                Expanded(
+                                  child: Text(
+                                    "Version 1.0 • SmartMate © 2026",
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: AppColors.textBodyColor,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -2783,7 +2953,7 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
+            color: Colors.grey.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -2792,16 +2962,19 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
       child: Column(
         children: [
           ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 4,
+            ),
             leading: Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: iconColor, size: 22),
-          ),
+            ),
             title: Text(
               title,
               style: GoogleFonts.poppins(
@@ -2810,12 +2983,16 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
                 color: AppColors.textDark,
               ),
             ),
-            trailing: children.isNotEmpty 
+            trailing: children.isNotEmpty
                 ? Icon(
                     isExpanded ? Icons.expand_less : Icons.expand_more,
                     color: AppColors.textBodyColor,
                   )
-                : const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textBodyColor),
+                : const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: AppColors.textBodyColor,
+                  ),
             onTap: onTap,
           ),
           if (isExpanded && children.isNotEmpty)
@@ -2845,7 +3022,7 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
             style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: AppColors.textDark.withOpacity(0.7),
+              color: AppColors.textDark.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -2878,19 +3055,29 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: _hoverStates[key]! ? AppColors.menuItemHover : Colors.transparent,
+            color: _hoverStates[key]!
+                ? AppColors.menuItemHover
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: showBorder && !_hoverStates[key]!
                 ? Border(
-                    bottom: BorderSide(color: AppColors.dividerColor, width: 0.5),
+                    bottom: BorderSide(
+                      color: AppColors.dividerColor,
+                      width: 0.5,
+                    ),
                   )
                 : null,
           ),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
             leading: Icon(
               icon,
-              color: isImportant ? AppColors.iconOrange : AppColors.textBodyColor,
+              color: isImportant
+                  ? AppColors.iconOrange
+                  : AppColors.textBodyColor,
               size: 20,
             ),
             title: Text(
@@ -2925,40 +3112,49 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
     );
   }
 
-void _showComingSoonDialog(BuildContext context, String featureName) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text("Coming Soon", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-      content: Text("$featureName feature is coming soon!"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("OK"),
+  void _showComingSoonDialog(BuildContext context, String featureName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          "Coming Soon",
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
-      ],
-    ),
-  );
-}
+        content: Text("$featureName feature is coming soon!"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
 
-void _navigateToMyTasks(BuildContext context) {
-  Navigator.pop(context);
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const MyTasksPage()),
-  );
-}
+  void _navigateToMyTasks(BuildContext context) {
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const MyTasksPage()),
+    );
+  }
 
   void _showHelpSupport(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Help & Support", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        title: Text(
+          "Help & Support",
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Contact Support:", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+            Text(
+              "Contact Support:",
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             _buildDetailRow("Email", "support@smartcare.com"),
             _buildDetailRow("Phone", "+1 (555) 123-4567"),
@@ -2979,7 +3175,10 @@ void _navigateToMyTasks(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Privacy Policy", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        title: Text(
+          "Privacy Policy",
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
         content: const SingleChildScrollView(
           child: Text(
             "Your privacy is important to us. This privacy policy explains what personal data we collect from you and how we use it.",
@@ -2999,7 +3198,10 @@ void _navigateToMyTasks(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Terms of Service", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        title: Text(
+          "Terms of Service",
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
         content: const SingleChildScrollView(
           child: Text(
             "By using our services, you agree to our terms of service. Please read them carefully.",
@@ -3029,12 +3231,7 @@ void _navigateToMyTasks(BuildContext context) {
             ),
           ),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              style: GoogleFonts.poppins(),
-            ),
-          ),
+          Expanded(child: Text(value, style: GoogleFonts.poppins())),
         ],
       ),
     );

@@ -56,7 +56,8 @@ class _SessionCheckerState extends State<SessionChecker>
     final biometricSessionActive =
         await SessionManager.isBiometricSessionActive();
     final biometricEnabled = await BiometricAuthService.isBiometricEnabled();
-    final biometricAvailable = await BiometricAuthService.isBiometricAvailable();
+    final biometricAvailable =
+        await BiometricAuthService.isBiometricAvailable();
 
     if (biometricSessionActive && biometricEnabled && biometricAvailable) {
       _biometricLabel = await BiometricAuthService.getBiometricLabel();
@@ -78,26 +79,26 @@ class _SessionCheckerState extends State<SessionChecker>
     if (mounted) setState(() => _isLoading = false);
   }
 
-Future<void> _triggerBiometric() async {
-  if (_isAuthenticating || !mounted) return;
-  setState(() => _isAuthenticating = true);
+  Future<void> _triggerBiometric() async {
+    if (_isAuthenticating || !mounted) return;
+    setState(() => _isAuthenticating = true);
 
-  final authenticated = await BiometricAuthService.authenticate();
-
-  if (!mounted) return;
-  setState(() => _isAuthenticating = false);
-
-  if (authenticated) {
-    // ✅ Run bootstrap BEFORE going to dashboard
-    await SessionBootstrap.run();
+    final authenticated = await BiometricAuthService.authenticate();
 
     if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const DashboardPage()),
-    );
+    setState(() => _isAuthenticating = false);
+
+    if (authenticated) {
+      // ✅ Run bootstrap BEFORE going to dashboard
+      await SessionBootstrap.run();
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const DashboardPage()),
+      );
+    }
   }
-}
 
   Future<void> _skipBiometric() async {
     // Don't clear auth data here — just navigate to login
@@ -128,7 +129,7 @@ Future<void> _triggerBiometric() async {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
               ),
               child: Image.asset(
                 'assets/images/welcomesm.png',
@@ -142,16 +143,24 @@ Future<void> _triggerBiometric() async {
               ),
             ),
             const SizedBox(height: 30),
-            const CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+            const CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 3,
+            ),
             const SizedBox(height: 20),
-            Text("SmartMate",
-                style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold)),
+            Text(
+              "SmartMate",
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 10),
-            Text("Loading...",
-                style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14)),
+            Text(
+              "Loading...",
+              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14),
+            ),
           ],
         ),
       ),
@@ -176,28 +185,36 @@ Future<void> _triggerBiometric() async {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: _isAuthenticating
-                      ? Colors.white.withOpacity(0.25)
-                      : Colors.white.withOpacity(0.1),
+                      ? Colors.white.withValues(alpha: 0.25)
+                      : Colors.white.withValues(alpha: 0.1),
                   border: Border.all(color: Colors.white38, width: 2),
                 ),
                 child: _isAuthenticating
                     ? const Padding(
                         padding: EdgeInsets.all(30),
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2.5),
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
                       )
-                    : const Icon(Icons.fingerprint,
-                        size: 56, color: Colors.white),
+                    : const Icon(
+                        Icons.fingerprint,
+                        size: 56,
+                        color: Colors.white,
+                      ),
               ),
             ),
 
             const SizedBox(height: 28),
 
-            Text("Welcome Back",
-                style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold)),
+            Text(
+              "Welcome Back",
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 10),
             Text(
               "Tap to verify with $_biometricLabel",
@@ -213,14 +230,19 @@ Future<void> _triggerBiometric() async {
               child: ElevatedButton.icon(
                 onPressed: _isAuthenticating ? null : _triggerBiometric,
                 icon: const Icon(Icons.fingerprint),
-                label: Text("Authenticate with $_biometricLabel",
-                    style: GoogleFonts.poppins(
-                        fontSize: 16, fontWeight: FontWeight.w600)),
+                label: Text(
+                  "Authenticate with $_biometricLabel",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: const Color(0xFF1A237E),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
               ),
             ),
@@ -229,12 +251,15 @@ Future<void> _triggerBiometric() async {
 
             TextButton(
               onPressed: _skipBiometric,
-              child: Text("Use Password Instead",
-                  style: GoogleFonts.poppins(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      decoration: TextDecoration.underline,
-                      decorationColor: Colors.white70)),
+              child: Text(
+                "Use Password Instead",
+                style: GoogleFonts.poppins(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  decoration: TextDecoration.underline,
+                  decorationColor: Colors.white70,
+                ),
+              ),
             ),
           ],
         ),

@@ -12,7 +12,9 @@ class AppColors {
   static const Color whiteColor = Colors.white;
   static const Color textDark = Color(0xFF1A237E);
   static final Color textBodyColor = Colors.grey.shade600;
-  static const Color accentBlue = Color(0xFF0289A1); // Kept for accents if needed
+  static const Color accentBlue = Color(
+    0xFF0289A1,
+  ); // Kept for accents if needed
 }
 
 class AuthOptionsPage extends StatelessWidget {
@@ -50,11 +52,13 @@ class AuthOptionsPage extends StatelessWidget {
               height: size.width * 0.8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05), // FIXED: Changed withValues to withOpacity
+                color: Colors.white.withValues(
+                  alpha: 0.05,
+                ), // FIXED: Changed withValues to withOpacity
               ),
             ),
           ),
-          
+
           // --- Main Layout ---
           Column(
             children: [
@@ -76,10 +80,14 @@ class AuthOptionsPage extends StatelessWidget {
                               padding: EdgeInsets.all(size.width * 0.06),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Colors.white.withOpacity(0.1), // FIXED: Changed withValues to withOpacity
+                                color: Colors.white.withValues(
+                                  alpha: 0.1,
+                                ), // FIXED: Changed withValues to withOpacity
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.1), // FIXED: Changed withValues to withOpacity
+                                    color: Colors.black.withValues(
+                                      alpha: 0.1,
+                                    ), // FIXED: Changed withValues to withOpacity
                                     blurRadius: 20,
                                     spreadRadius: 5,
                                   ),
@@ -120,7 +128,12 @@ class AuthOptionsPage extends StatelessWidget {
                       physics: const BouncingScrollPhysics(),
                       child: Padding(
                         // Add bottom padding to account for safe area (home indicator)
-                        padding: EdgeInsets.fromLTRB(30, 40, 30, 30 + padding.bottom),
+                        padding: EdgeInsets.fromLTRB(
+                          30,
+                          40,
+                          30,
+                          30 + padding.bottom,
+                        ),
                         child: AnimationLimiter(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
@@ -147,7 +160,8 @@ class AuthOptionsPage extends StatelessWidget {
                                   'Let\'s Get Started',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.poppins(
-                                    fontSize: size.width * 0.075, // Responsive text
+                                    fontSize:
+                                        size.width * 0.075, // Responsive text
                                     fontWeight: FontWeight.bold,
                                     color: AppColors.textDark,
                                     height: 1.2,
@@ -168,8 +182,12 @@ class AuthOptionsPage extends StatelessWidget {
                                 SizedBox(height: size.height * 0.05),
 
                                 // Login Button
-                                _buildLoginButton(context, AppColors.primaryDarkBlue, AppColors.whiteColor),
-                                
+                                _buildLoginButton(
+                                  context,
+                                  AppColors.primaryDarkBlue,
+                                  AppColors.whiteColor,
+                                ),
+
                                 // Spacer
                                 const SizedBox(height: 16),
                               ],
@@ -188,7 +206,11 @@ class AuthOptionsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildLoginButton(BuildContext context, Color buttonColor, Color textColor) {
+  Widget _buildLoginButton(
+    BuildContext context,
+    Color buttonColor,
+    Color textColor,
+  ) {
     return SizedBox(
       width: double.infinity,
       height: 58,
@@ -196,16 +218,16 @@ class AuthOptionsPage extends StatelessWidget {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const LoginPage(),
-            ),
+            MaterialPageRoute(builder: (context) => const LoginPage()),
           );
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: buttonColor,
           foregroundColor: textColor,
           elevation: 8,
-          shadowColor: buttonColor.withOpacity(0.4), // FIXED: Changed withValues to withOpacity
+          shadowColor: buttonColor.withValues(
+            alpha: 0.4,
+          ), // FIXED: Changed withValues to withOpacity
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -216,8 +238,8 @@ class AuthOptionsPage extends StatelessWidget {
             Text(
               'Login',
               style: GoogleFonts.poppins(
-                fontSize: 18, 
-                fontWeight: FontWeight.w600, 
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
                 color: textColor,
                 letterSpacing: 0.5,
               ),

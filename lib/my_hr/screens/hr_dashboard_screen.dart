@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:staff_mate/pages/smartcarehomescreen.dart' show Birthday;
 import 'package:staff_mate/presentation/face_attendance/face_attendance_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/hr_theme.dart';
@@ -49,8 +50,8 @@ class _HRDashboardScreenState extends State<HRDashboardScreen>
   bool _loadingTrainings = true;
   bool _loadingDocuments = true;
   String currentDate = '';
-bool _isCheckedIn = false;
-String _punchTime = '';
+  bool _isCheckedIn = false;
+  String _punchTime = '';
 
   List<StaffDOB> todayBirthdays = [];
   List<Birthday> upcomingBirthdays = [];
@@ -63,6 +64,7 @@ String _punchTime = '';
   CheckInOutStatus checkInOutStatus = CheckInOutStatus();
 
   HREmployee? _emp;
+  AttendanceRecord? _todayRecord;
   AttendanceSummary? _summary;
   List<LeaveBalance> _leaveBalances = [];
   List<SalarySlip> _salarySlips = [];
@@ -148,29 +150,39 @@ String _punchTime = '';
     });
   }
 
-  void _fetchProfile() {
+  Future<void> _fetchProfile() async {
     try {
-      final userData = GlobalUserData().userData;
-      
+      final savedInfo = await UserInformationService.getSavedUserInformation();
+      final savedName = savedInfo['fullName']?.toString().trim() ?? '';
+      final userData = savedName.isNotEmpty
+          ? savedInfo
+          : GlobalUserData().userData;
+
       if (userData != null) {
         String first = userData['firstName']?.toString() ?? '';
         String last = userData['lastName']?.toString() ?? '';
         String init = userData['initial']?.toString() ?? '';
-        
+
         String fullName = userData['fullName']?.toString() ?? '';
         if (fullName.isEmpty) {
           fullName = '$init $first $last'.trim();
         }
-        if (fullName.isEmpty) fullName = userData['userId']?.toString() ?? 'Employee';
-        
+        if (fullName.isEmpty)
+          fullName = userData['userId']?.toString() ?? 'Employee';
+
         String clinicName = userData['clinicName']?.toString() ?? '';
         String job = userData['jobtitle']?.toString() ?? '';
         String role = job.isNotEmpty ? job : 'Medical Staff';
         String dept = userData['department']?.toString() ?? '';
-        if (dept.isEmpty) dept = clinicName.length > 20 ? clinicName.substring(0, 20) : (clinicName.isNotEmpty ? clinicName : 'General');
-        
-        String avatarStr = first.isNotEmpty ? first[0].toUpperCase() : (fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U');
-        
+        if (dept.isEmpty)
+          dept = clinicName.length > 20
+              ? clinicName.substring(0, 20)
+              : (clinicName.isNotEmpty ? clinicName : 'General');
+
+        String avatarStr = first.isNotEmpty
+            ? first[0].toUpperCase()
+            : (fullName.isNotEmpty ? fullName[0].toUpperCase() : 'U');
+
         if (mounted) {
           setState(() {
             _emp = HREmployee(
@@ -206,7 +218,7 @@ String _punchTime = '';
         }
         return;
       }
-      
+
       // Fallback
       if (mounted) setState(() => _emp = HREmployee.empty());
     } catch (e) {
@@ -220,8 +232,36 @@ String _punchTime = '';
       final monthYear = '${now.month.toString().padLeft(2, '0')}-${now.year}';
       final res = await HRApiService.getMyAttendance(monthYear: monthYear);
       final data = res['data'] ?? res;
+      final rawRecords = data is Map
+          ? (data['records'] ?? data['attendance'] ?? data['list'] ?? [])
+          : data;
+      AttendanceRecord? todayRecord;
+      if (rawRecords is List) {
+        final records = rawRecords
+            .whereType<Map>()
+            .map(
+              (item) =>
+                  AttendanceRecord.fromJson(Map<String, dynamic>.from(item)),
+            )
+            .toList();
+        final todayLabel =
+            '${now.day.toString().padLeft(2, '0')}-${now.month.toString().padLeft(2, '0')}-${now.year}';
+        todayRecord = records.cast<AttendanceRecord?>().firstWhere(
+          (record) => record!.date.contains(todayLabel),
+          orElse: () => records.isNotEmpty ? records.first : null,
+        );
+      }
       if (mounted) {
-        setState(() => _summary = AttendanceSummary.fromJson(data['summary'] ?? data));
+        setState(() {
+          _summary = AttendanceSummary.fromJson(
+            data is Map ? (data['summary'] ?? data) : const {},
+          );
+          _todayRecord = todayRecord;
+          _isCheckedIn =
+              todayRecord != null &&
+              todayRecord.punchIn != '–' &&
+              todayRecord.punchOut == '–';
+        });
       }
     } catch (e) {
       if (mounted) setState(() => _summary = AttendanceSummary.empty());
@@ -235,7 +275,11 @@ String _punchTime = '';
           ? res['data'] as List
           : res as List<dynamic>;
       if (mounted) {
-        setState(() => _leaveBalances = dataList.map((e) => LeaveBalance.fromJson(e)).toList());
+        setState(
+          () => _leaveBalances = dataList
+              .map((e) => LeaveBalance.fromJson(e))
+              .toList(),
+        );
       }
     } catch (_) {}
   }
@@ -250,7 +294,11 @@ String _punchTime = '';
           ? res['data'] as List
           : (res is List ? res : []);
       if (mounted) {
-        setState(() => _salarySlips = dataList.map((e) => SalarySlip.fromJson(e)).toList());
+        setState(
+          () => _salarySlips = dataList
+              .map((e) => SalarySlip.fromJson(e))
+              .toList(),
+        );
       }
     } catch (_) {}
   }
@@ -262,7 +310,9 @@ String _punchTime = '';
           ? res['data'] as List
           : (res is List ? res as List<dynamic> : []);
       if (mounted) {
-        setState(() => _holidays = dataList.map((e) => HRHoliday.fromJson(e)).toList());
+        setState(
+          () => _holidays = dataList.map((e) => HRHoliday.fromJson(e)).toList(),
+        );
       }
     } catch (_) {}
   }
@@ -274,8 +324,11 @@ String _punchTime = '';
     super.dispose();
   }
 
-  void _navigate(Widget screen) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  Future<void> _navigate(Widget screen) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    if (mounted) {
+      await _fetchProfile();
+    }
   }
 
   Future<void> _handlePunch() async {
@@ -296,72 +349,88 @@ String _punchTime = '';
     return 'Evening';
   }
 
-  String _dayName(int d) => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1];
-  String _monthName(int m) =>
-      ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m - 1];
+  String _dayName(int d) =>
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1];
+  String _monthName(int m) => [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ][m - 1];
 
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final emp = _emp ?? HREmployee.empty();
+    final summary = _summary ?? AttendanceSummary.empty();
+    final unread = HRMockData.notifications.where((n) => !n.isRead).length;
+    final pendingApprovalsCount = pendingApprovals
+        .where((a) => a.status == 'Pending')
+        .length;
 
-@override
-Widget build(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  final emp = _emp ?? HREmployee.empty();
-  final summary = _summary ?? AttendanceSummary.empty();
-  final unread = HRMockData.notifications.where((n) => !n.isRead).length;
-  final pendingApprovalsCount = pendingApprovals.where((a) => a.status == 'Pending').length;
+    return Scaffold(
+      backgroundColor: isDark ? HRTheme.bgDark : const Color(0xFFF7F8FA),
+      body: FadeTransition(
+        opacity: _fadeAnim,
+        child: RefreshIndicator(
+          onRefresh: _refreshAllData,
+          color: HRTheme.primaryDark,
+          backgroundColor: isDark ? HRTheme.bgDark : Colors.white,
+          strokeWidth: 2.5,
+          displacement: 60,
+          child: CustomScrollView(
+            controller: _scrollCtrl,
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            slivers: [
+              SliverToBoxAdapter(child: _buildHeader(emp, unread, isDark)),
 
-  return Scaffold(
-    backgroundColor: isDark ? HRTheme.bgDark : const Color(0xFFF7F8FA),
-    body: FadeTransition(
-      opacity: _fadeAnim,
-      child: RefreshIndicator(
-        onRefresh: _refreshAllData,
-        color: HRTheme.primaryDark,
-        backgroundColor: isDark ? HRTheme.bgDark : Colors.white,
-        strokeWidth: 2.5,
-        displacement: 60,
-        child: CustomScrollView(
-          controller: _scrollCtrl,
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
+              if (!_isLoading)
+                SliverToBoxAdapter(child: _buildPunchCard(isDark)),
+
+              if (!_isLoading)
+                SliverToBoxAdapter(child: _buildKeyMetrics(summary)),
+
+              if (!_isLoading)
+                SliverToBoxAdapter(
+                  child: _buildQuickActions(pendingApprovalsCount, unread),
+                ),
+
+              if (!_isLoading) SliverToBoxAdapter(child: _buildLeaveSection()),
+
+              if (!_isLoading) SliverToBoxAdapter(child: _buildSalarySummary()),
+
+              if (!_isLoading)
+                SliverToBoxAdapter(child: _buildUpcomingHolidays()),
+
+              if (!_isLoading && !_loadingAnnouncements)
+                SliverToBoxAdapter(child: _buildAnnouncements()),
+
+              if (!_isLoading && !_loadingBirthdays)
+                SliverToBoxAdapter(child: _buildBirthdays(isDark)),
+
+              if (!_isLoading && !_loadingTrainings)
+                SliverToBoxAdapter(child: _buildTrainingReminders()),
+
+              if (!_isLoading && !_loadingDocuments)
+                SliverToBoxAdapter(child: _buildDocExpirySection()),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 40)),
+            ],
           ),
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader(emp, unread, isDark)),
-
-            if (!_isLoading) SliverToBoxAdapter(child: _buildPunchCard(isDark)),
-
-            if (!_isLoading) SliverToBoxAdapter(child: _buildKeyMetrics(summary)),
-
-            if (!_isLoading)
-              SliverToBoxAdapter(child: _buildQuickActions(pendingApprovalsCount, unread)),
-
-            if (!_isLoading)
-              SliverToBoxAdapter(child: _buildAttendanceSnapshot(summary)),
-
-            if (!_isLoading) SliverToBoxAdapter(child: _buildLeaveSection()),
-
-            if (!_isLoading) SliverToBoxAdapter(child: _buildSalarySummary()),
-
-            if (!_isLoading) SliverToBoxAdapter(child: _buildUpcomingHolidays()),
-
-            if (!_isLoading && !_loadingAnnouncements)
-              SliverToBoxAdapter(child: _buildAnnouncements()),
-
-            if (!_isLoading && !_loadingBirthdays)
-              SliverToBoxAdapter(child: _buildBirthdays(isDark)),
-
-            if (!_isLoading && !_loadingTrainings)
-              SliverToBoxAdapter(child: _buildTrainingReminders()),
-
-            if (!_isLoading && !_loadingDocuments)
-              SliverToBoxAdapter(child: _buildDocExpirySection()),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 40)),
-          ],
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // ─────────────────────────────────────────────────────────────────
   // HEADER
@@ -372,13 +441,13 @@ Widget build(BuildContext context) {
         20,
         MediaQuery.of(context).padding.top + 12,
         20,
-        24,
+        14,
       ),
       decoration: const BoxDecoration(
         gradient: HRTheme.primaryGradient,
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(28),
-          bottomRight: Radius.circular(28),
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
         ),
       ),
       child: Column(
@@ -404,7 +473,7 @@ Widget build(BuildContext context) {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
 
           // Profile row
           Row(
@@ -412,7 +481,7 @@ Widget build(BuildContext context) {
               GestureDetector(
                 onTap: () => _navigate(const HRProfileScreen()),
                 child: CircleAvatar(
-                  radius: 28,
+                  radius: 24,
                   backgroundColor: Colors.white.withOpacity(0.22),
                   child: Text(
                     emp.avatarInitials,
@@ -424,7 +493,7 @@ Widget build(BuildContext context) {
                   ),
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,41 +521,20 @@ Widget build(BuildContext context) {
                         fontSize: 12,
                       ),
                     ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${emp.employeeCode}  ·  Main Campus',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white70,
+                        fontSize: 10,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-
-          // Employee code chip
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.badge_outlined, color: Colors.white70, size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  emp.employeeCode,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                const Icon(Icons.location_on_outlined, color: Colors.white70, size: 15),
-                const SizedBox(width: 4),
-                Text(
-                  'Main Campus',
-                  style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -581,12 +629,23 @@ Widget build(BuildContext context) {
                   const SizedBox(height: 14),
                   Row(
                     children: [
-                      _punchChip(Icons.login_rounded, 'In', _isCheckedIn ? _punchTime : DateFormat('hh:mm a').format(now), HRTheme.success),
+                      _punchChip(
+                        Icons.login_rounded,
+                        'In',
+                        _todayRecord?.punchIn != null &&
+                                _todayRecord!.punchIn != '–'
+                            ? _todayRecord!.punchIn
+                            : '--:--',
+                        HRTheme.success,
+                      ),
                       const SizedBox(width: 10),
                       _punchChip(
                         Icons.logout_rounded,
                         'Out',
-                        _isCheckedIn ? DateFormat('hh:mm a').format(now) : '--:--',
+                        _todayRecord?.punchOut != null &&
+                                _todayRecord!.punchOut != '–'
+                            ? _todayRecord!.punchOut
+                            : '--:--',
                         HRTheme.error,
                       ),
                     ],
@@ -612,7 +671,8 @@ Widget build(BuildContext context) {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: (_isCheckedIn ? HRTheme.error : HRTheme.success).withOpacity(0.35),
+                      color: (_isCheckedIn ? HRTheme.error : HRTheme.success)
+                          .withOpacity(0.35),
                       blurRadius: 14,
                       offset: const Offset(0, 6),
                     ),
@@ -660,7 +720,10 @@ Widget build(BuildContext context) {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: GoogleFonts.poppins(fontSize: 10, color: color)),
+              Text(
+                label,
+                style: GoogleFonts.poppins(fontSize: 10, color: color),
+              ),
               Text(
                 time,
                 style: GoogleFonts.poppins(
@@ -765,18 +828,30 @@ Widget build(BuildContext context) {
   // ─────────────────────────────────────────────────────────────────
   Widget _buildQuickActions(int pendingApprovals, int unread) {
     final actions = [
-      _QuickAction('Attendance', Icons.fingerprint_rounded, HRTheme.attendance,
-          () => _navigate(const HRAttendanceScreen())),
-      _QuickAction('Leave', Icons.calendar_today_rounded, HRTheme.leave,
-          () => _navigate(const HRLeaveScreen())),
+      _QuickAction(
+        'Attendance',
+        Icons.fingerprint_rounded,
+        HRTheme.attendance,
+        () => _navigate(const HRAttendanceScreen()),
+      ),
+      _QuickAction(
+        'Leave',
+        Icons.calendar_today_rounded,
+        HRTheme.leave,
+        () => _navigate(const HRLeaveScreen()),
+      ),
       // _QuickAction('Payroll', Icons.payments_rounded, HRTheme.payroll,
       //     () => _navigate(const HRPayrollScreen())),
-      _QuickAction('Shift', Icons.schedule_rounded, HRTheme.shift,
-          () => _navigate(const HRShiftScreen())),
+      _QuickAction(
+        'Shift',
+        Icons.schedule_rounded,
+        HRTheme.shift,
+        () => _navigate(const HRShiftScreen()),
+      ),
     ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -788,152 +863,64 @@ Widget build(BuildContext context) {
               color: HRTheme.textPrimary,
             ),
           ),
-          const SizedBox(height: 14),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 3,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.1,
+          const SizedBox(height: 10),
+          Row(
             children: actions.map((a) {
-              return GestureDetector(
-                onTap: a.onTap,
-                child: Column(
-                  children: [
-                    Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: a.color.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(16),
+              return Expanded(
+                child: GestureDetector(
+                  onTap: a.onTap,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: a.color.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(a.icon, color: a.color, size: 24),
                           ),
-                          child: Icon(a.icon, color: a.color, size: 24),
-                        ),
-                        if (a.badge != null && a.badge! > 0)
-                          Positioned(
-                            top: -4,
-                            right: -4,
-                            child: Container(
-                              padding: const EdgeInsets.all(5),
-                              decoration: const BoxDecoration(
-                                color: Colors.redAccent,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Text(
-                                '${a.badge}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
+                          if (a.badge != null && a.badge! > 0)
+                            Positioned(
+                              top: -4,
+                              right: -4,
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: const BoxDecoration(
+                                  color: Colors.redAccent,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  '${a.badge}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      a.label,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: HRTheme.textPrimary,
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 6),
+                      Text(
+                        a.label,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: HRTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────────────────────────────
-  // ATTENDANCE SNAPSHOT
-  // ─────────────────────────────────────────────────────────────────
-  Widget _buildAttendanceSnapshot(AttendanceSummary summary) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-      child: HRCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            HRSectionHeader(
-              title: 'Attendance Snapshot',
-              icon: Icons.insights_rounded,
-              actionLabel: 'Details',
-              onAction: () => _navigate(const HRAttendanceScreen()),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: _snapshotTile(
-                    'Working Days',
-                    '${summary.totalWorkingDays}',
-                    HRTheme.primaryDark,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _snapshotTile(
-                    'Attendance %',
-                    '${summary.attendancePercentage.toStringAsFixed(1)}%',
-                    HRTheme.attendance,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _snapshotTile('Late', '${summary.late}', HRTheme.warning),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _snapshotTile('Half Day', '${summary.halfDay}', HRTheme.teal),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _snapshotTile(String title, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              color: HRTheme.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
           ),
         ],
       ),
@@ -965,7 +952,9 @@ Widget build(BuildContext context) {
               ..._leaveBalances.map((lb) {
                 final color = () {
                   try {
-                    return Color(int.parse(lb.colorHex.replaceFirst('#', '0xFF')));
+                    return Color(
+                      int.parse(lb.colorHex.replaceFirst('#', '0xFF')),
+                    );
                   } catch (_) {
                     return HRTheme.leave;
                   }
@@ -1102,7 +1091,11 @@ Widget build(BuildContext context) {
                       color: Colors.white.withOpacity(0.18),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.download_rounded, color: Colors.white, size: 22),
+                    child: const Icon(
+                      Icons.download_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                   ),
                 ],
               ),
@@ -1209,7 +1202,10 @@ Widget build(BuildContext context) {
                     ),
                     if (h.isOptional)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: HRTheme.warningLight,
                           borderRadius: BorderRadius.circular(20),
@@ -1279,7 +1275,9 @@ Widget build(BuildContext context) {
                 contentPadding: EdgeInsets.zero,
                 dense: true,
                 leading: CircleAvatar(
-                  backgroundColor: b.isToday ? HRTheme.primaryDark : Colors.amber.shade200,
+                  backgroundColor: b.isToday
+                      ? HRTheme.primaryDark
+                      : Colors.amber.shade200,
                   radius: 18,
                   child: Text(
                     b.initials,
@@ -1300,11 +1298,17 @@ Widget build(BuildContext context) {
                 ),
                 subtitle: Text(
                   b.designation,
-                  style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textSecondary),
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: HRTheme.textSecondary,
+                  ),
                 ),
                 trailing: b.isToday
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.amber.shade100,
                           borderRadius: BorderRadius.circular(20),
@@ -1319,7 +1323,10 @@ Widget build(BuildContext context) {
                       )
                     : Text(
                         b.date,
-                        style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textHint),
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: HRTheme.textHint,
+                        ),
                       ),
               );
             }),
@@ -1329,7 +1336,9 @@ Widget build(BuildContext context) {
                 contentPadding: EdgeInsets.zero,
                 dense: true,
                 leading: CircleAvatar(
-                  backgroundColor: a.isToday ? HRTheme.teal : Colors.blue.shade100,
+                  backgroundColor: a.isToday
+                      ? HRTheme.teal
+                      : Colors.blue.shade100,
                   radius: 18,
                   child: Text(
                     a.initials,
@@ -1350,11 +1359,17 @@ Widget build(BuildContext context) {
                 ),
                 subtitle: Text(
                   '${a.years} Year Work Anniversary',
-                  style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textSecondary),
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: HRTheme.textSecondary,
+                  ),
                 ),
                 trailing: a.isToday
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: HRTheme.teal.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(20),
@@ -1370,7 +1385,10 @@ Widget build(BuildContext context) {
                       )
                     : Text(
                         a.date,
-                        style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textHint),
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: HRTheme.textHint,
+                        ),
                       ),
               );
             }),
@@ -1384,7 +1402,9 @@ Widget build(BuildContext context) {
   // TRAINING
   // ─────────────────────────────────────────────────────────────────
   Widget _buildTrainingReminders() {
-    final upcoming = HRMockData.trainings.where((t) => t.status == 'Upcoming').toList();
+    final upcoming = HRMockData.trainings
+        .where((t) => t.status == 'Upcoming')
+        .toList();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -1416,7 +1436,11 @@ Widget build(BuildContext context) {
                           color: HRTheme.training.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(Icons.school_rounded, color: HRTheme.training, size: 20),
+                        child: Icon(
+                          Icons.school_rounded,
+                          color: HRTheme.training,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -1441,7 +1465,10 @@ Widget build(BuildContext context) {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: HRTheme.pendingLight,
                           borderRadius: BorderRadius.circular(20),
@@ -1469,7 +1496,9 @@ Widget build(BuildContext context) {
   // DOCUMENT EXPIRY
   // ─────────────────────────────────────────────────────────────────
   Widget _buildDocExpirySection() {
-    final expiring = HRMockData.documents.where((d) => d.isExpiringSoon).toList();
+    final expiring = HRMockData.documents
+        .where((d) => d.isExpiringSoon)
+        .toList();
     if (expiring.isEmpty) return const SizedBox.shrink();
 
     return Padding(
@@ -1486,7 +1515,11 @@ Widget build(BuildContext context) {
           children: [
             Row(
               children: [
-                const Icon(Icons.warning_amber_rounded, color: HRTheme.warning, size: 20),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: HRTheme.warning,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Document Expiry Alert',
@@ -1504,7 +1537,11 @@ Widget build(BuildContext context) {
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(
                   children: [
-                    const Icon(Icons.description_outlined, size: 15, color: HRTheme.warning),
+                    const Icon(
+                      Icons.description_outlined,
+                      size: 15,
+                      color: HRTheme.warning,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -1551,5 +1588,11 @@ class _QuickAction {
   final VoidCallback onTap;
   final int? badge;
 
-  const _QuickAction(this.label, this.icon, this.color, this.onTap, {this.badge});
+  const _QuickAction(
+    this.label,
+    this.icon,
+    this.color,
+    this.onTap, {
+    this.badge,
+  });
 }

@@ -17,10 +17,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Shift Patient',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'Poppins',
-        useMaterial3: true,
-      ),
+      theme: ThemeData(fontFamily: 'Poppins', useMaterial3: true),
       home: const ShiftPatientPage(),
     );
   }
@@ -38,19 +35,20 @@ class ShiftPatientPage extends StatefulWidget {
 class _ShiftPatientPageState extends State<ShiftPatientPage> {
   final TextEditingController _patientNameController = TextEditingController();
   final IpdService _ipdService = IpdService();
-  
+
   String? _selectedWard;
   String? _selectedWardId; // Store ward ID for API calls
   String? _selectedBed;
   String? _selectedBedId; // Store bed ID for submission
   TimeOfDay? _selectedTime;
-  
+
   bool _isLoadingWards = false;
   bool _isLoadingBeds = false;
   bool _isSubmitting = false; // For loading state during API call
-  
+
   List<dynamic> _wards = []; // Store wards from API
-  List<String> _wardNames = []; // Store ward names as strings for display (without IDs)
+  List<String> _wardNames =
+      []; // Store ward names as strings for display (without IDs)
   List<dynamic> _bedsData = []; // Store bed objects from API
   List<String> _bedNames = []; // Store bed names as strings for display
   String? _branchId; // Store branch ID from SharedPreferences
@@ -64,7 +62,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
     _patient = widget.patient;
     _loadBranchIdAndFetchWards();
     _loadPractitionerData();
-    
+
     // If patient data is provided, pre-fill the patient name
     if (_patient != null) {
       _patientNameController.text = _patient!.patientname;
@@ -74,7 +72,8 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
   Future<void> _loadPractitionerData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _practitionerId = _patient?.practitionerid ?? prefs.getString('practitionerId') ?? '';
+      _practitionerId =
+          _patient?.practitionerid ?? prefs.getString('practitionerId') ?? '';
       _practitionerName = prefs.getString('practitionerName') ?? 'Dr. Unknown';
     });
     debugPrint('Loaded practitioner: $_practitionerName ($_practitionerId)');
@@ -88,17 +87,16 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
     try {
       // Get branch ID from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      _branchId = prefs.getString('branchId') ?? '1'; // Default to '1' if not found
-      
+      _branchId =
+          prefs.getString('branchId') ?? '1'; // Default to '1' if not found
+
       debugPrint('Loading wards for branch ID: $_branchId');
-      
+
       // Fetch wards from API
-      final wards = await _ipdService.fetchBranchWardList(
-        branchId: _branchId!,
-      );
-      
+      final wards = await _ipdService.fetchBranchWardList(branchId: _branchId!);
+
       debugPrint('Raw wards data: $wards');
-      
+
       // Extract ward names for display (ONLY names, no IDs)
       final wardNames = wards.map((ward) {
         if (ward is Map<String, dynamic>) {
@@ -113,8 +111,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
           // Check for name field as last resort
           else if (ward.containsKey('name')) {
             return ward['name']?.toString() ?? 'Unknown Ward';
-          }
-          else {
+          } else {
             debugPrint('Ward object missing expected fields: $ward');
             return 'Unknown Ward';
           }
@@ -122,23 +119,23 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
         debugPrint('Ward is not a Map: $ward');
         return ward.toString();
       }).toList();
-      
+
       setState(() {
         _wards = wards;
         _wardNames = wardNames.cast<String>();
         _isLoadingWards = false;
       });
-      
+
       debugPrint('Successfully loaded ${wards.length} wards');
       debugPrint('Ward names: $_wardNames'); // Verify only names are shown
     } catch (e, stackTrace) {
       debugPrint('Error loading wards: $e');
       debugPrint('StackTrace: $stackTrace');
-      
+
       setState(() {
         _isLoadingWards = false;
       });
-      
+
       _showSnackBar('Failed to load wards: ${e.toString()}', Colors.red);
     }
   }
@@ -154,14 +151,12 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
 
     try {
       debugPrint('Fetching beds for ward ID: $wardId');
-      
+
       // Fetch beds from API
-      final beds = await _ipdService.fetchAvailableBedsInWard(
-        wardId: wardId,
-      );
-      
+      final beds = await _ipdService.fetchAvailableBedsInWard(wardId: wardId);
+
       debugPrint('Raw beds data: $beds');
-      
+
       // Extract bed names for display
       final bedNames = beds.map((bed) {
         if (bed is Map<String, dynamic>) {
@@ -176,8 +171,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
           // Check for name field
           else if (bed.containsKey('name')) {
             return bed['name']?.toString() ?? 'Unknown Bed';
-          }
-          else {
+          } else {
             debugPrint('Bed object missing expected fields: $bed');
             return 'Unknown Bed';
           }
@@ -185,16 +179,16 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
         debugPrint('Bed is not a Map: $bed');
         return bed.toString();
       }).toList();
-      
+
       setState(() {
         _bedsData = beds;
         _bedNames = bedNames.cast<String>();
         _isLoadingBeds = false;
       });
-      
+
       debugPrint('Successfully loaded ${beds.length} beds for ward: $wardId');
       debugPrint('Bed names: $_bedNames');
-      
+
       // Automatically show bed selection sheet after loading
       if (_bedNames.isNotEmpty) {
         _showBedSelectionSheet();
@@ -204,11 +198,11 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
     } catch (e, stackTrace) {
       debugPrint('Error loading beds: $e');
       debugPrint('StackTrace: $stackTrace');
-      
+
       setState(() {
         _isLoadingBeds = false;
       });
-      
+
       _showSnackBar('Failed to load beds: ${e.toString()}', Colors.red);
     }
   }
@@ -227,9 +221,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
         return Theme(
           data: ThemeData.light().copyWith(
             primaryColor: const Color(0xFF1A237E),
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1A237E),
-            ),
+            colorScheme: const ColorScheme.light(primary: Color(0xFF1A237E)),
           ),
           child: child!,
         );
@@ -253,42 +245,41 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
         isLoading: _isLoadingWards,
         onItemSelected: (wardName) {
           // Find the selected ward object by matching name
-          final selectedWardObj = _wards.firstWhere(
-            (ward) {
-              if (ward is Map<String, dynamic>) {
-                // Check for wardname field (lowercase)
-                if (ward.containsKey('wardname')) {
-                  return ward['wardname']?.toString() == wardName;
-                }
-                // Check for wardName field (camelCase)
-                else if (ward.containsKey('wardName')) {
-                  return ward['wardName']?.toString() == wardName;
-                }
-                // Check for name field
-                else if (ward.containsKey('name')) {
-                  return ward['name']?.toString() == wardName;
-                }
+          final selectedWardObj = _wards.firstWhere((ward) {
+            if (ward is Map<String, dynamic>) {
+              // Check for wardname field (lowercase)
+              if (ward.containsKey('wardname')) {
+                return ward['wardname']?.toString() == wardName;
               }
-              return ward.toString() == wardName;
-            },
-            orElse: () => null,
-          );
-          
+              // Check for wardName field (camelCase)
+              else if (ward.containsKey('wardName')) {
+                return ward['wardName']?.toString() == wardName;
+              }
+              // Check for name field
+              else if (ward.containsKey('name')) {
+                return ward['name']?.toString() == wardName;
+              }
+            }
+            return ward.toString() == wardName;
+          }, orElse: () => null);
+
           if (selectedWardObj != null) {
             // Extract ward ID (stored internally, not shown to user)
             String wardId = '0';
             String wardDisplayName = wardName;
-            
+
             if (selectedWardObj is Map<String, dynamic>) {
               // Try to get ID from various possible field names
-              wardId = (selectedWardObj['wardId'] ?? 
-                       selectedWardObj['id'] ?? 
-                       selectedWardObj['wardid'] ?? 
-                       '0').toString();
+              wardId =
+                  (selectedWardObj['wardId'] ??
+                          selectedWardObj['id'] ??
+                          selectedWardObj['wardid'] ??
+                          '0')
+                      .toString();
               // Use the display name (already just the name)
               wardDisplayName = wardName;
             }
-            
+
             setState(() {
               _selectedWard = wardDisplayName; // Shows only name
               _selectedWardId = wardId; // Stores ID internally
@@ -297,9 +288,9 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
               _bedsData = [];
               _bedNames = [];
             });
-            
+
             Navigator.pop(context);
-            
+
             // Fetch beds for the selected ward
             _fetchBedsForWard(wardId);
           } else {
@@ -313,7 +304,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
 
   void _showBedSelectionSheet() {
     if (_selectedWard == null) return;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -324,50 +315,50 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
         isLoading: _isLoadingBeds,
         onItemSelected: (bedName) {
           // Find the selected bed object
-          final selectedBedObj = _bedsData.firstWhere(
-            (bed) {
-              if (bed is Map<String, dynamic>) {
-                // Check for bedname field (lowercase)
-                if (bed.containsKey('bedname')) {
-                  return bed['bedname']?.toString() == bedName;
-                }
-                // Check for bedName field (camelCase)
-                else if (bed.containsKey('bedName')) {
-                  return bed['bedName']?.toString() == bedName;
-                }
-                // Check for name field
-                else if (bed.containsKey('name')) {
-                  return bed['name']?.toString() == bedName;
-                }
+          final selectedBedObj = _bedsData.firstWhere((bed) {
+            if (bed is Map<String, dynamic>) {
+              // Check for bedname field (lowercase)
+              if (bed.containsKey('bedname')) {
+                return bed['bedname']?.toString() == bedName;
               }
-              return bed.toString() == bedName;
-            },
-            orElse: () => null,
-          );
-          
+              // Check for bedName field (camelCase)
+              else if (bed.containsKey('bedName')) {
+                return bed['bedName']?.toString() == bedName;
+              }
+              // Check for name field
+              else if (bed.containsKey('name')) {
+                return bed['name']?.toString() == bedName;
+              }
+            }
+            return bed.toString() == bedName;
+          }, orElse: () => null);
+
           if (selectedBedObj != null) {
             // Extract bed ID
             String bedId = '0';
             String bedDisplayName = bedName;
-            
+
             if (selectedBedObj is Map<String, dynamic>) {
               // Try to get ID from various possible field names
-              bedId = (selectedBedObj['bedid'] ?? 
-                      selectedBedObj['bedId'] ?? 
-                      selectedBedObj['id'] ?? 
-                      '0').toString();
-              bedDisplayName = selectedBedObj['bedname']?.toString() ?? 
-                              selectedBedObj['bedName']?.toString() ?? 
-                              selectedBedObj['name']?.toString() ?? 
-                              bedName;
+              bedId =
+                  (selectedBedObj['bedid'] ??
+                          selectedBedObj['bedId'] ??
+                          selectedBedObj['id'] ??
+                          '0')
+                      .toString();
+              bedDisplayName =
+                  selectedBedObj['bedname']?.toString() ??
+                  selectedBedObj['bedName']?.toString() ??
+                  selectedBedObj['name']?.toString() ??
+                  bedName;
             }
-            
+
             setState(() {
               _selectedBed = bedDisplayName;
               _selectedBedId = bedId;
             });
           }
-          
+
           Navigator.pop(context);
         },
       ),
@@ -376,12 +367,12 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
 
   Future<void> _shiftPatientAndAddCharges() async {
     debugPrint('Shifting patient and adding charges...');
-    
+
     // Format time for API submission (HH:mm:ss format)
-    final formattedTime = DateFormat('HH:mm:ss').format(
-      DateTime(2024, 1, 1, _selectedTime!.hour, _selectedTime!.minute)
-    );
-    
+    final formattedTime = DateFormat(
+      'HH:mm:ss',
+    ).format(DateTime(2024, 1, 1, _selectedTime!.hour, _selectedTime!.minute));
+
     try {
       // Step 1: Call the shift bed API
       final shiftResponse = await _ipdService.shiftPatientBed(
@@ -402,11 +393,16 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
         setState(() {
           _isSubmitting = false;
         });
-        _showSnackBar('Failed to shift patient: ${shiftResponse['message']}', Colors.red);
+        _showSnackBar(
+          'Failed to shift patient: ${shiftResponse['message']}',
+          Colors.red,
+        );
         return;
       }
 
-      debugPrint('Patient shifted successfully, now adding standard charges...');
+      debugPrint(
+        'Patient shifted successfully, now adding standard charges...',
+      );
 
       // Step 2: Call the add standard charges API
       final chargesResponse = await _ipdService.addStandardCharges(
@@ -427,21 +423,27 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
       });
 
       if (chargesResponse['success'] == true) {
-        _showSnackBar('Patient shifted and charges added successfully', Colors.green);
+        _showSnackBar(
+          'Patient shifted and charges added successfully',
+          Colors.green,
+        );
         Navigator.pop(context); // Go back after success
       } else {
-        _showSnackBar('Patient shifted but failed to add charges: ${chargesResponse['message']}', Colors.orange);
+        _showSnackBar(
+          'Patient shifted but failed to add charges: ${chargesResponse['message']}',
+          Colors.orange,
+        );
         // Still go back since patient was shifted
         Navigator.pop(context);
       }
     } catch (e, stackTrace) {
       debugPrint('Error in shift and charges process: $e');
       debugPrint('StackTrace: $stackTrace');
-      
+
       setState(() {
         _isSubmitting = false;
       });
-      
+
       _showSnackBar('Error: ${e.toString()}', Colors.red);
     }
   }
@@ -494,10 +496,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
           ),
           content: Text(
             'You must add charges for the new ward to shift the patient.',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.grey[700],
-            ),
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[700]),
           ),
           actions: [
             TextButton(
@@ -507,16 +506,15 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
                   _isSubmitting = false; // Reset submitting state
                 });
                 // Show alert message
-                _showSnackBar('Please select Yes to add charges and shift patient', Colors.orange);
+                _showSnackBar(
+                  'Please select Yes to add charges and shift patient',
+                  Colors.orange,
+                );
               },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.grey[600],
-              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
               child: Text(
                 'No',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w500,
-                ),
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
               ),
             ),
             ElevatedButton(
@@ -534,9 +532,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
               ),
               child: Text(
                 'Yes',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w500,
-                ),
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
               ),
             ),
           ],
@@ -593,7 +589,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
@@ -646,7 +642,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.05),
+                        color: Colors.grey.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                       ),
@@ -738,7 +734,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.05),
+                        color: Colors.grey.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                       ),
@@ -760,7 +756,9 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
                         label: 'Ward',
                         value: _selectedWard, // Shows only name, no ID
                         icon: Icons.local_hospital_rounded,
-                        placeholder: _isLoadingWards ? 'Loading wards...' : 'Select ward',
+                        placeholder: _isLoadingWards
+                            ? 'Loading wards...'
+                            : 'Select ward',
                         onTap: _isLoadingWards ? null : _showWardSelectionSheet,
                         isEnabled: !_isLoadingWards,
                       ),
@@ -769,20 +767,38 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
                         label: 'Bed',
                         value: _selectedBed,
                         icon: Icons.bed_rounded,
-                        placeholder: _selectedWard == null 
-                            ? 'Select ward first' 
-                            : (_isLoadingBeds ? 'Loading beds...' : (_bedNames.isEmpty ? 'No beds available' : 'Select bed')),
+                        placeholder: _selectedWard == null
+                            ? 'Select ward first'
+                            : (_isLoadingBeds
+                                  ? 'Loading beds...'
+                                  : (_bedNames.isEmpty
+                                        ? 'No beds available'
+                                        : 'Select bed')),
                         onTap: _selectedWard == null
-                            ? () => _showSnackBar('Select ward first', Colors.orange)
-                            : (_isLoadingBeds || _bedNames.isEmpty ? null : _showBedSelectionSheet),
-                        isEnabled: _selectedWard != null && !_isLoadingBeds && _bedNames.isNotEmpty,
+                            ? () => _showSnackBar(
+                                'Select ward first',
+                                Colors.orange,
+                              )
+                            : (_isLoadingBeds || _bedNames.isEmpty
+                                  ? null
+                                  : _showBedSelectionSheet),
+                        isEnabled:
+                            _selectedWard != null &&
+                            !_isLoadingBeds &&
+                            _bedNames.isNotEmpty,
                       ),
                       const SizedBox(height: 12),
                       _buildSelectionTile(
                         label: 'Shift Time',
-                        value: _selectedTime != null 
+                        value: _selectedTime != null
                             ? DateFormat('hh:mm a').format(
-                                DateTime(2024, 1, 1, _selectedTime!.hour, _selectedTime!.minute)
+                                DateTime(
+                                  2024,
+                                  1,
+                                  1,
+                                  _selectedTime!.hour,
+                                  _selectedTime!.minute,
+                                ),
                               )
                             : null,
                         icon: Icons.access_time_rounded,
@@ -806,7 +822,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),
@@ -817,18 +833,20 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: _isSubmitting ? null : () {
-                    setState(() {
-                      _patientNameController.clear();
-                      _selectedWard = null;
-                      _selectedWardId = null;
-                      _selectedBed = null;
-                      _selectedBedId = null;
-                      _selectedTime = null;
-                      _bedsData = [];
-                      _bedNames = [];
-                    });
-                  },
+                  onPressed: _isSubmitting
+                      ? null
+                      : () {
+                          setState(() {
+                            _patientNameController.clear();
+                            _selectedWard = null;
+                            _selectedWardId = null;
+                            _selectedBed = null;
+                            _selectedBedId = null;
+                            _selectedTime = null;
+                            _bedsData = [];
+                            _bedNames = [];
+                          });
+                        },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.grey[700],
                     side: BorderSide(color: Colors.grey[300]!),
@@ -858,7 +876,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 5,
-                    shadowColor: accentBlue.withOpacity(0.3),
+                    shadowColor: accentBlue.withValues(alpha: 0.3),
                   ),
                   child: _isSubmitting
                       ? const SizedBox(
@@ -894,7 +912,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
     bool isEnabled = true,
   }) {
     const accentBlue = Color(0xFF0289A1);
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[50],
@@ -907,11 +925,13 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
         leading: Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: value != null ? accentBlue.withValues(alpha: 0.1) : Colors.transparent,
+            color: value != null
+                ? accentBlue.withValues(alpha: 0.1)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
-            icon, 
+            icon,
             color: value != null ? accentBlue : Colors.grey[400],
             size: 18,
           ),
@@ -932,7 +952,7 @@ class _ShiftPatientPageState extends State<ShiftPatientPage> {
             color: value != null ? Colors.black87 : Colors.grey[400],
           ),
         ),
-        trailing: isEnabled 
+        trailing: isEnabled
             ? Icon(
                 Icons.keyboard_arrow_down_rounded,
                 color: value != null ? accentBlue : Colors.grey[400],
@@ -996,31 +1016,36 @@ class _MinimalSelectionSheet extends StatelessWidget {
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : items.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No items available',
-                          style: GoogleFonts.poppins(color: Colors.grey),
+                ? Center(
+                    child: Text(
+                      'No items available',
+                      style: GoogleFonts.poppins(color: Colors.grey),
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, indent: 16),
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
                         ),
-                      )
-                    : ListView.separated(
-                        itemCount: items.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1, indent: 16),
-                        itemBuilder: (context, index) {
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                            leading: Icon(
-                              title.contains('Ward') ? Icons.local_hospital_rounded : Icons.bed_rounded,
-                              color: const Color(0xFF0289A1),
-                              size: 18,
-                            ),
-                            title: Text(
-                              items[index],
-                              style: GoogleFonts.poppins(fontSize: 14),
-                            ),
-                            onTap: () => onItemSelected(items[index]),
-                          );
-                        },
-                      ),
+                        leading: Icon(
+                          title.contains('Ward')
+                              ? Icons.local_hospital_rounded
+                              : Icons.bed_rounded,
+                          color: const Color(0xFF0289A1),
+                          size: 18,
+                        ),
+                        title: Text(
+                          items[index],
+                          style: GoogleFonts.poppins(fontSize: 14),
+                        ),
+                        onTap: () => onItemSelected(items[index]),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

@@ -36,7 +36,7 @@ class _HRAttendanceScreenState extends State<HRAttendanceScreen> {
   List<double> _trendValues = [];
   List<String> _trendLabels = [];
   ReportFormat _reportFormat = ReportFormat.pdf;
-  
+
   @override
   void initState() {
     super.initState();
@@ -48,33 +48,47 @@ class _HRAttendanceScreenState extends State<HRAttendanceScreen> {
       _isLoading = true;
     });
     try {
-      final monthYear = '${_selectedMonth.month.toString().padLeft(2, '0')}-${_selectedMonth.year}';
+      final monthYear =
+          '${_selectedMonth.month.toString().padLeft(2, '0')}-${_selectedMonth.year}';
       final res = await HRApiService.getMyAttendance(monthYear: monthYear);
       final responseMap = Map<String, dynamic>.from(res);
 
-      dynamic rawData = responseMap['data'] ?? responseMap['records'] ?? responseMap['attendance'] ?? res;
+      dynamic rawData =
+          responseMap['data'] ??
+          responseMap['records'] ??
+          responseMap['attendance'] ??
+          res;
       if (rawData is Map) {
-        rawData = rawData['data'] ?? rawData['records'] ?? rawData['attendance'] ?? rawData;
+        rawData =
+            rawData['data'] ??
+            rawData['records'] ??
+            rawData['attendance'] ??
+            rawData;
       }
 
       final records = <AttendanceRecord>[];
       if (rawData is List) {
         for (final item in rawData) {
           if (item is Map) {
-            records.add(AttendanceRecord.fromJson(Map<String, dynamic>.from(item)));
+            records.add(
+              AttendanceRecord.fromJson(Map<String, dynamic>.from(item)),
+            );
           }
         }
       }
 
-      final summaryData = responseMap['summary'] ??
+      final summaryData =
+          responseMap['summary'] ??
           responseMap['attendanceSummary'] ??
           responseMap['attendanceSummaryDTO'] ??
           responseMap['summaryData'];
       final summary = summaryData is Map<String, dynamic>
           ? AttendanceSummary.fromJson(summaryData)
           : (summaryData is Map
-              ? AttendanceSummary.fromJson(Map<String, dynamic>.from(summaryData))
-              : AttendanceSummary.fromRecords(records));
+                ? AttendanceSummary.fromJson(
+                    Map<String, dynamic>.from(summaryData),
+                  )
+                : AttendanceSummary.fromRecords(records));
 
       setState(() {
         _records = records;
@@ -99,33 +113,42 @@ class _HRAttendanceScreenState extends State<HRAttendanceScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: isDark ? HRTheme.bgDark : HRTheme.bgLight,
-      body: Column(children: [
-        HRGradientHeader(
-          title: 'My Attendance',
-          subtitle: 'Track your attendance & reports',
-          actions: [_searchAction()],
-        ),
-        HRTabBar(
-          tabs: const ['Today', 'History', 'Summary' /*, 'Report'*/],  // TODO: Report tab - baad mein enable karna hai
-          selectedIndex: _tab,
-          onTabChanged: (i) => setState(() => _tab = i),
-          activeColor: HRTheme.attendance,
-        ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: _fetchAttendance,
-            color: HRTheme.attendance,
-            child: _isLoading 
-              ? const Center(child: CircularProgressIndicator()) 
-              : IndexedStack(index: _tab, children: [
-                  _buildTodayTab(),
-                  _buildHistoryTab(),
-                  _buildSummaryTab(),
-                  // _buildReportTab(),  // TODO: Report tab - baad mein enable karna hai
-                ]),
+      body: Column(
+        children: [
+          HRGradientHeader(
+            title: 'My Attendance',
+            subtitle: 'Track your attendance & reports',
+            actions: [_searchAction()],
           ),
-        ),
-      ]),
+          HRTabBar(
+            tabs: const [
+              'Today',
+              'History',
+              'Summary' /*, 'Report'*/,
+            ], // TODO: Report tab - baad mein enable karna hai
+            selectedIndex: _tab,
+            onTabChanged: (i) => setState(() => _tab = i),
+            activeColor: HRTheme.attendance,
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _fetchAttendance,
+              color: HRTheme.attendance,
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : IndexedStack(
+                      index: _tab,
+                      children: [
+                        _buildTodayTab(),
+                        _buildHistoryTab(),
+                        _buildSummaryTab(),
+                        // _buildReportTab(),  // TODO: Report tab - baad mein enable karna hai
+                      ],
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -133,8 +156,10 @@ class _HRAttendanceScreenState extends State<HRAttendanceScreen> {
     padding: const EdgeInsets.only(right: 4),
     child: Container(
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(color: Colors.white.withAlpha(38),
-          borderRadius: BorderRadius.circular(HRTheme.radiusSM)),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(38),
+        borderRadius: BorderRadius.circular(HRTheme.radiusSM),
+      ),
       child: const Icon(Icons.search, color: Colors.white, size: 20),
     ),
   );
@@ -169,11 +194,22 @@ class _HRAttendanceScreenState extends State<HRAttendanceScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textSecondary)),
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: HRTheme.textSecondary,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(value,
-                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: HRTheme.textPrimary)),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: HRTheme.textPrimary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -182,249 +218,482 @@ class _HRAttendanceScreenState extends State<HRAttendanceScreen> {
     );
   }
 
-  Widget _infoCard(String title, String value, IconData icon, Color color) {
-    return HRCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-      color: Colors.white,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _compactAttendanceBadge(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(HRTheme.radiusFull),
+      ),
+      child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withAlpha((0.12 * 255).round()),
-              borderRadius: BorderRadius.circular(HRTheme.radiusSM),
-            ),
-            child: Icon(icon, color: color, size: 20),
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-          const SizedBox(height: 10),
-          Text(title,
-              style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textSecondary)),
-          const SizedBox(height: 6),
-          Text(value,
-              style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700, color: HRTheme.textPrimary)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: HRTheme.textSecondary,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
   }
 
-Widget _buildTodayTab() {
-  final today = _currentRecord;
-  final summary = _summary ?? AttendanceSummary.empty();
-
-  return SingleChildScrollView(
-    padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF2F4EAF), Color(0xFF2A84E5)],
-            ),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: HRTheme.primaryDark.withAlpha((0.18 * 255).round()),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
+  Widget _infoCard(String title, String value, IconData icon, Color color) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 142),
+      child: HRCard(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        color: Colors.white,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withAlpha((0.12 * 255).round()),
+                borderRadius: BorderRadius.circular(HRTheme.radiusSM),
               ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_greeting(),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: HRTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: HRTheme.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTodayTab() {
+    final today = _currentRecord;
+    final summary = _summary ?? AttendanceSummary.empty();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF2F4EAF), Color(0xFF2A84E5)],
+              ),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: HRTheme.primaryDark.withAlpha((0.18 * 255).round()),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _greeting(),
                         style: GoogleFonts.poppins(
                           color: Colors.white70,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                        )),
-                    const SizedBox(height: 8),
-                    Text(_todayDateLabel(_selectedMonth),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _todayDateLabel(_selectedMonth),
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
-                        )),
-                    const SizedBox(height: 12),
-                    Row(children: [
-                      HRStatusBadge(
-                        label: today?.status ?? 'Pending',
-                        color: _statusColorForStatus(today?.status ?? 'pending'),
-                        bgColor: _statusColorForStatus(today?.status ?? 'pending').withAlpha((0.16 * 255).round()),
-                        icon: Icons.circle,
-                        fontSize: 11,
+                        ),
                       ),
-                      const SizedBox(width: 10),
-                      Text('Attendance Status',
-                          style: GoogleFonts.poppins(
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 6,
+                        children: [
+                          HRStatusBadge(
+                            label: today?.status ?? 'Pending',
+                            color:
+                                (today?.status ?? 'pending').toLowerCase() ==
+                                    'pending'
+                                ? Colors.white
+                                : _statusColorForStatus(
+                                    today?.status ?? 'pending',
+                                  ),
+                            bgColor:
+                                (today?.status ?? 'pending').toLowerCase() ==
+                                    'pending'
+                                ? const Color(0xFFD97706)
+                                : _statusColorForStatus(
+                                    today?.status ?? 'pending',
+                                  ).withAlpha((0.16 * 255).round()),
+                            icon: Icons.circle,
+                            fontSize: 11,
+                          ),
+                          Text(
+                            'Attendance Status',
+                            style: GoogleFonts.poppins(
                               color: Colors.white70,
                               fontSize: 12,
-                              fontWeight: FontWeight.w500)),
-                    ]),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: _pickMonthYear,
-                child: Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(26),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  child: const Icon(Icons.event_available_rounded,
-                      color: Colors.white, size: 44),
                 ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        Row(children: [
-          Expanded(
-            child: HRCard(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              color: Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Punch In',
-                      style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary)),
-                  const SizedBox(height: 10),
-                  Text(today?.punchIn ?? DateFormat('hh:mm a').format(DateTime.now()),
-                      style: GoogleFonts.poppins(
-                          fontSize: 28, fontWeight: FontWeight.w800, color: HRTheme.success)),
-                  const SizedBox(height: 8),
-                  Text(today != null && today.punchIn != '–' ? 'Punched In' : 'Not Punched In',
-                      style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textSecondary)),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: HRCard(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              color: Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Punch Out',
-                      style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary)),
-                  const SizedBox(height: 10),
-                  Text(today?.punchOut ?? DateFormat('hh:mm a').format(DateTime.now()),
-                      style: GoogleFonts.poppins(
-                          fontSize: 28, fontWeight: FontWeight.w800, color: HRTheme.textPrimary)),
-                  const SizedBox(height: 8),
-                  Text(today != null && today.punchOut != '–' ? 'Punched Out' : 'Not Punched Out',
-                      style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textSecondary)),
-                ],
-              ),
-            ),
-          ),
-        ]),
-
-        const SizedBox(height: 18),
-
-        HRCard(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  HRCircularProgress(
-                    value: summary.attendancePercentage / 100,
-                    label: 'Attendance Rate',
-                    centerText: '${summary.attendancePercentage.toStringAsFixed(0)}%',
-                    color: HRTheme.attendance,
-                    size: 90,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Attendance Overview',
-                            style: GoogleFonts.poppins(
-                                fontSize: 14, fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 8),
-                        Text(_attendanceInsight,
-                            style: GoogleFonts.poppins(
-                                fontSize: 12, color: HRTheme.textSecondary, height: 1.5)),
-                        const SizedBox(height: 16),
-                        _infoBadge('Present', '${summary.present}', HRTheme.success),
-                        const SizedBox(height: 10),
-                        _infoBadge('Absent', '${summary.absent}', HRTheme.error),
-                      ],
+                GestureDetector(
+                  onTap: _pickMonthYear,
+                  child: Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                    child: const Icon(
+                      Icons.event_available_rounded,
+                      color: Colors.white,
+                      size: 44,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              HRProgressBar(value: summary.attendancePercentage / 100, color: HRTheme.attendance, label: 'Monthly attendance progress'),
-            ],
+                ),
+              ],
+            ),
           ),
-        ),
 
-        const SizedBox(height: 18),
+          const SizedBox(height: 20),
 
-        Row(children: [
-          Expanded(child: _infoCard('Shift', today?.shiftCode ?? '-', Icons.schedule, HRTheme.primaryDark)),
-          const SizedBox(width: 12),
-          Expanded(child: _infoCard('Work Hours', today?.workHours ?? '-', Icons.timer, HRTheme.attendance)),
-          const SizedBox(width: 12),
-          Expanded(child: _infoCard('Day Type', today?.dayType ?? '-', Icons.calendar_month, HRTheme.cyan)),
-        ]),
-
-        const SizedBox(height: 18),
-
-        HRCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text('Quick Summary', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 14),
-              Row(children: [
-                Expanded(child: _summaryMetricCard('${summary.present}', 'Present', HRTheme.success)),
-                const SizedBox(width: 10),
-                Expanded(child: _summaryMetricCard('${summary.absent}', 'Absent', HRTheme.error)),
-              ]),
-              const SizedBox(height: 10),
-              Row(children: [
-                Expanded(child: _summaryMetricCard('${summary.late}', 'Late', HRTheme.warning)),
-                const SizedBox(width: 10),
-                Expanded(child: _summaryMetricCard('${summary.halfDay}', 'Half Day', HRTheme.teal)),
-              ]),
+              Expanded(
+                child: HRCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 18,
+                  ),
+                  color: Colors.white,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Punch In',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: HRTheme.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        today?.punchIn == null || today!.punchIn == '–'
+                            ? '--:--'
+                            : today.punchIn,
+                        style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: HRTheme.success,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        today?.punchIn != null && today!.punchIn != '–'
+                            ? 'Punched In'
+                            : 'Not Punched In',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: HRTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: HRCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 18,
+                  ),
+                  color: Colors.white,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Punch Out',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: HRTheme.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        today?.punchOut == null || today!.punchOut == '–'
+                            ? '--:--'
+                            : today.punchOut,
+                        style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: HRTheme.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        today?.punchOut != null && today!.punchOut != '–'
+                            ? 'Punched Out'
+                            : 'Not Punched Out',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: HRTheme.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
-        ),
 
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 18),
 
-  String _weekDay(int d) => ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d - 1];
-  String _month(int m) => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m - 1];
+          HRCard(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Attendance Overview Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Attendance Overview',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      '${summary.attendancePercentage.toStringAsFixed(0)}%',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: HRTheme.attendance,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+
+                // Present and Absent in one row
+                Row(
+                  children: [
+                    Expanded(
+                      child: _compactAttendanceBadge(
+                        'Present',
+                        '${summary.present}',
+                        HRTheme.success,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _compactAttendanceBadge(
+                        'Absent',
+                        '${summary.absent}',
+                        HRTheme.error,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 10),
+
+                // Thin progress bar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: (summary.attendancePercentage / 100).clamp(0.0, 1.0),
+                    minHeight: 5,
+                    backgroundColor: HRTheme.divider,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      HRTheme.attendance,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _infoCard(
+                    'Shift',
+                    today?.shiftCode ?? '-',
+                    Icons.schedule,
+                    HRTheme.primaryDark,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _infoCard(
+                    'Work Hours',
+                    today?.workHours ?? '-',
+                    Icons.timer,
+                    HRTheme.attendance,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _infoCard(
+                    'Day Type',
+                    today?.dayType ?? '-',
+                    Icons.calendar_month,
+                    HRTheme.cyan,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 18),
+
+          HRCard(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Quick Summary',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _summaryMetricCard(
+                        '${summary.present}',
+                        'Present',
+                        HRTheme.success,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _summaryMetricCard(
+                        '${summary.absent}',
+                        'Absent',
+                        HRTheme.error,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _summaryMetricCard(
+                        '${summary.late}',
+                        'Late',
+                        HRTheme.warning,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _summaryMetricCard(
+                        '${summary.halfDay}',
+                        'Half Day',
+                        HRTheme.teal,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _weekDay(int d) =>
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d - 1];
+  String _month(int m) => [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ][m - 1];
 
   Widget _buildHistoryTab() {
     if (_records.isEmpty) {
-      return const HREmptyState(icon: Icons.calendar_today_rounded, title: 'No Records', subtitle: 'No attendance records found');
+      return const HREmptyState(
+        icon: Icons.calendar_today_rounded,
+        title: 'No Records',
+        subtitle: 'No attendance records found',
+      );
     }
 
     return Padding(
@@ -452,38 +721,88 @@ Widget _buildTodayTab() {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const HRSectionHeader(title: 'Monthly Summary', icon: Icons.summarize_rounded),
+                const HRSectionHeader(
+                  title: 'Monthly Summary',
+                  icon: Icons.summarize_rounded,
+                ),
                 const SizedBox(height: 4),
-                Text(_displayMonthYear,
-                    style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary)),
+                Text(
+                  _displayMonthYear,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: HRTheme.textSecondary,
+                  ),
+                ),
                 const SizedBox(height: 18),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    HRCircularProgress(
-                      value: s.attendancePercentage / 100,
-                      label: 'Attendance Rate',
-                      centerText: '${s.attendancePercentage.toStringAsFixed(0)}%',
-                      color: HRTheme.attendance,
-                      size: 92,
+                    Container(
+                      width: 76,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: HRTheme.attendance.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '${s.attendancePercentage.toStringAsFixed(0)}%',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: HRTheme.attendance,
+                            ),
+                          ),
+                          Text(
+                            'Rate',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              color: HRTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Your attendance summary for the selected month.',
-                              style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary, height: 1.6)),
-                          const SizedBox(height: 16),
+                          Text(
+                            'Your attendance summary for the selected month.',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: HRTheme.textSecondary,
+                              height: 1.6,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           Row(
                             children: [
-                              Expanded(child: _summaryBadge('Present', '${s.present}', HRTheme.success)),
+                              Expanded(
+                                child: _summaryBadge(
+                                  'Present',
+                                  '${s.present}',
+                                  HRTheme.success,
+                                ),
+                              ),
                               const SizedBox(width: 10),
-                              Expanded(child: _summaryBadge('Absent', '${s.absent}', HRTheme.error)),
+                              Expanded(
+                                child: _summaryBadge(
+                                  'Absent',
+                                  '${s.absent}',
+                                  HRTheme.error,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 10),
-                          _summaryBadge('Working Days', '${s.totalWorkingDays}', HRTheme.primaryLight),
+                          _summaryBadge(
+                            'Working Days',
+                            '${s.totalWorkingDays}',
+                            HRTheme.primaryLight,
+                          ),
                         ],
                       ),
                     ),
@@ -498,39 +817,90 @@ Widget _buildTodayTab() {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const HRSectionHeader(title: 'Summary Metrics', icon: Icons.grid_view_rounded),
+                const HRSectionHeader(
+                  title: 'Summary Metrics',
+                  icon: Icons.grid_view_rounded,
+                ),
                 const SizedBox(height: 14),
                 Column(
                   children: [
                     Row(
                       children: [
-                        Expanded(child: _summaryMetricCard('${s.totalWorkingDays}', 'Working Days', Colors.blueGrey)),
+                        Expanded(
+                          child: _summaryMetricCard(
+                            '${s.totalWorkingDays}',
+                            'Working Days',
+                            Colors.blueGrey,
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        Expanded(child: _summaryMetricCard('${s.present}', 'Present', HRTheme.success)),
+                        Expanded(
+                          child: _summaryMetricCard(
+                            '${s.present}',
+                            'Present',
+                            HRTheme.success,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Expanded(child: _summaryMetricCard('${s.absent}', 'Absent', HRTheme.error)),
+                        Expanded(
+                          child: _summaryMetricCard(
+                            '${s.absent}',
+                            'Absent',
+                            HRTheme.error,
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        Expanded(child: _summaryMetricCard('${s.late}', 'Late Marks', HRTheme.warning)),
+                        Expanded(
+                          child: _summaryMetricCard(
+                            '${s.late}',
+                            'Late Marks',
+                            HRTheme.warning,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Expanded(child: _summaryMetricCard('${s.halfDay}', 'Half Day', HRTheme.teal)),
+                        Expanded(
+                          child: _summaryMetricCard(
+                            '${s.halfDay}',
+                            'Half Day',
+                            HRTheme.teal,
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        Expanded(child: _summaryMetricCard('${s.leavesTaken}', 'On Leave', HRTheme.leave)),
+                        Expanded(
+                          child: _summaryMetricCard(
+                            '${s.leavesTaken}',
+                            'On Leave',
+                            HRTheme.leave,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Expanded(child: _summaryMetricCard('${s.holidays}', 'Holidays', HRTheme.cyan)),
+                        Expanded(
+                          child: _summaryMetricCard(
+                            '${s.holidays}',
+                            'Holidays',
+                            HRTheme.cyan,
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        Expanded(child: _summaryMetricCard('${s.earlyExit}', 'Early Exit', HRTheme.pending)),
+                        Expanded(
+                          child: _summaryMetricCard(
+                            '${s.earlyExit}',
+                            'Early Exit',
+                            HRTheme.pending,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -544,11 +914,21 @@ Widget _buildTodayTab() {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const HRSectionHeader(title: 'Attendance Trend', icon: Icons.bar_chart_rounded),
+                const HRSectionHeader(
+                  title: 'Attendance Trend',
+                  icon: Icons.bar_chart_rounded,
+                ),
                 const SizedBox(height: 12),
                 HRBarChart(
-                  values: _trendValues.isNotEmpty ? _trendValues : List.generate(_trendLabels.isNotEmpty ? _trendLabels.length : 7, (_) => 0.0),
-                  labels: _trendLabels.isNotEmpty ? _trendLabels : const ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+                  values: _trendValues.isNotEmpty
+                      ? _trendValues
+                      : List.generate(
+                          _trendLabels.isNotEmpty ? _trendLabels.length : 7,
+                          (_) => 0.0,
+                        ),
+                  labels: _trendLabels.isNotEmpty
+                      ? _trendLabels
+                      : const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                   barColor: HRTheme.attendance,
                   maxValue: 10,
                 ),
@@ -561,10 +941,19 @@ Widget _buildTodayTab() {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const HRSectionHeader(title: 'Attendance Insights', icon: Icons.insights_rounded),
+                const HRSectionHeader(
+                  title: 'Attendance Insights',
+                  icon: Icons.insights_rounded,
+                ),
                 const SizedBox(height: 10),
-                Text(_attendanceInsight,
-                    style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary, height: 1.6)),
+                Text(
+                  _attendanceInsight,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: HRTheme.textSecondary,
+                    height: 1.6,
+                  ),
+                ),
               ],
             ),
           ),
@@ -573,7 +962,12 @@ Widget _buildTodayTab() {
     );
   }
 
-  Widget _downloadReportCard(String title, String subtitle, IconData icon, Color color) {
+  Widget _downloadReportCard(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+  ) {
     return GestureDetector(
       onTap: () => _downloadReport(title, format: _reportFormat),
       child: Container(
@@ -597,20 +991,37 @@ Widget _buildTodayTab() {
               child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(height: 18),
-            Text(title,
-                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700)),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textSecondary, height: 1.4)),
+            Text(
+              subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: HRTheme.textSecondary,
+                height: 1.4,
+              ),
+            ),
             const SizedBox(height: 14),
             Row(
               children: [
                 Icon(Icons.download_rounded, color: color, size: 16),
                 const SizedBox(width: 6),
-                Text(_reportFormat.label,
-                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+                Text(
+                  _reportFormat.label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
               ],
             ),
           ],
@@ -638,11 +1049,22 @@ Widget _buildTodayTab() {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textSecondary)),
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: HRTheme.textSecondary,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(value,
-                    style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: HRTheme.textPrimary)),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: HRTheme.textPrimary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -661,11 +1083,23 @@ Widget _buildTodayTab() {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value,
-              style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text(label,
-              style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary, height: 1.4)),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: HRTheme.textSecondary,
+              height: 1.4,
+            ),
+          ),
         ],
       ),
     );
@@ -679,20 +1113,28 @@ Widget _buildTodayTab() {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: selected ? HRTheme.attendance : HRTheme.bgLight,
-          border: Border.all(color: selected ? HRTheme.attendance : HRTheme.divider),
+          border: Border.all(
+            color: selected ? HRTheme.attendance : HRTheme.divider,
+          ),
           borderRadius: BorderRadius.circular(HRTheme.radiusMD),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: selected ? Colors.white : HRTheme.textPrimary),
+            Icon(
+              icon,
+              size: 16,
+              color: selected ? Colors.white : HRTheme.textPrimary,
+            ),
             const SizedBox(width: 8),
-            Text(label,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : HRTheme.textPrimary,
-                )),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : HRTheme.textPrimary,
+              ),
+            ),
           ],
         ),
       ),
@@ -719,12 +1161,20 @@ Widget _buildTodayTab() {
 
   Color _statusColorForStatus(String status) {
     switch (status.toLowerCase()) {
-      case 'present': return HRTheme.success;
-      case 'late': return HRTheme.warning;
-      case 'absent': return HRTheme.error;
-      case 'leave': return HRTheme.info;
-      case 'holiday': return HRTheme.teal;
-      default: return HRTheme.textSecondary;
+      case 'present':
+        return HRTheme.success;
+      case 'late':
+        return HRTheme.warning;
+      case 'absent':
+        return HRTheme.error;
+      case 'leave':
+        return HRTheme.info;
+      case 'holiday':
+        return HRTheme.teal;
+      case 'pending':
+        return HRTheme.pending;
+      default:
+        return HRTheme.textSecondary;
     }
   }
 
@@ -751,13 +1201,13 @@ Widget _buildTodayTab() {
   AttendanceRecord? get _currentRecord {
     if (_records.isEmpty) return null;
     final today = _selectedMonth;
-    return _records.firstWhere(
-      (record) {
-        final date = _parseRecordDate(record.date);
-        return date != null && date.year == today.year && date.month == today.month && date.day == today.day;
-      },
-      orElse: () => _records.first,
-    );
+    return _records.firstWhere((record) {
+      final date = _parseRecordDate(record.date);
+      return date != null &&
+          date.year == today.year &&
+          date.month == today.month &&
+          date.day == today.day;
+    }, orElse: () => _records.first);
   }
 
   Future<void> _pickMonthYear() async {
@@ -766,8 +1216,17 @@ Widget _buildTodayTab() {
       initialDate: _selectedMonth,
       firstDate: DateTime(2000),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) => Theme(
+        data: ThemeData.light().copyWith(
+          useMaterial3: false,
+          colorScheme: const ColorScheme.light(primary: HRTheme.attendance),
+        ),
+        child: child!,
+      ),
     );
-    if (picked != null && (picked.month != _selectedMonth.month || picked.year != _selectedMonth.year)) {
+    if (picked != null &&
+        (picked.month != _selectedMonth.month ||
+            picked.year != _selectedMonth.year)) {
       setState(() {
         _selectedMonth = picked;
       });
@@ -795,7 +1254,9 @@ Widget _buildTodayTab() {
       if (date != null) return _weekDay(date.weekday);
       return record.date;
     }).toList();
-    _trendValues = trendRecords.map((record) => _parseWorkHours(record.workHours)).toList();
+    _trendValues = trendRecords
+        .map((record) => _parseWorkHours(record.workHours))
+        .toList();
   }
 
   double _parseWorkHours(String value) {
@@ -827,19 +1288,48 @@ Widget _buildTodayTab() {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const HRSectionHeader(title: 'Attendance Reports', icon: Icons.file_download_rounded),
+                const HRSectionHeader(
+                  title: 'Attendance Reports',
+                  icon: Icons.file_download_rounded,
+                ),
                 const SizedBox(height: 8),
-                Text('Download the attendance reports you need for audit, payroll, and correction.',
-                    style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary, height: 1.5)),
+                Text(
+                  'Download the attendance reports you need for audit, payroll, and correction.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: HRTheme.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    _downloadReportCard('Monthly Attendance', 'View complete monthly attendance data', Icons.calendar_month_rounded, HRTheme.attendance),
-                    _downloadReportCard('Late Mark Report', 'See late entry details for the month', Icons.warning_amber_rounded, HRTheme.warning),
-                    _downloadReportCard('Overtime Report', 'Review extra hours and approvals', Icons.timer_rounded, HRTheme.cyan),
-                    _downloadReportCard('Yearly Summary', 'Export annual attendance overview', Icons.summarize_rounded, HRTheme.primaryDark),
+                    _downloadReportCard(
+                      'Monthly Attendance',
+                      'View complete monthly attendance data',
+                      Icons.calendar_month_rounded,
+                      HRTheme.attendance,
+                    ),
+                    _downloadReportCard(
+                      'Late Mark Report',
+                      'See late entry details for the month',
+                      Icons.warning_amber_rounded,
+                      HRTheme.warning,
+                    ),
+                    _downloadReportCard(
+                      'Overtime Report',
+                      'Review extra hours and approvals',
+                      Icons.timer_rounded,
+                      HRTheme.cyan,
+                    ),
+                    _downloadReportCard(
+                      'Yearly Summary',
+                      'Export annual attendance overview',
+                      Icons.summarize_rounded,
+                      HRTheme.primaryDark,
+                    ),
                   ],
                 ),
               ],
@@ -851,25 +1341,60 @@ Widget _buildTodayTab() {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const HRSectionHeader(title: 'Report Settings', icon: Icons.settings_rounded),
+                const HRSectionHeader(
+                  title: 'Report Settings',
+                  icon: Icons.settings_rounded,
+                ),
                 const SizedBox(height: 10),
-                Row(children: [
-                  Expanded(child: _infoCard('Selected Month', _displayMonthYear, Icons.calendar_today, HRTheme.primaryDark)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _infoCard('Selected Format', _reportFormat.label, _reportFormat == ReportFormat.pdf ? Icons.picture_as_pdf_rounded : Icons.grid_view_rounded, HRTheme.attendance)),
-                ]),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _infoCard(
+                        'Selected Month',
+                        _displayMonthYear,
+                        Icons.calendar_today,
+                        HRTheme.primaryDark,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _infoCard(
+                        'Selected Format',
+                        _reportFormat.label,
+                        _reportFormat == ReportFormat.pdf
+                            ? Icons.picture_as_pdf_rounded
+                            : Icons.grid_view_rounded,
+                        HRTheme.attendance,
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    _reportFormatOption(ReportFormat.pdf, Icons.picture_as_pdf_rounded, 'PDF'),
-                    _reportFormatOption(ReportFormat.excel, Icons.grid_view_rounded, 'Excel'),
+                    _reportFormatOption(
+                      ReportFormat.pdf,
+                      Icons.picture_as_pdf_rounded,
+                      'PDF',
+                    ),
+                    _reportFormatOption(
+                      ReportFormat.excel,
+                      Icons.grid_view_rounded,
+                      'Excel',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text('Choose the format above, then tap a report card to download it.',
-                    style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary, height: 1.5)),
+                Text(
+                  'Choose the format above, then tap a report card to download it.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: HRTheme.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
               ],
             ),
           ),
@@ -880,13 +1405,19 @@ Widget _buildTodayTab() {
 
   void _toggleReportFormat() {
     setState(() {
-      _reportFormat = _reportFormat == ReportFormat.pdf ? ReportFormat.excel : ReportFormat.pdf;
+      _reportFormat = _reportFormat == ReportFormat.pdf
+          ? ReportFormat.excel
+          : ReportFormat.pdf;
     });
   }
 
-  Future<void> _downloadReport(String title, {required ReportFormat format}) async {
+  Future<void> _downloadReport(
+    String title, {
+    required ReportFormat format,
+  }) async {
     try {
-      final fileName = '${title.replaceAll(' ', '_')}_${_displayMonthYear.replaceAll(' ', '_')}.${format.extension}';
+      final fileName =
+          '${title.replaceAll(' ', '_')}_${_displayMonthYear.replaceAll(' ', '_')}.${format.extension}';
       final path = await FilePicker.platform.saveFile(
         dialogTitle: 'Save $fileName',
         fileName: fileName,
@@ -904,18 +1435,28 @@ Widget _buildTodayTab() {
       await file.writeAsBytes(bytes, flush: true);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('$fileName saved successfully', style: GoogleFonts.poppins()),
-        backgroundColor: HRTheme.success,
-        behavior: SnackBarBehavior.floating,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$fileName saved successfully',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: HRTheme.success,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Unable to save report. Please try again.', style: GoogleFonts.poppins()),
-        backgroundColor: HRTheme.error,
-        behavior: SnackBarBehavior.floating,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Unable to save report. Please try again.',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: HRTheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -924,54 +1465,90 @@ Widget _buildTodayTab() {
     final selectedRecords = _recordsForReport(title);
     final summary = _summary ?? AttendanceSummary.empty();
 
-    pdf.addPage(pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      build: (context) {
-        return [
-          pw.Text(title,
-              style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
-          pw.SizedBox(height: 8),
-          pw.Text('Month: $_displayMonthYear', style: pw.TextStyle(fontSize: 12, color: PdfColors.grey600)),
-          pw.SizedBox(height: 16),
-          if (title.contains('Yearly Summary'))
-            pw.Column(children: [
-              _pdfSummaryRow('Total Working Days', '${summary.totalWorkingDays}'),
-              _pdfSummaryRow('Present', '${summary.present}'),
-              _pdfSummaryRow('Absent', '${summary.absent}'),
-              _pdfSummaryRow('Late', '${summary.late}'),
-              _pdfSummaryRow('Half Day', '${summary.halfDay}'),
-              _pdfSummaryRow('Holidays', '${summary.holidays}'),
-              _pdfSummaryRow('On Leave', '${summary.leavesTaken}'),
-              _pdfSummaryRow('Early Exit', '${summary.earlyExit}'),
-              _pdfSummaryRow('Attendance %', '${summary.attendancePercentage.toStringAsFixed(1)}%'),
-            ])
-          else if (selectedRecords.isEmpty)
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(vertical: 20),
-              child: pw.Text('No attendance records are available for this report.',
-                  style: pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
-            )
-          else
-            pw.TableHelper.fromTextArray(
-              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-              headerDecoration: pw.BoxDecoration(color: PdfColors.blue500),
-              headers: const ['Date', 'Status', 'Punch In', 'Punch Out', 'Work Hours', 'Shift', 'Day Type', 'Extra Hours'],
-              data: selectedRecords.map((record) => [
-                record.date,
-                record.status,
-                record.punchIn,
-                record.punchOut,
-                record.workHours,
-                record.shiftCode,
-                record.dayType,
-                record.extraHours,
-              ]).toList(),
-              cellAlignment: pw.Alignment.centerLeft,
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        build: (context) {
+          return [
+            pw.Text(
+              title,
+              style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
             ),
-        ];
-      },
-    ));
+            pw.SizedBox(height: 8),
+            pw.Text(
+              'Month: $_displayMonthYear',
+              style: pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
+            ),
+            pw.SizedBox(height: 16),
+            if (title.contains('Yearly Summary'))
+              pw.Column(
+                children: [
+                  _pdfSummaryRow(
+                    'Total Working Days',
+                    '${summary.totalWorkingDays}',
+                  ),
+                  _pdfSummaryRow('Present', '${summary.present}'),
+                  _pdfSummaryRow('Absent', '${summary.absent}'),
+                  _pdfSummaryRow('Late', '${summary.late}'),
+                  _pdfSummaryRow('Half Day', '${summary.halfDay}'),
+                  _pdfSummaryRow('Holidays', '${summary.holidays}'),
+                  _pdfSummaryRow('On Leave', '${summary.leavesTaken}'),
+                  _pdfSummaryRow('Early Exit', '${summary.earlyExit}'),
+                  _pdfSummaryRow(
+                    'Attendance %',
+                    '${summary.attendancePercentage.toStringAsFixed(1)}%',
+                  ),
+                ],
+              )
+            else if (selectedRecords.isEmpty)
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 20),
+                child: pw.Text(
+                  'No attendance records are available for this report.',
+                  style: pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+                ),
+              )
+            else
+              pw.TableHelper.fromTextArray(
+                border: pw.TableBorder.all(
+                  color: PdfColors.grey300,
+                  width: 0.5,
+                ),
+                headerStyle: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.white,
+                ),
+                headerDecoration: pw.BoxDecoration(color: PdfColors.blue500),
+                headers: const [
+                  'Date',
+                  'Status',
+                  'Punch In',
+                  'Punch Out',
+                  'Work Hours',
+                  'Shift',
+                  'Day Type',
+                  'Extra Hours',
+                ],
+                data: selectedRecords
+                    .map(
+                      (record) => [
+                        record.date,
+                        record.status,
+                        record.punchIn,
+                        record.punchOut,
+                        record.workHours,
+                        record.shiftCode,
+                        record.dayType,
+                        record.extraHours,
+                      ],
+                    )
+                    .toList(),
+                cellAlignment: pw.Alignment.centerLeft,
+              ),
+          ];
+        },
+      ),
+    );
 
     return pdf.save();
   }
@@ -983,7 +1560,10 @@ Widget _buildTodayTab() {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(label, style: pw.TextStyle(fontSize: 12)),
-          pw.Text(value, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            value,
+            style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          ),
         ],
       ),
     );
@@ -1004,9 +1584,13 @@ Widget _buildTodayTab() {
       buffer.writeln('Holidays,${summary.holidays}');
       buffer.writeln('On Leave,${summary.leavesTaken}');
       buffer.writeln('Early Exit,${summary.earlyExit}');
-      buffer.writeln('Attendance %,${summary.attendancePercentage.toStringAsFixed(1)}');
+      buffer.writeln(
+        'Attendance %,${summary.attendancePercentage.toStringAsFixed(1)}',
+      );
     } else {
-      buffer.writeln('Date,Status,Punch In,Punch Out,Work Hours,Shift,Day Type,Extra Hours');
+      buffer.writeln(
+        'Date,Status,Punch In,Punch Out,Work Hours,Shift,Day Type,Extra Hours',
+      );
       if (selectedRecords.isEmpty) {
         buffer.writeln('No records available for this report.');
       } else {
@@ -1025,10 +1609,20 @@ Widget _buildTodayTab() {
 
   List<AttendanceRecord> _recordsForReport(String title) {
     if (title.contains('Late')) {
-      return _records.where((record) => record.isLate || record.status.toLowerCase().contains('late')).toList();
+      return _records
+          .where(
+            (record) =>
+                record.isLate || record.status.toLowerCase().contains('late'),
+          )
+          .toList();
     }
     if (title.contains('Overtime')) {
-      return _records.where((record) => record.extraHours.isNotEmpty && record.extraHours != '00:00:00').toList();
+      return _records
+          .where(
+            (record) =>
+                record.extraHours.isNotEmpty && record.extraHours != '00:00:00',
+          )
+          .toList();
     }
     return _records;
   }
@@ -1039,17 +1633,25 @@ class _AttendanceCard extends StatelessWidget {
   final AttendanceRecord record;
   const _AttendanceCard({required this.record});
 
-  String get _safeStatus => record.status.isNotEmpty ? record.status : 'Pending';
+  String get _safeStatus =>
+      record.status.isNotEmpty ? record.status : 'Pending';
 
   Color get _statusColor {
     switch (_safeStatus.toLowerCase()) {
-      case 'present': return HRTheme.success;
-      case 'late': return HRTheme.warning;
-      case 'absent': return HRTheme.error;
-      case 'leave': return HRTheme.info;
-      case 'holiday': return HRTheme.teal;
-      case 'pending': return HRTheme.textSecondary;
-      default: return HRTheme.textSecondary;
+      case 'present':
+        return HRTheme.success;
+      case 'late':
+        return HRTheme.warning;
+      case 'absent':
+        return HRTheme.error;
+      case 'leave':
+        return HRTheme.info;
+      case 'holiday':
+        return HRTheme.teal;
+      case 'pending':
+        return const Color(0xFFF59E0B);
+      default:
+        return HRTheme.textSecondary;
     }
   }
 
@@ -1071,21 +1673,40 @@ class _AttendanceCard extends StatelessWidget {
                   color: _statusColor.withAlpha(30),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(Icons.calendar_today_rounded, color: _statusColor, size: 20),
+                child: Icon(
+                  Icons.calendar_today_rounded,
+                  color: _statusColor,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(record.date,
-                        style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700)),
+                    Text(
+                      record.date,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text('Shift: ${record.shiftCode}',
-                        style: GoogleFonts.poppins(fontSize: 12, color: HRTheme.textSecondary)),
+                    Text(
+                      'Shift: ${record.shiftCode}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: HRTheme.textSecondary,
+                      ),
+                    ),
                     const SizedBox(height: 10),
-                    Text(record.status.isNotEmpty ? record.status : 'Pending',
-                        style: GoogleFonts.poppins(fontSize: 11, color: HRTheme.textSecondary)),
+                    Text(
+                      record.status.isNotEmpty ? record.status : 'Pending',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: HRTheme.textSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1103,12 +1724,42 @@ class _AttendanceCard extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _detailChip('Shift In', record.shiftInTime, Icons.schedule, HRTheme.primaryDark),
-              _detailChip('Shift Out', record.shiftOutTime, Icons.schedule, HRTheme.primaryDark),
-              _detailChip('Punch In', record.punchIn, Icons.login, HRTheme.success),
-              _detailChip('Punch Out', record.punchOut, Icons.logout, HRTheme.error),
-              _detailChip('Work Hrs', record.workHours, Icons.timer, HRTheme.attendance),
-              _detailChip('Extra Hrs', record.extraHours, Icons.add_task_rounded, HRTheme.cyan),
+              _detailChip(
+                'Shift In',
+                record.shiftInTime,
+                Icons.schedule,
+                HRTheme.primaryDark,
+              ),
+              _detailChip(
+                'Shift Out',
+                record.shiftOutTime,
+                Icons.schedule,
+                HRTheme.primaryDark,
+              ),
+              _detailChip(
+                'Punch In',
+                record.punchIn,
+                Icons.login,
+                HRTheme.success,
+              ),
+              _detailChip(
+                'Punch Out',
+                record.punchOut,
+                Icons.logout,
+                HRTheme.error,
+              ),
+              _detailChip(
+                'Work Hrs',
+                record.workHours,
+                Icons.timer,
+                HRTheme.attendance,
+              ),
+              _detailChip(
+                'Extra Hrs',
+                record.extraHours,
+                Icons.add_task_rounded,
+                HRTheme.cyan,
+              ),
             ],
           ),
         ],
@@ -1131,11 +1782,22 @@ class _AttendanceCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title,
-                  style: GoogleFonts.poppins(fontSize: 10, color: HRTheme.textSecondary)),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  color: HRTheme.textSecondary,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(value,
-                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: HRTheme.textPrimary)),
+              Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: HRTheme.textPrimary,
+                ),
+              ),
             ],
           ),
         ],

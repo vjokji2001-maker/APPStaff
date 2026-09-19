@@ -47,7 +47,8 @@ class ApprovalQueuePage extends StatefulWidget {
   State<ApprovalQueuePage> createState() => _ApprovalQueuePageState();
 }
 
-class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKeepAliveClientMixin {
+class _ApprovalQueuePageState extends State<ApprovalQueuePage>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
@@ -56,13 +57,13 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
 
   final ApprovalService _approvalService = ApprovalService();
   final IpdService _ipdService = IpdService();
-  
+
   // Refund data
   List<dynamic> _refundDataList = [];
   bool _isLoadingRefunds = false;
   bool _isProcessingAction = false;
   String _refundApiError = '';
-  
+
   // Summary counts
   int _allCount = 0;
   int _cancelledCount = 0;
@@ -94,13 +95,13 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
   String _practitionerApiError = '';
   Map<int, String> _practitionerNameMap = {};
   Map<int, Map<String, dynamic>> _practitionerDetailsMap = {};
-  
+
   // Bank names data
   List<dynamic> _bankList = [];
   bool _isLoadingBanks = false;
   String _bankApiError = '';
   Map<int, String> _bankNameMap = {};
-  
+
   // Filter options for Refund tab
   final List<Map<String, dynamic>> _refundStatusOptions = [
     {'label': 'All', 'value': ''},
@@ -109,7 +110,7 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     {'label': 'Paid', 'value': '2'},
     {'label': 'Cancelled', 'value': '4'},
   ];
-  
+
   // Discount status options
   final List<Map<String, dynamic>> _discountStatusOptions = [
     {'label': 'All', 'value': 'all'},
@@ -117,20 +118,20 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     {'label': 'Approved', 'value': '2'},
     {'label': 'Applied', 'value': '3'},
   ];
-  
+
   String _selectedRefundStatusValue = '';
   String _selectedDiscountStatusValue = 'all';
-  
+
   String _selectedRefundSummary = 'ALL';
-  
-  String _selectedLocation = 'All'; 
+
+  String _selectedLocation = 'All';
   String _searchUHID = '';
   String _searchQuery = '';
-  
+
   // Refund selection
   final Map<int, bool> _selectedRefunds = {};
   bool _selectAll = false;
-  
+
   // Discount selection
   final Map<int, bool> _selectedDiscounts = {};
   bool _selectAllDiscounts = false;
@@ -159,20 +160,28 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
   String _getDiscountStatusFromCode(int? statusCode) {
     if (statusCode == null) return 'Pending';
     switch (statusCode) {
-      case 1: return 'Requested';
-      case 2: return 'Approved';
-      case 3: return 'Applied';
-      default: return 'Pending';
+      case 1:
+        return 'Requested';
+      case 2:
+        return 'Approved';
+      case 3:
+        return 'Applied';
+      default:
+        return 'Pending';
     }
   }
 
   String _getDiscountType(int? discountTypeFlag) {
     if (discountTypeFlag == null) return 'N/A';
     switch (discountTypeFlag) {
-      case 0: return 'Percentage';
-      case 1: return 'Fixed Amount';
-      case 2: return 'Free Service';
-      default: return 'N/A';
+      case 0:
+        return 'Percentage';
+      case 1:
+        return 'Fixed Amount';
+      case 2:
+        return 'Free Service';
+      default:
+        return 'N/A';
     }
   }
 
@@ -181,11 +190,17 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     final isDeleted = refund['isdeleted'] == 1;
     if (isDeleted) return 'Cancelled';
     switch (status) {
-      case 'PENDING': case 'REQUESTED': return 'Un-Approved Request';
-      case 'APPROVED': return 'Un-Paid Approval';
-      case 'PAID': return 'Paid';
-      case 'CANCELLED': return 'Cancelled';
-      default: return status;
+      case 'PENDING':
+      case 'REQUESTED':
+        return 'Un-Approved Request';
+      case 'APPROVED':
+        return 'Un-Paid Approval';
+      case 'PAID':
+        return 'Paid';
+      case 'CANCELLED':
+        return 'Cancelled';
+      default:
+        return status;
     }
   }
 
@@ -194,7 +209,7 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     final isDeleted = refund['isdeleted'] == 1;
     return !isDeleted && (status == 'PENDING' || status == 'REQUESTED');
   }
-  
+
   bool _isApproved(Map<String, dynamic> refund) {
     final status = refund['refundStatus']?.toString().toUpperCase() ?? '';
     final isDeleted = refund['isdeleted'] == 1;
@@ -206,11 +221,16 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     final isDeleted = refund['isdeleted'] == 1;
     if (filterValue.isEmpty) return true;
     switch (filterValue) {
-      case '0': return !isDeleted && (status == 'PENDING' || status == 'REQUESTED');
-      case '1': return !isDeleted && status == 'APPROVED';
-      case '2': return status == 'PAID';
-      case '4': return isDeleted || status == 'CANCELLED';
-      default: return true;
+      case '0':
+        return !isDeleted && (status == 'PENDING' || status == 'REQUESTED');
+      case '1':
+        return !isDeleted && status == 'APPROVED';
+      case '2':
+        return status == 'PAID';
+      case '4':
+        return isDeleted || status == 'CANCELLED';
+      default:
+        return true;
     }
   }
 
@@ -331,7 +351,8 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
         if (data.containsKey('list')) {
           final listData = data['list'] as Map<String, dynamic>;
           List<dynamic> refundDataList = [];
-          if (listData.containsKey('refundDataList') && listData['refundDataList'] is List) {
+          if (listData.containsKey('refundDataList') &&
+              listData['refundDataList'] is List) {
             refundDataList = listData['refundDataList'] as List<dynamic>;
           }
           int unApprovedRequestCount = listData['unApprovedCount'] as int? ?? 0;
@@ -342,7 +363,8 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
           int itemsInCancelledStatus = 0;
           for (var r in refundDataList) {
             if (r is Map<String, dynamic>) {
-              final rawStatus = r['refundStatus']?.toString().toUpperCase() ?? '';
+              final rawStatus =
+                  r['refundStatus']?.toString().toUpperCase() ?? '';
               final isDeleted = r['isdeleted'] == 1;
               if (isDeleted || rawStatus == 'CANCELLED') {
                 itemsInCancelledStatus++;
@@ -414,8 +436,10 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       final query = _searchQuery.toLowerCase();
       filtered = filtered.where((refund) {
         if (refund is! Map<String, dynamic>) return false;
-        final patientName = refund['patientName']?.toString().toLowerCase() ?? '';
-        final refundRequestId = refund['refundRequestId']?.toString().toLowerCase() ?? '';
+        final patientName =
+            refund['patientName']?.toString().toLowerCase() ?? '';
+        final refundRequestId =
+            refund['refundRequestId']?.toString().toLowerCase() ?? '';
         return patientName.contains(query) || refundRequestId.contains(query);
       }).toList();
     }
@@ -426,13 +450,17 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
         if (branchId != null) {
           final locationName = _locationNameMap[branchId] ?? '';
           final locationAbbr = _locationAbbreviationMap[branchId] ?? '';
-          return locationName == _selectedLocation || locationAbbr == _selectedLocation ||
-                 locationName.contains(_selectedLocation) || locationAbbr.contains(_selectedLocation);
+          return locationName == _selectedLocation ||
+              locationAbbr == _selectedLocation ||
+              locationName.contains(_selectedLocation) ||
+              locationAbbr.contains(_selectedLocation);
         }
         final locationName = refund['locationName']?.toString() ?? '';
         final location = refund['location']?.toString() ?? '';
-        return locationName == _selectedLocation || location == _selectedLocation ||
-               locationName.contains(_selectedLocation) || location.contains(_selectedLocation);
+        return locationName == _selectedLocation ||
+            location == _selectedLocation ||
+            locationName.contains(_selectedLocation) ||
+            location.contains(_selectedLocation);
       }).toList();
     }
     if (!mounted) return;
@@ -488,8 +516,10 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
           final nonApplied = (listData['nonApplied'] as int?) ?? 0;
           final nonApproved = (listData['nonApproved'] as int?) ?? 0;
           List<dynamic> discountDataList = [];
-          if (listData.containsKey('discountDashboardList') && listData['discountDashboardList'] is List) {
-            discountDataList = listData['discountDashboardList'] as List<dynamic>;
+          if (listData.containsKey('discountDashboardList') &&
+              listData['discountDashboardList'] is List) {
+            discountDataList =
+                listData['discountDashboardList'] as List<dynamic>;
           }
           if (!mounted) return;
           setState(() {
@@ -540,7 +570,8 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       }
       final locationList = await _approvalService.getLocationList();
       final locationNameMap = await _approvalService.getLocationMap();
-      final locationAbbreviationMap = await _approvalService.getLocationAbbreviationMap();
+      final locationAbbreviationMap = await _approvalService
+          .getLocationAbbreviationMap();
       if (!mounted) return;
       setState(() {
         _locationList = locationList;
@@ -564,7 +595,7 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     }
   }
 
-  Future<void> _fetchInvoiceTypeData() async {    
+  Future<void> _fetchInvoiceTypeData() async {
     if (_isLoadingInvoiceTypes) return;
     if (!mounted) return;
     setState(() {
@@ -593,7 +624,8 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _invoiceTypeApiError = 'Failed to load invoice type data: ${e.toString()}';
+        _invoiceTypeApiError =
+            'Failed to load invoice type data: ${e.toString()}';
       });
     } finally {
       if (!mounted) return;
@@ -602,7 +634,7 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       });
     }
   }
-  
+
   Future<void> _fetchPractitionerData() async {
     if (_isLoadingPractitioners) return;
     if (!mounted) return;
@@ -639,7 +671,8 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _practitionerApiError = 'Failed to load practitioner data: ${e.toString()}';
+        _practitionerApiError =
+            'Failed to load practitioner data: ${e.toString()}';
       });
     } finally {
       if (!mounted) return;
@@ -664,8 +697,10 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       final query = _searchQuery.toLowerCase();
       filtered = filtered.where((discount) {
         if (discount is! Map<String, dynamic>) return false;
-        final patientName = discount['patientName']?.toString().toLowerCase() ?? '';
-        final discountId = discount['discountId']?.toString().toLowerCase() ?? '';
+        final patientName =
+            discount['patientName']?.toString().toLowerCase() ?? '';
+        final discountId =
+            discount['discountId']?.toString().toLowerCase() ?? '';
         return patientName.contains(query) || discountId.contains(query);
       }).toList();
     }
@@ -686,17 +721,25 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
   Color _getStatusColor(String? status) {
     final statusLower = status?.toLowerCase() ?? '';
     switch (statusLower) {
-      case 'un-paid approval': return ApprovalQueueColors.successGreen;
-      case 'un-approved request': return ApprovalQueueColors.warningOrange;
-      case 'paid': return ApprovalQueueColors.accentTeal;
-      case 'cancelled': return ApprovalQueueColors.errorRed;
-      case 'requested': return ApprovalQueueColors.warningOrange;
-      case 'approved': return ApprovalQueueColors.successGreen;
-      case 'applied': return ApprovalQueueColors.accentTeal;
-      default: return ApprovalQueueColors.checkboxColor;
+      case 'un-paid approval':
+        return ApprovalQueueColors.successGreen;
+      case 'un-approved request':
+        return ApprovalQueueColors.warningOrange;
+      case 'paid':
+        return ApprovalQueueColors.accentTeal;
+      case 'cancelled':
+        return ApprovalQueueColors.errorRed;
+      case 'requested':
+        return ApprovalQueueColors.warningOrange;
+      case 'approved':
+        return ApprovalQueueColors.successGreen;
+      case 'applied':
+        return ApprovalQueueColors.accentTeal;
+      default:
+        return ApprovalQueueColors.checkboxColor;
     }
   }
-  
+
   String _formatDate(String? dateString) {
     if (dateString == null || dateString.isEmpty) return 'N/A';
     try {
@@ -722,7 +765,7 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     if (dateString == null || dateString.isEmpty) return 'N/A';
     return dateString;
   }
-  
+
   String _formatIndianCurrency(double? amount) {
     if (amount == null) return '₹0.00';
     return '₹${amount.toStringAsFixed(2)}';
@@ -739,7 +782,11 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
   }
 
   String getInvoiceTypeFromRefund(Map<String, dynamic> refund) {
-    final invoiceTypeData = refund['invoiceType'] ?? refund['invoice_type'] ?? refund['invoiceTypeId'] ?? refund['invoiceTypeName'];
+    final invoiceTypeData =
+        refund['invoiceType'] ??
+        refund['invoice_type'] ??
+        refund['invoiceTypeId'] ??
+        refund['invoiceTypeName'];
     if (invoiceTypeData == null) return 'N/A';
     return invoiceTypeData.toString();
   }
@@ -754,7 +801,7 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       _selectedTab = index;
     });
   }
-  
+
   void _handleViewClick() {
     if (_selectedTab == 0) {
       _fetchRefundData();
@@ -762,7 +809,7 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       _fetchDiscountData();
     }
   }
-  
+
   void _handleSelectAll(bool? value) {
     if (value != null && mounted) {
       setState(() {
@@ -808,7 +855,7 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       });
     }
   }
-  
+
   int get _selectedRefundsCount {
     int count = 0;
     for (int i = 0; i < _filteredRefunds.length; i++) {
@@ -849,12 +896,12 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
   Future<void> _cancelRefund(Map<String, dynamic> refund) async {
     final refundId = refund['refundRequestId'] ?? 0;
     final patientName = refund['patientName']?.toString() ?? 'Unknown';
-    
+
     if (!mounted) return;
-    
+
     TextEditingController reasonController = TextEditingController();
     bool isLoading = false;
-    
+
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -862,22 +909,34 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: ApprovalQueueColors.errorRed.withOpacity(0.1),
+                      color: ApprovalQueueColors.errorRed.withValues(
+                        alpha: 0.1,
+                      ),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.cancel_outlined, color: ApprovalQueueColors.errorRed, size: 24),
+                    child: Icon(
+                      Icons.cancel_outlined,
+                      color: ApprovalQueueColors.errorRed,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Cancel Refund',
-                      style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: ApprovalQueueColors.textDark),
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: ApprovalQueueColors.textDark,
+                      ),
                     ),
                   ),
                 ],
@@ -895,29 +954,47 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Refund ID: $refundId', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500)),
+                        Text(
+                          'Refund ID: $refundId',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         const SizedBox(height: 4),
-                        Text('Patient: $patientName', style: GoogleFonts.poppins(fontSize: 13)),
+                        Text(
+                          'Patient: $patientName',
+                          style: GoogleFonts.poppins(fontSize: 13),
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Cancellation Reason *',
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: ApprovalQueueColors.textDark),
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: ApprovalQueueColors.textDark,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
                       color: ApprovalQueueColors.lightGreyColor,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: ApprovalQueueColors.tableBorder),
+                      border: Border.all(
+                        color: ApprovalQueueColors.tableBorder,
+                      ),
                     ),
                     child: TextField(
                       controller: reasonController,
                       decoration: InputDecoration(
                         hintText: 'Enter reason for cancellation...',
-                        hintStyle: GoogleFonts.poppins(color: ApprovalQueueColors.checkboxColor, fontSize: 12),
+                        hintStyle: GoogleFonts.poppins(
+                          color: ApprovalQueueColors.checkboxColor,
+                          fontSize: 12,
+                        ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.all(12),
                       ),
@@ -929,8 +1006,16 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
               ),
               actions: [
                 TextButton(
-                  onPressed: isLoading ? null : () => Navigator.pop(context, false),
-                  child: Text('Back', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                  onPressed: isLoading
+                      ? null
+                      : () => Navigator.pop(context, false),
+                  child: Text(
+                    'Back',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: isLoading || reasonController.text.trim().isEmpty
@@ -944,8 +1029,18 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                     foregroundColor: Colors.white,
                   ),
                   child: isLoading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : Text('Cancel Request', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          'Cancel Request',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ],
             );
@@ -953,29 +1048,32 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
         );
       },
     );
-    
+
     if (result != true) {
       reasonController.dispose();
       return;
     }
-    
+
     final reason = reasonController.text.trim();
     reasonController.dispose();
-    
+
     if (reason.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Please provide a cancellation reason', style: GoogleFonts.poppins()),
+            content: Text(
+              'Please provide a cancellation reason',
+              style: GoogleFonts.poppins(),
+            ),
             backgroundColor: ApprovalQueueColors.warningOrange,
           ),
         );
       }
       return;
     }
-    
+
     if (!mounted) return;
-    
+
     setState(() {
       _isProcessingAction = true;
     });
@@ -983,22 +1081,27 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('userId') ?? '';
-      
-      debugPrint('Calling cancel API with id: $refundId, reason: $reason, userId: $userId');
-      
+
+      debugPrint(
+        'Calling cancel API with id: $refundId, reason: $reason, userId: $userId',
+      );
+
       final response = await _approvalService.cancelRefundRequest(
         id: refundId is int ? refundId : int.tryParse(refundId.toString()) ?? 0,
         reason: reason,
         userId: userId,
       );
-      
+
       debugPrint('Cancel API response: $response');
-      
+
       if (response['success'] == true) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('✅ Refund #$refundId cancelled successfully', style: GoogleFonts.poppins()),
+              content: Text(
+                '✅ Refund #$refundId cancelled successfully',
+                style: GoogleFonts.poppins(),
+              ),
               backgroundColor: ApprovalQueueColors.successGreen,
             ),
           );
@@ -1020,7 +1123,10 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Error: ${e.toString()}', style: GoogleFonts.poppins()),
+            content: Text(
+              '❌ Error: ${e.toString()}',
+              style: GoogleFonts.poppins(),
+            ),
             backgroundColor: ApprovalQueueColors.errorRed,
           ),
         );
@@ -1056,9 +1162,15 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
             final prefs = await SharedPreferences.getInstance();
             final userId = prefs.getString('userId') ?? '';
             final userName = prefs.getString('userName') ?? userId;
-            final id = refundId is int ? refundId : int.tryParse(refundId.toString()) ?? 0;
-            final invoiceid = refund['invoiceId'] is int ? refund['invoiceId'] : int.tryParse(refund['invoiceId']?.toString() ?? '0') ?? 0;
-            final location = refund['branchId'] is int ? refund['branchId'] : int.tryParse(refund['branchId']?.toString() ?? '0') ?? 0;
+            final id = refundId is int
+                ? refundId
+                : int.tryParse(refundId.toString()) ?? 0;
+            final invoiceid = refund['invoiceId'] is int
+                ? refund['invoiceId']
+                : int.tryParse(refund['invoiceId']?.toString() ?? '0') ?? 0;
+            final location = refund['branchId'] is int
+                ? refund['branchId']
+                : int.tryParse(refund['branchId']?.toString() ?? '0') ?? 0;
             final response = await _approvalService.approveRefund(
               id: id,
               invoiceid: invoiceid,
@@ -1068,15 +1180,39 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
             );
             if (mounted) {
               if (response['success'] == true) {
-                scaffoldMessenger.showSnackBar(SnackBar(content: Text('✅ Refund #$refundId approved successfully', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.successGreen));
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '✅ Refund #$refundId approved successfully',
+                      style: GoogleFonts.poppins(),
+                    ),
+                    backgroundColor: ApprovalQueueColors.successGreen,
+                  ),
+                );
                 await _fetchRefundData();
               } else {
-                scaffoldMessenger.showSnackBar(SnackBar(content: Text('❌ ${response['message'] ?? 'Failed to approve refund'}', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed));
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '❌ ${response['message'] ?? 'Failed to approve refund'}',
+                      style: GoogleFonts.poppins(),
+                    ),
+                    backgroundColor: ApprovalQueueColors.errorRed,
+                  ),
+                );
               }
             }
           } catch (e) {
             if (mounted) {
-              scaffoldMessenger.showSnackBar(SnackBar(content: Text('❌ Error: ${e.toString()}', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed));
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '❌ Error: ${e.toString()}',
+                    style: GoogleFonts.poppins(),
+                  ),
+                  backgroundColor: ApprovalQueueColors.errorRed,
+                ),
+              );
             }
           } finally {
             if (mounted) {
@@ -1098,7 +1234,8 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
         setState(() {
           _isProcessingAction = true;
         });
-        final invoiceResponse = await _approvalService.fetchInvoiceByPractitionerId(invoiceId: invoiceId);
+        final invoiceResponse = await _approvalService
+            .fetchInvoiceByPractitionerId(invoiceId: invoiceId);
         if (invoiceResponse['success'] == true && mounted) {
           final invoiceData = invoiceResponse['data'];
           showModalBottomSheet(
@@ -1115,10 +1252,26 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to fetch invoice details: ${invoiceResponse['message']}', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Failed to fetch invoice details: ${invoiceResponse['message']}',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: ApprovalQueueColors.errorRed,
+            ),
+          );
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error fetching invoice: ${e.toString()}', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error fetching invoice: ${e.toString()}',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: ApprovalQueueColors.errorRed,
+          ),
+        );
       } finally {
         if (mounted) {
           setState(() {
@@ -1127,18 +1280,44 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
         }
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No invoice ID found for this refund', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No invoice ID found for this refund',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: ApprovalQueueColors.errorRed,
+        ),
+      );
     }
   }
 
   void _approveSelectedRefunds() {
     if (_selectedRefundsCount == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select refunds to approve', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.warningOrange));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please select refunds to approve',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: ApprovalQueueColors.warningOrange,
+        ),
+      );
       return;
     }
-    final actionableSelectedCount = _selectedRefundsList.where((refund) => _isActionable(refund)).length;
+    final actionableSelectedCount = _selectedRefundsList
+        .where((refund) => _isActionable(refund))
+        .length;
     if (actionableSelectedCount == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Selected refunds are not in "Requested" status', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.warningOrange));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Selected refunds are not in "Requested" status',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: ApprovalQueueColors.warningOrange,
+        ),
+      );
       return;
     }
     showDialog(
@@ -1154,9 +1333,11 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       ),
     );
   }
-  
+
   Future<void> _processBulkApproveRefunds(String note) async {
-    final selectedRefunds = _selectedRefundsList.where((refund) => _isActionable(refund)).toList();
+    final selectedRefunds = _selectedRefundsList
+        .where((refund) => _isActionable(refund))
+        .toList();
     if (selectedRefunds.isEmpty) return;
     if (!mounted) return;
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -1172,9 +1353,15 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       for (var refund in selectedRefunds) {
         try {
           final refundId = refund['refundRequestId'] ?? 0;
-          final id = refundId is int ? refundId : int.tryParse(refundId.toString()) ?? 0;
-          final invoiceid = refund['invoiceId'] is int ? refund['invoiceId'] : int.tryParse(refund['invoiceId']?.toString() ?? '0') ?? 0;
-          final location = refund['branchId'] is int ? refund['branchId'] : int.tryParse(refund['branchId']?.toString() ?? '0') ?? 0;
+          final id = refundId is int
+              ? refundId
+              : int.tryParse(refundId.toString()) ?? 0;
+          final invoiceid = refund['invoiceId'] is int
+              ? refund['invoiceId']
+              : int.tryParse(refund['invoiceId']?.toString() ?? '0') ?? 0;
+          final location = refund['branchId'] is int
+              ? refund['branchId']
+              : int.tryParse(refund['branchId']?.toString() ?? '0') ?? 0;
           final response = await _approvalService.approveRefund(
             id: id,
             invoiceid: invoiceid,
@@ -1193,15 +1380,44 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       }
       if (mounted) {
         if (successCount > 0) {
-          scaffoldMessenger.showSnackBar(SnackBar(content: Text('✅ Successfully approved $successCount refund(s)', style: GoogleFonts.poppins()), backgroundColor: failedRefunds.isEmpty ? ApprovalQueueColors.successGreen : ApprovalQueueColors.warningOrange, duration: const Duration(seconds: 3)));
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                '✅ Successfully approved $successCount refund(s)',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: failedRefunds.isEmpty
+                  ? ApprovalQueueColors.successGreen
+                  : ApprovalQueueColors.warningOrange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
           await _fetchRefundData();
         } else {
-          scaffoldMessenger.showSnackBar(SnackBar(content: Text('❌ Failed to approve refunds. Please try again.', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed, duration: const Duration(seconds: 3)));
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                '❌ Failed to approve refunds. Please try again.',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: ApprovalQueueColors.errorRed,
+              duration: const Duration(seconds: 3),
+            ),
+          );
         }
       }
     } catch (e) {
       if (mounted) {
-        scaffoldMessenger.showSnackBar(SnackBar(content: Text('❌ Error: ${e.toString()}', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed, duration: const Duration(seconds: 3)));
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              '❌ Error: ${e.toString()}',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: ApprovalQueueColors.errorRed,
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -1218,7 +1434,15 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
 
   void _approveSelectedDiscounts() {
     if (_selectedDiscountsCount == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please select discounts to approve', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.warningOrange));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please select discounts to approve',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: ApprovalQueueColors.warningOrange,
+        ),
+      );
       return;
     }
     final requestedSelectedCount = _selectedDiscountsList.where((discount) {
@@ -1226,7 +1450,15 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       return statusCode == 1;
     }).length;
     if (requestedSelectedCount == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Selected discounts are not in "Requested" status', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.warningOrange));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Selected discounts are not in "Requested" status',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: ApprovalQueueColors.warningOrange,
+        ),
+      );
       return;
     }
     showDialog(
@@ -1265,15 +1497,32 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       List<String> failedDiscounts = [];
       for (var discount in selectedDiscounts) {
         try {
-          final discountId = discount['discountId'] is int ? discount['discountId'] : int.tryParse(discount['discountId']?.toString() ?? '0') ?? 0;
-          final invoiceAmount = discount['invoiceAmount'] is int ? discount['invoiceAmount'] : int.tryParse(discount['invoiceAmount']?.toString() ?? '0') ?? 0;
-          final afterDiscountAmount = discount['invoiceAmountAfterDiscount'] is int ? discount['invoiceAmountAfterDiscount'] : int.tryParse(discount['invoiceAmountAfterDiscount']?.toString() ?? '0') ?? 0;
+          final discountId = discount['discountId'] is int
+              ? discount['discountId']
+              : int.tryParse(discount['discountId']?.toString() ?? '0') ?? 0;
+          final invoiceAmount = discount['invoiceAmount'] is int
+              ? discount['invoiceAmount']
+              : int.tryParse(discount['invoiceAmount']?.toString() ?? '0') ?? 0;
+          final afterDiscountAmount =
+              discount['invoiceAmountAfterDiscount'] is int
+              ? discount['invoiceAmountAfterDiscount']
+              : int.tryParse(
+                      discount['invoiceAmountAfterDiscount']?.toString() ?? '0',
+                    ) ??
+                    0;
           int chargeDiscountAmount = invoiceAmount - afterDiscountAmount;
           final response = await _approvalService.approveDiscount(
             id: discountId,
-            invoiceid: discount['invoiceId'] is int ? discount['invoiceId'] : int.tryParse(discount['invoiceId']?.toString() ?? '0') ?? 0,
-            patient_id: discount['patientId'] is int ? discount['patientId'] : int.tryParse(discount['patientId']?.toString() ?? '0') ?? 0,
-            practitionerid: discount['practitionerId'] is int ? discount['practitionerId'] : int.tryParse(discount['practitionerId']?.toString() ?? '0') ?? 0,
+            invoiceid: discount['invoiceId'] is int
+                ? discount['invoiceId']
+                : int.tryParse(discount['invoiceId']?.toString() ?? '0') ?? 0,
+            patient_id: discount['patientId'] is int
+                ? discount['patientId']
+                : int.tryParse(discount['patientId']?.toString() ?? '0') ?? 0,
+            practitionerid: discount['practitionerId'] is int
+                ? discount['practitionerId']
+                : int.tryParse(discount['practitionerId']?.toString() ?? '0') ??
+                      0,
             requested_userid: discount['requestedUserid']?.toString() ?? '',
             abrivationId: discount['abrivationId']?.toString(),
             approve_note: note,
@@ -1312,15 +1561,44 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       }
       if (mounted) {
         if (successCount > 0) {
-          scaffoldMessenger.showSnackBar(SnackBar(content: Text('✅ Successfully approved $successCount discount(s)', style: GoogleFonts.poppins()), backgroundColor: failedDiscounts.isEmpty ? ApprovalQueueColors.successGreen : ApprovalQueueColors.warningOrange, duration: const Duration(seconds: 3)));
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                '✅ Successfully approved $successCount discount(s)',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: failedDiscounts.isEmpty
+                  ? ApprovalQueueColors.successGreen
+                  : ApprovalQueueColors.warningOrange,
+              duration: const Duration(seconds: 3),
+            ),
+          );
           await _fetchDiscountData();
         } else {
-          scaffoldMessenger.showSnackBar(SnackBar(content: Text('❌ Failed to approve discounts. Please try again.', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed, duration: const Duration(seconds: 3)));
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                '❌ Failed to approve discounts. Please try again.',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: ApprovalQueueColors.errorRed,
+              duration: const Duration(seconds: 3),
+            ),
+          );
         }
       }
     } catch (e) {
       if (mounted) {
-        scaffoldMessenger.showSnackBar(SnackBar(content: Text('❌ Error: ${e.toString()}', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed, duration: const Duration(seconds: 3)));
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              '❌ Error: ${e.toString()}',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: ApprovalQueueColors.errorRed,
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -1355,18 +1633,41 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
           try {
             final prefs = await SharedPreferences.getInstance();
             final approverUserId = prefs.getString('userId') ?? '';
-            final approverUserName = prefs.getString('userName') ?? approverUserId;
+            final approverUserName =
+                prefs.getString('userName') ?? approverUserId;
             if (approverUserId.isEmpty) {
               throw Exception('User ID not found. Please login again.');
             }
-            final invoiceAmount = discount['invoiceAmount'] is int ? discount['invoiceAmount'] : int.tryParse(discount['invoiceAmount']?.toString() ?? '0') ?? 0;
-            final afterDiscountAmount = discount['invoiceAmountAfterDiscount'] is int ? discount['invoiceAmountAfterDiscount'] : int.tryParse(discount['invoiceAmountAfterDiscount']?.toString() ?? '0') ?? 0;
+            final invoiceAmount = discount['invoiceAmount'] is int
+                ? discount['invoiceAmount']
+                : int.tryParse(discount['invoiceAmount']?.toString() ?? '0') ??
+                      0;
+            final afterDiscountAmount =
+                discount['invoiceAmountAfterDiscount'] is int
+                ? discount['invoiceAmountAfterDiscount']
+                : int.tryParse(
+                        discount['invoiceAmountAfterDiscount']?.toString() ??
+                            '0',
+                      ) ??
+                      0;
             int chargeDiscountAmount = invoiceAmount - afterDiscountAmount;
             final response = await _approvalService.approveDiscount(
-              id: discount['discountId'] is int ? discount['discountId'] : int.tryParse(discount['discountId']?.toString() ?? '0') ?? 0,
-              invoiceid: discount['invoiceId'] is int ? discount['invoiceId'] : int.tryParse(discount['invoiceId']?.toString() ?? '0') ?? 0,
-              patient_id: discount['patientId'] is int ? discount['patientId'] : int.tryParse(discount['patientId']?.toString() ?? '0') ?? 0,
-              practitionerid: discount['practitionerId'] is int ? discount['practitionerId'] : int.tryParse(discount['practitionerId']?.toString() ?? '0') ?? 0,
+              id: discount['discountId'] is int
+                  ? discount['discountId']
+                  : int.tryParse(discount['discountId']?.toString() ?? '0') ??
+                        0,
+              invoiceid: discount['invoiceId'] is int
+                  ? discount['invoiceId']
+                  : int.tryParse(discount['invoiceId']?.toString() ?? '0') ?? 0,
+              patient_id: discount['patientId'] is int
+                  ? discount['patientId']
+                  : int.tryParse(discount['patientId']?.toString() ?? '0') ?? 0,
+              practitionerid: discount['practitionerId'] is int
+                  ? discount['practitionerId']
+                  : int.tryParse(
+                          discount['practitionerId']?.toString() ?? '0',
+                        ) ??
+                        0,
               requested_userid: discount['requestedUserid']?.toString() ?? '',
               abrivationId: discount['abrivationId']?.toString(),
               approve_note: note,
@@ -1381,7 +1682,8 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
               discount: discount['discount']?.toString() ?? '0',
               discountAmt: discount['discountAmt'] as int? ?? 0,
               discountSms: false,
-              discount_given_userid: discount['discountGivenUserid']?.toString(),
+              discount_given_userid: discount['discountGivenUserid']
+                  ?.toString(),
               discount_type: discount['discountTypeFlag'] as int? ?? 0,
               discountstatus: 0,
               invoice_amount: invoiceAmount,
@@ -1396,15 +1698,39 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
             );
             if (mounted) {
               if (response['success'] == true) {
-                scaffoldMessenger.showSnackBar(SnackBar(content: Text('✅ Discount #$discountId approved successfully', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.successGreen));
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '✅ Discount #$discountId approved successfully',
+                      style: GoogleFonts.poppins(),
+                    ),
+                    backgroundColor: ApprovalQueueColors.successGreen,
+                  ),
+                );
                 await _fetchDiscountData();
               } else {
-                scaffoldMessenger.showSnackBar(SnackBar(content: Text('❌ ${response['message'] ?? 'Failed to approve discount'}', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed));
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '❌ ${response['message'] ?? 'Failed to approve discount'}',
+                      style: GoogleFonts.poppins(),
+                    ),
+                    backgroundColor: ApprovalQueueColors.errorRed,
+                  ),
+                );
               }
             }
           } catch (e) {
             if (mounted) {
-              scaffoldMessenger.showSnackBar(SnackBar(content: Text('❌ Error: ${e.toString()}', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed));
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '❌ Error: ${e.toString()}',
+                    style: GoogleFonts.poppins(),
+                  ),
+                  backgroundColor: ApprovalQueueColors.errorRed,
+                ),
+              );
             }
           } finally {
             if (mounted) {
@@ -1431,30 +1757,67 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
         constraints: const BoxConstraints(minWidth: 70),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.15) : color.withOpacity(0.08),
+          color: isSelected
+              ? color.withValues(alpha: 0.15)
+              : color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isSelected ? color : color.withOpacity(0.15), width: isSelected ? 2 : 1),
+          border: Border.all(
+            color: isSelected ? color : color.withValues(alpha: 0.15),
+            width: isSelected ? 2 : 1,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(count.toString(), style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+            Text(
+              count.toString(),
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
             const SizedBox(height: 2),
-            Text(title, style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: color), textAlign: TextAlign.center, maxLines: 1),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+            ),
           ],
         ),
       ),
     );
   }
-  
+
   Widget _buildCompactHeader() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [ApprovalQueueColors.primaryDarkBlue, ApprovalQueueColors.midDarkBlue], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 2))],
+        gradient: const LinearGradient(
+          colors: [
+            ApprovalQueueColors.primaryDarkBlue,
+            ApprovalQueueColors.midDarkBlue,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: SafeArea(
         child: Column(
@@ -1466,24 +1829,60 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                 Row(
                   children: [
                     Container(
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
-                      child: IconButton(onPressed: () { if (Navigator.canPop(context)) Navigator.pop(context); }, icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16), padding: const EdgeInsets.all(6)),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        onPressed: () {
+                          if (Navigator.canPop(context)) Navigator.pop(context);
+                        },
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        padding: const EdgeInsets.all(6),
+                      ),
                     ),
                     const SizedBox(width: 8),
-                    Text('Approval Queue', style: GoogleFonts.poppins(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(
+                      'Approval Queue',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
-                  child: Text('${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}', style: GoogleFonts.poppins(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${DateTime.now().day.toString().padLeft(2, '0')}/${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Container(
               height: 40,
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Row(
                 children: List.generate(_tabs.length, (index) {
                   return Expanded(
@@ -1492,11 +1891,32 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                       child: Container(
                         margin: const EdgeInsets.all(3),
                         decoration: BoxDecoration(
-                          color: _selectedTab == index ? Colors.white : Colors.transparent,
+                          color: _selectedTab == index
+                              ? Colors.white
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
-                          boxShadow: _selectedTab == index ? [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 1))] : [],
+                          boxShadow: _selectedTab == index
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : [],
                         ),
-                        child: Center(child: Text(_tabs[index], style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: _selectedTab == index ? ApprovalQueueColors.primaryDarkBlue : Colors.white.withOpacity(0.9)))),
+                        child: Center(
+                          child: Text(
+                            _tabs[index],
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: _selectedTab == index
+                                  ? ApprovalQueueColors.primaryDarkBlue
+                                  : Colors.white.withValues(alpha: 0.9),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   );
@@ -1513,36 +1933,92 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 2))]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           Expanded(
             child: Container(
-              decoration: BoxDecoration(color: ApprovalQueueColors.lightGreyColor, borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                color: ApprovalQueueColors.lightGreyColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: TextField(
                 decoration: InputDecoration(
-                  hintText: 'Search UHID, patient, ${_selectedTab == 0 ? 'refund' : 'discount'} ID...',
-                  hintStyle: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.checkboxColor),
+                  hintText:
+                      'Search UHID, patient, ${_selectedTab == 0 ? 'refund' : 'discount'} ID...',
+                  hintStyle: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: ApprovalQueueColors.checkboxColor,
+                  ),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  prefixIcon: Icon(Icons.search, size: 18, color: ApprovalQueueColors.checkboxColor),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    size: 18,
+                    color: ApprovalQueueColors.checkboxColor,
+                  ),
                 ),
                 onChanged: (value) {
-                  setState(() { _searchQuery = value; });
-                  if (_selectedTab == 0) { _applyFilters(); } else { _filterDiscounts(); }
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                  if (_selectedTab == 0) {
+                    _applyFilters();
+                  } else {
+                    _filterDiscounts();
+                  }
                 },
               ),
             ),
           ),
           const SizedBox(width: 8),
           Container(
-            decoration: BoxDecoration(color: ApprovalQueueColors.primaryDarkBlue, borderRadius: BorderRadius.circular(8)),
-            child: IconButton(onPressed: _handleViewClick, icon: const Icon(Icons.refresh, color: Colors.white, size: 18), tooltip: 'Refresh', padding: const EdgeInsets.all(8)),
+            decoration: BoxDecoration(
+              color: ApprovalQueueColors.primaryDarkBlue,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: IconButton(
+              onPressed: _handleViewClick,
+              icon: const Icon(Icons.refresh, color: Colors.white, size: 18),
+              tooltip: 'Refresh',
+              padding: const EdgeInsets.all(8),
+            ),
           ),
           const SizedBox(width: 8),
           Container(
-            decoration: BoxDecoration(color: _showFilters ? ApprovalQueueColors.warningOrange : ApprovalQueueColors.accentTeal, borderRadius: BorderRadius.circular(8)),
-            child: IconButton(onPressed: () { setState(() { _showFilters = !_showFilters; }); }, icon: Icon(_showFilters ? Icons.filter_alt_off : Icons.filter_alt, color: Colors.white, size: 18), tooltip: 'Filters', padding: const EdgeInsets.all(8)),
+            decoration: BoxDecoration(
+              color: _showFilters
+                  ? ApprovalQueueColors.warningOrange
+                  : ApprovalQueueColors.accentTeal,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: IconButton(
+              onPressed: () {
+                setState(() {
+                  _showFilters = !_showFilters;
+                });
+              },
+              icon: Icon(
+                _showFilters ? Icons.filter_alt_off : Icons.filter_alt,
+                color: Colors.white,
+                size: 18,
+              ),
+              tooltip: 'Filters',
+              padding: const EdgeInsets.all(8),
+            ),
           ),
         ],
       ),
@@ -1554,7 +2030,17 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 2))]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1565,25 +2051,78 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Status', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: ApprovalQueueColors.checkboxColor)),
+                    Text(
+                      'Status',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: ApprovalQueueColors.checkboxColor,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Container(
                       height: 36,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(color: ApprovalQueueColors.lightGreyColor, borderRadius: BorderRadius.circular(6), border: Border.all(color: ApprovalQueueColors.tableBorder)),
+                      decoration: BoxDecoration(
+                        color: ApprovalQueueColors.lightGreyColor,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: ApprovalQueueColors.tableBorder,
+                        ),
+                      ),
                       child: DropdownButton<String>(
-                        value: _selectedTab == 0 ? _selectedRefundStatusValue : _selectedDiscountStatusValue,
+                        value: _selectedTab == 0
+                            ? _selectedRefundStatusValue
+                            : _selectedDiscountStatusValue,
                         isExpanded: true,
                         underline: const SizedBox(),
-                        icon: Icon(Icons.arrow_drop_down, size: 18, color: ApprovalQueueColors.checkboxColor),
-                        items: _selectedTab == 0 
-                            ? _refundStatusOptions.map((option) => DropdownMenuItem<String>(value: option['value'] as String, child: Text(option['label'] as String, style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.textDark)))).toList()
-                            : _discountStatusOptions.map((option) => DropdownMenuItem<String>(value: option['value'] as String, child: Text(option['label'] as String, style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.textDark)))).toList(),
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          size: 18,
+                          color: ApprovalQueueColors.checkboxColor,
+                        ),
+                        items: _selectedTab == 0
+                            ? _refundStatusOptions
+                                  .map(
+                                    (option) => DropdownMenuItem<String>(
+                                      value: option['value'] as String,
+                                      child: Text(
+                                        option['label'] as String,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          color: ApprovalQueueColors.textDark,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList()
+                            : _discountStatusOptions
+                                  .map(
+                                    (option) => DropdownMenuItem<String>(
+                                      value: option['value'] as String,
+                                      child: Text(
+                                        option['label'] as String,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          color: ApprovalQueueColors.textDark,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
                         onChanged: (newValue) {
                           setState(() {
-                            if (_selectedTab == 0) { _selectedRefundStatusValue = newValue!; } else { _selectedDiscountStatusValue = newValue!; }
+                            if (_selectedTab == 0) {
+                              _selectedRefundStatusValue = newValue!;
+                            } else {
+                              _selectedDiscountStatusValue = newValue!;
+                            }
                           });
-                          if (_selectedTab == 0) { _applyFilters(); } else { _filterDiscounts(); }
+                          if (_selectedTab == 0) {
+                            _applyFilters();
+                          } else {
+                            _filterDiscounts();
+                          }
                         },
                       ),
                     ),
@@ -1595,26 +2134,59 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Location', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: ApprovalQueueColors.checkboxColor)),
+                    Text(
+                      'Location',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: ApprovalQueueColors.checkboxColor,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Container(
                       height: 36,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(color: ApprovalQueueColors.lightGreyColor, borderRadius: BorderRadius.circular(6), border: Border.all(color: ApprovalQueueColors.tableBorder)),
+                      decoration: BoxDecoration(
+                        color: ApprovalQueueColors.lightGreyColor,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: ApprovalQueueColors.tableBorder,
+                        ),
+                      ),
                       child: DropdownButton<String>(
                         value: _selectedLocation,
                         isExpanded: true,
                         underline: const SizedBox(),
-                        icon: Icon(Icons.arrow_drop_down, size: 18, color: ApprovalQueueColors.checkboxColor),
-                        items: ['All', ..._locationNameMap.values].map((String value) {
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          size: 18,
+                          color: ApprovalQueueColors.checkboxColor,
+                        ),
+                        items: ['All', ..._locationNameMap.values].map((
+                          String value,
+                        ) {
                           return DropdownMenuItem<String>(
                             value: value,
-                            child: Text(value.length > 20 ? '${value.substring(0, 20)}...' : value, style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.textDark)),
+                            child: Text(
+                              value.length > 20
+                                  ? '${value.substring(0, 20)}...'
+                                  : value,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: ApprovalQueueColors.textDark,
+                              ),
+                            ),
                           );
                         }).toList(),
                         onChanged: (String? newValue) {
-                          setState(() { _selectedLocation = newValue!; });
-                          if (_selectedTab == 0) { _applyFilters(); } else { _filterDiscounts(); }
+                          setState(() {
+                            _selectedLocation = newValue!;
+                          });
+                          if (_selectedTab == 0) {
+                            _applyFilters();
+                          } else {
+                            _filterDiscounts();
+                          }
                         },
                       ),
                     ),
@@ -1631,19 +2203,44 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('From Date', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: ApprovalQueueColors.checkboxColor)),
+                    Text(
+                      'From Date',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: ApprovalQueueColors.checkboxColor,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     GestureDetector(
                       onTap: () => _selectDate(context, true),
                       child: Container(
                         height: 36,
                         padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(color: ApprovalQueueColors.lightGreyColor, borderRadius: BorderRadius.circular(6), border: Border.all(color: ApprovalQueueColors.tableBorder)),
+                        decoration: BoxDecoration(
+                          color: ApprovalQueueColors.lightGreyColor,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: ApprovalQueueColors.tableBorder,
+                          ),
+                        ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(child: Text('${_selectedFromDate.day.toString().padLeft(2, '0')}/${_selectedFromDate.month.toString().padLeft(2, '0')}/${_selectedFromDate.year}', style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.textDark))),
-                            Icon(Icons.calendar_today, size: 14, color: ApprovalQueueColors.checkboxColor),
+                            Expanded(
+                              child: Text(
+                                '${_selectedFromDate.day.toString().padLeft(2, '0')}/${_selectedFromDate.month.toString().padLeft(2, '0')}/${_selectedFromDate.year}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: ApprovalQueueColors.textDark,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.calendar_today,
+                              size: 14,
+                              color: ApprovalQueueColors.checkboxColor,
+                            ),
                           ],
                         ),
                       ),
@@ -1656,19 +2253,44 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('To Date', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: ApprovalQueueColors.checkboxColor)),
+                    Text(
+                      'To Date',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: ApprovalQueueColors.checkboxColor,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     GestureDetector(
                       onTap: () => _selectDate(context, false),
                       child: Container(
                         height: 36,
                         padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(color: ApprovalQueueColors.lightGreyColor, borderRadius: BorderRadius.circular(6), border: Border.all(color: ApprovalQueueColors.tableBorder)),
+                        decoration: BoxDecoration(
+                          color: ApprovalQueueColors.lightGreyColor,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: ApprovalQueueColors.tableBorder,
+                          ),
+                        ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Expanded(child: Text('${_selectedToDate.day.toString().padLeft(2, '0')}/${_selectedToDate.month.toString().padLeft(2, '0')}/${_selectedToDate.year}', style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.textDark))),
-                            Icon(Icons.calendar_today, size: 14, color: ApprovalQueueColors.checkboxColor),
+                            Expanded(
+                              child: Text(
+                                '${_selectedToDate.day.toString().padLeft(2, '0')}/${_selectedToDate.month.toString().padLeft(2, '0')}/${_selectedToDate.year}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: ApprovalQueueColors.textDark,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.calendar_today,
+                              size: 14,
+                              color: ApprovalQueueColors.checkboxColor,
+                            ),
                           ],
                         ),
                       ),
@@ -1693,17 +2315,48 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                     _selectedFromDate = DateTime(2024, 1, 1);
                     _selectedToDate = DateTime.now();
                   });
-                  if (_selectedTab == 0) { _applyFilters(); } else { _fetchDiscountData(); }
+                  if (_selectedTab == 0) {
+                    _applyFilters();
+                  } else {
+                    _fetchDiscountData();
+                  }
                 },
-                child: Text('Clear Filters', style: GoogleFonts.poppins(fontSize: 11, color: ApprovalQueueColors.primaryDarkBlue, fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Clear Filters',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: ApprovalQueueColors.primaryDarkBlue,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: () {
-                  if (_selectedTab == 0) { _fetchRefundData(); } else { _fetchDiscountData(); }
+                  if (_selectedTab == 0) {
+                    _fetchRefundData();
+                  } else {
+                    _fetchDiscountData();
+                  }
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: ApprovalQueueColors.primaryDarkBlue, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
-                child: Text('Apply', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ApprovalQueueColors.primaryDarkBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                child: Text(
+                  'Apply',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
@@ -1713,30 +2366,75 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
   }
 
   Future<void> _selectDate(BuildContext context, bool isFromDate) async {
-    final DateTime? picked = await showDatePicker(context: context, initialDate: isFromDate ? _selectedFromDate : _selectedToDate, firstDate: DateTime(2020), lastDate: DateTime(2030));
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: isFromDate ? _selectedFromDate : _selectedToDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
     if (picked != null && mounted) {
       setState(() {
-        if (isFromDate) { _selectedFromDate = picked; } else { _selectedToDate = picked; }
+        if (isFromDate) {
+          _selectedFromDate = picked;
+        } else {
+          _selectedToDate = picked;
+        }
       });
     }
   }
-  
+
   Widget _buildCompactStatusCards() {
     if (_selectedTab == 0) {
       return Container(
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 2))]),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.1),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: ApprovalQueueColors.primaryDarkBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(6)), child: Icon(Icons.bar_chart, color: ApprovalQueueColors.primaryDarkBlue, size: 16)),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: ApprovalQueueColors.primaryDarkBlue.withValues(
+                      alpha: 0.1,
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    Icons.bar_chart,
+                    color: ApprovalQueueColors.primaryDarkBlue,
+                    size: 16,
+                  ),
+                ),
                 const SizedBox(width: 6),
-                Text('Refund Summary', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: ApprovalQueueColors.textDark)),
+                Text(
+                  'Refund Summary',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: ApprovalQueueColors.textDark,
+                  ),
+                ),
                 const Spacer(),
-                Text('${_filteredRefunds.length} items', style: GoogleFonts.poppins(fontSize: 11, color: ApprovalQueueColors.checkboxColor)),
+                Text(
+                  '${_filteredRefunds.length} items',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: ApprovalQueueColors.checkboxColor,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -1744,15 +2442,35 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildCompactStatusCard('ALL', _allCount, ApprovalQueueColors.primaryDarkBlue),
+                  _buildCompactStatusCard(
+                    'ALL',
+                    _allCount,
+                    ApprovalQueueColors.primaryDarkBlue,
+                  ),
                   const SizedBox(width: 6),
-                  _buildCompactStatusCard('Un-Approved Request', _unApprovedCount, ApprovalQueueColors.warningOrange),
+                  _buildCompactStatusCard(
+                    'Un-Approved Request',
+                    _unApprovedCount,
+                    ApprovalQueueColors.warningOrange,
+                  ),
                   const SizedBox(width: 6),
-                  _buildCompactStatusCard('Un-Paid Approval', _unPaidCount, ApprovalQueueColors.successGreen),
+                  _buildCompactStatusCard(
+                    'Un-Paid Approval',
+                    _unPaidCount,
+                    ApprovalQueueColors.successGreen,
+                  ),
                   const SizedBox(width: 6),
-                  _buildCompactStatusCard('Paid', _paidCount, ApprovalQueueColors.accentTeal),
+                  _buildCompactStatusCard(
+                    'Paid',
+                    _paidCount,
+                    ApprovalQueueColors.accentTeal,
+                  ),
                   const SizedBox(width: 6),
-                  _buildCompactStatusCard('Cancelled', _cancelledCount, ApprovalQueueColors.errorRed),
+                  _buildCompactStatusCard(
+                    'Cancelled',
+                    _cancelledCount,
+                    ApprovalQueueColors.errorRed,
+                  ),
                 ],
               ),
             ),
@@ -1763,17 +2481,53 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
       return Container(
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 2))]),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.1),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: ApprovalQueueColors.primaryDarkBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(6)), child: Icon(Icons.bar_chart, color: ApprovalQueueColors.primaryDarkBlue, size: 16)),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: ApprovalQueueColors.primaryDarkBlue.withValues(
+                      alpha: 0.1,
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    Icons.bar_chart,
+                    color: ApprovalQueueColors.primaryDarkBlue,
+                    size: 16,
+                  ),
+                ),
                 const SizedBox(width: 6),
-                Text('Discount Summary', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: ApprovalQueueColors.textDark)),
+                Text(
+                  'Discount Summary',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: ApprovalQueueColors.textDark,
+                  ),
+                ),
                 const Spacer(),
-                Text('${_filteredDiscounts.length} items', style: GoogleFonts.poppins(fontSize: 11, color: ApprovalQueueColors.checkboxColor)),
+                Text(
+                  '${_filteredDiscounts.length} items',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: ApprovalQueueColors.checkboxColor,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -1781,11 +2535,23 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildCompactStatusCard('ALL', _discountTotalCount, ApprovalQueueColors.primaryDarkBlue),
+                  _buildCompactStatusCard(
+                    'ALL',
+                    _discountTotalCount,
+                    ApprovalQueueColors.primaryDarkBlue,
+                  ),
                   const SizedBox(width: 6),
-                  _buildCompactStatusCard('NON-APPLIED', _discountNonAppliedCount, ApprovalQueueColors.warningOrange),
+                  _buildCompactStatusCard(
+                    'NON-APPLIED',
+                    _discountNonAppliedCount,
+                    ApprovalQueueColors.warningOrange,
+                  ),
                   const SizedBox(width: 6),
-                  _buildCompactStatusCard('NON-APPROVED', _discountNonApprovedCount, ApprovalQueueColors.infoBlue),
+                  _buildCompactStatusCard(
+                    'NON-APPROVED',
+                    _discountNonApprovedCount,
+                    ApprovalQueueColors.infoBlue,
+                  ),
                 ],
               ),
             ),
@@ -1797,42 +2563,59 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
 
   Widget _buildCompactRefundCard(Map<String, dynamic> refund, int index) {
     final patientName = refund['patientName']?.toString() ?? 'N/A';
-    final uhid = refund['uhid']?.toString() ?? refund['abrivationId']?.toString() ?? 'N/A';
+    final uhid =
+        refund['uhid']?.toString() ??
+        refund['abrivationId']?.toString() ??
+        'N/A';
     final refundRequestId = refund['refundRequestId']?.toString() ?? 'N/A';
-    final refundAmount = double.tryParse(refund['refundAmount']?.toString() ?? '0') ?? 0.0;
+    final refundAmount =
+        double.tryParse(refund['refundAmount']?.toString() ?? '0') ?? 0.0;
     final requestedDatetime = refund['requestedDatetime']?.toString() ?? '';
     final invoiceTypeName = getInvoiceTypeFromRefund(refund);
     final displayStatus = _getRefundDisplayStatus(refund);
-    
+
     final bool isActionable = _isActionable(refund);
     final bool isApproved = _isApproved(refund);
-    
+
     final locationName = _getLocationName(refund['branchId']);
     final locationAbbreviation = _getLocationAbbreviation(refund['branchId']);
-    
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.08),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
             decoration: BoxDecoration(
-              color: _getStatusColor(displayStatus).withOpacity(0.05),
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+              color: _getStatusColor(displayStatus).withValues(alpha: 0.05),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
             ),
             child: Row(
               children: [
                 if (isActionable)
                   Checkbox(
                     value: _selectedRefunds[index] ?? false,
-                    onChanged: _isProcessingAction ? null : (value) => _handleCheckboxChange(index, value),
+                    onChanged: _isProcessingAction
+                        ? null
+                        : (value) => _handleCheckboxChange(index, value),
                     activeColor: ApprovalQueueColors.checkboxColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                     visualDensity: VisualDensity.compact,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -1840,20 +2623,37 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                 Expanded(
                   child: Text(
                     refundRequestId,
-                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: ApprovalQueueColors.textDark),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: ApprovalQueueColors.textDark,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(displayStatus).withOpacity(0.1),
+                    color: _getStatusColor(
+                      displayStatus,
+                    ).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _getStatusColor(displayStatus).withOpacity(0.2)),
+                    border: Border.all(
+                      color: _getStatusColor(
+                        displayStatus,
+                      ).withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Text(
                     displayStatus,
-                    style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: _getStatusColor(displayStatus)),
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: _getStatusColor(displayStatus),
+                    ),
                   ),
                 ),
               ],
@@ -1872,19 +2672,30 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                         children: [
                           Text(
                             patientName,
-                            style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: ApprovalQueueColors.primaryDarkBlue),
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: ApprovalQueueColors.primaryDarkBlue,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(Icons.person_outline, size: 14, color: ApprovalQueueColors.checkboxColor),
+                              Icon(
+                                Icons.person_outline,
+                                size: 14,
+                                color: ApprovalQueueColors.checkboxColor,
+                              ),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
                                   'UHID: $uhid',
-                                  style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.textDark),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: ApprovalQueueColors.textDark,
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -1893,12 +2704,21 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(Icons.location_on_outlined, size: 14, color: ApprovalQueueColors.checkboxColor),
+                              Icon(
+                                Icons.location_on_outlined,
+                                size: 14,
+                                color: ApprovalQueueColors.checkboxColor,
+                              ),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
-                                  locationAbbreviation.isNotEmpty ? '$locationName ($locationAbbreviation)' : locationName,
-                                  style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.textDark),
+                                  locationAbbreviation.isNotEmpty
+                                      ? '$locationName ($locationAbbreviation)'
+                                      : locationName,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: ApprovalQueueColors.textDark,
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1908,12 +2728,19 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(Icons.receipt_outlined, size: 14, color: ApprovalQueueColors.checkboxColor),
+                              Icon(
+                                Icons.receipt_outlined,
+                                size: 14,
+                                color: ApprovalQueueColors.checkboxColor,
+                              ),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
                                   invoiceTypeName,
-                                  style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.textDark),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: ApprovalQueueColors.textDark,
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1923,11 +2750,18 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              Icon(Icons.calendar_today_outlined, size: 14, color: ApprovalQueueColors.checkboxColor),
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                size: 14,
+                                color: ApprovalQueueColors.checkboxColor,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 _formatDate(requestedDatetime),
-                                style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.textDark),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: ApprovalQueueColors.textDark,
+                                ),
                               ),
                             ],
                           ),
@@ -1937,11 +2771,21 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text('Amount', style: GoogleFonts.poppins(fontSize: 11, color: ApprovalQueueColors.checkboxColor)),
+                        Text(
+                          'Amount',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: ApprovalQueueColors.checkboxColor,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           _formatIndianCurrency(refundAmount),
-                          style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: ApprovalQueueColors.primaryDarkBlue),
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: ApprovalQueueColors.primaryDarkBlue,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Wrap(
@@ -1950,57 +2794,100 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                           alignment: WrapAlignment.end,
                           children: [
                             OutlinedButton(
-                              onPressed: () => _showCompactRefundDetails(refund),
+                              onPressed: () =>
+                                  _showCompactRefundDetails(refund),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
                                 minimumSize: const Size(60, 32),
                               ),
-                              child: Text('Details', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
+                              child: Text(
+                                'Details',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                             if (isActionable)
                               ElevatedButton(
-                                onPressed: _isProcessingAction ? null : () => _approveRefund(refund),
+                                onPressed: _isProcessingAction
+                                    ? null
+                                    : () => _approveRefund(refund),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: ApprovalQueueColors.successGreen,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  backgroundColor:
+                                      ApprovalQueueColors.successGreen,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
                                   minimumSize: const Size(60, 32),
                                 ),
-                                child: Text('Approve', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
+                                child: Text(
+                                  'Approve',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             if (isActionable)
                               ElevatedButton(
-                                onPressed: _isProcessingAction ? null : () => _cancelRefund(refund),
+                                onPressed: _isProcessingAction
+                                    ? null
+                                    : () => _cancelRefund(refund),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: ApprovalQueueColors.errorRed,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
                                   minimumSize: const Size(60, 32),
                                 ),
-                                child: Text('Cancel', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
+                                child: Text(
+                                  'Cancel',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             if (isApproved)
                               ElevatedButton(
-                                onPressed: _isProcessingAction ? null : () => _payRefund(refund),
+                                onPressed: _isProcessingAction
+                                    ? null
+                                    : () => _payRefund(refund),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: ApprovalQueueColors.accentTeal,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  backgroundColor:
+                                      ApprovalQueueColors.accentTeal,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
                                   minimumSize: const Size(60, 32),
                                 ),
-                                child: Text('Pay', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
+                                child: Text(
+                                  'Pay',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                           ],
                         ),
-              
+                      ],
+                    ),
                   ],
                 ),
               ],
+            ),
           ),
-              ],
-          ),
-    ),
         ],
       ),
     );
-        
   }
 
   Widget _buildCompactDiscountCard(Map<String, dynamic> discount, int index) {
@@ -2011,24 +2898,84 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     final discountTypeFlag = discount['discountTypeFlag'] as int?;
     final discType = _getDiscountType(discountTypeFlag);
     final disc = discount['discount']?.toString() ?? 'N/A';
-    final totalDiscountAmount = double.tryParse(discount['chargeDiscountAmount']?.toString() ?? '0') ?? 0.0;
+    final totalDiscountAmount =
+        double.tryParse(discount['chargeDiscountAmount']?.toString() ?? '0') ??
+        0.0;
     final statusCode = discount['discountStatus'] as int?;
     final status = _getDiscountStatusFromCode(statusCode);
     final isRequested = statusCode == 1;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.08), blurRadius: 4, offset: const Offset(0, 2))]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.08),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            decoration: BoxDecoration(color: _getStatusColor(status).withOpacity(0.05), borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12))),
+            decoration: BoxDecoration(
+              color: _getStatusColor(status).withValues(alpha: 0.05),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
             child: Row(
               children: [
-                if (isRequested) Checkbox(value: _selectedDiscounts[index] ?? false, onChanged: _isApprovingDiscounts ? null : (value) => _handleCheckboxChange(index, value), activeColor: ApprovalQueueColors.checkboxColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                if (isRequested)
+                  Checkbox(
+                    value: _selectedDiscounts[index] ?? false,
+                    onChanged: _isApprovingDiscounts
+                        ? null
+                        : (value) => _handleCheckboxChange(index, value),
+                    activeColor: ApprovalQueueColors.checkboxColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                 if (isRequested) const SizedBox(width: 4),
-                Expanded(child: Text('#$discountId', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: ApprovalQueueColors.textDark), overflow: TextOverflow.ellipsis)),
-                Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: _getStatusColor(status).withOpacity(0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: _getStatusColor(status).withOpacity(0.2))), child: Text(status, style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: _getStatusColor(status)))),
+                Expanded(
+                  child: Text(
+                    '#$discountId',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: ApprovalQueueColors.textDark,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(status).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _getStatusColor(status).withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Text(
+                    status,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: _getStatusColor(status),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -2042,35 +2989,141 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(patientName, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: ApprovalQueueColors.primaryDarkBlue), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(
+                            patientName,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: ApprovalQueueColors.primaryDarkBlue,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           const SizedBox(height: 4),
-                          Text('UHID: $uhid', style: GoogleFonts.poppins(fontSize: 11, color: ApprovalQueueColors.checkboxColor)),
+                          Text(
+                            'UHID: $uhid',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: ApprovalQueueColors.checkboxColor,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text('Invoice ID', style: GoogleFonts.poppins(fontSize: 10, color: ApprovalQueueColors.checkboxColor)),
-                        Text(invoiceId, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: ApprovalQueueColors.textDark)),
+                        Text(
+                          'Invoice ID',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            color: ApprovalQueueColors.checkboxColor,
+                          ),
+                        ),
+                        Text(
+                          invoiceId,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: ApprovalQueueColors.textDark,
+                          ),
+                        ),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Divider(height: 1, color: ApprovalQueueColors.dividerColor),
+                const Divider(
+                  height: 1,
+                  color: ApprovalQueueColors.dividerColor,
+                ),
                 const SizedBox(height: 8),
-                Row(children: [Expanded(child: _buildDiscountInfoRow('Disc. Type', discType)), Expanded(child: _buildDiscountInfoRow('Disc.', disc))]),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildDiscountInfoRow('Disc. Type', discType),
+                    ),
+                    Expanded(child: _buildDiscountInfoRow('Disc.', disc)),
+                  ],
+                ),
                 const SizedBox(height: 6),
-                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: ApprovalQueueColors.lightGreyColor, borderRadius: BorderRadius.circular(8)), child: Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Total Discount', style: GoogleFonts.poppins(fontSize: 10, color: ApprovalQueueColors.checkboxColor)), Text(_formatIndianCurrency(totalDiscountAmount), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: ApprovalQueueColors.primaryDarkBlue))])),])),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: ApprovalQueueColors.lightGreyColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Total Discount',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                color: ApprovalQueueColors.checkboxColor,
+                              ),
+                            ),
+                            Text(
+                              _formatIndianCurrency(totalDiscountAmount),
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: ApprovalQueueColors.primaryDarkBlue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 12),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   alignment: WrapAlignment.end,
                   children: [
-                    OutlinedButton(onPressed: () => _showCompactDiscountDetails(discount), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), minimumSize: const Size(60, 36)), child: Text('Details', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600))),
-                    if (isRequested) ElevatedButton(onPressed: !_isApprovingDiscounts ? () => _approveDiscount(discount) : null, style: ElevatedButton.styleFrom(backgroundColor: ApprovalQueueColors.primaryDarkBlue, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), minimumSize: const Size(60, 36)), child: Text('Approve', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600))),
+                    OutlinedButton(
+                      onPressed: () => _showCompactDiscountDetails(discount),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        minimumSize: const Size(60, 36),
+                      ),
+                      child: Text(
+                        'Details',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (isRequested)
+                      ElevatedButton(
+                        onPressed: !_isApprovingDiscounts
+                            ? () => _approveDiscount(discount)
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: ApprovalQueueColors.primaryDarkBlue,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          minimumSize: const Size(60, 36),
+                        ),
+                        child: Text(
+                          'Approve',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ],
@@ -2081,18 +3134,78 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     );
   }
 
-  Widget _buildDiscountInfoRow(String label, String value, {bool fullWidth = false}) {
+  Widget _buildDiscountInfoRow(
+    String label,
+    String value, {
+    bool fullWidth = false,
+  }) {
     if (fullWidth) {
-      return Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 2), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 90, child: Text('$label:', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: ApprovalQueueColors.checkboxColor))), const SizedBox(width: 8), Expanded(child: Text(value, style: GoogleFonts.poppins(fontSize: 11, color: ApprovalQueueColors.textDark), maxLines: 2, overflow: TextOverflow.ellipsis))]));
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 90,
+              child: Text(
+                '$label:',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: ApprovalQueueColors.checkboxColor,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                value,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: ApprovalQueueColors.textDark,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      );
     }
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: GoogleFonts.poppins(fontSize: 10, color: ApprovalQueueColors.checkboxColor)), Text(value, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: ApprovalQueueColors.textDark), maxLines: 1, overflow: TextOverflow.ellipsis)]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 10,
+            color: ApprovalQueueColors.checkboxColor,
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: ApprovalQueueColors.textDark,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
   }
 
   void _showCompactRefundDetails(Map<String, dynamic> refund) {
     final patientName = refund['patientName']?.toString() ?? 'N/A';
-    final uhid = refund['uhid']?.toString() ?? refund['abrivationId']?.toString() ?? 'N/A';
+    final uhid =
+        refund['uhid']?.toString() ??
+        refund['abrivationId']?.toString() ??
+        'N/A';
     final refundRequestId = refund['refundRequestId']?.toString() ?? 'N/A';
-    final refundAmount = double.tryParse(refund['refundAmount']?.toString() ?? '0') ?? 0.0;
+    final refundAmount =
+        double.tryParse(refund['refundAmount']?.toString() ?? '0') ?? 0.0;
     final requestedDatetime = refund['requestedDatetime']?.toString() ?? '';
     final refundNote = refund['refundNote']?.toString() ?? '';
     final displayStatus = _getRefundDisplayStatus(refund);
@@ -2101,7 +3214,9 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       isScrollControlled: true,
       builder: (context) => DraggableScrollableSheet(
         expand: false,
@@ -2113,9 +3228,78 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: Container(width: 40, height: 3, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               const SizedBox(height: 12),
-              Row(children: [Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: ApprovalQueueColors.primaryDarkBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.receipt_long, color: ApprovalQueueColors.primaryDarkBlue, size: 20)), const SizedBox(width: 8), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text("Refund Details", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: ApprovalQueueColors.textDark)), Text(refundRequestId, style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.checkboxColor))])), Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: _getStatusColor(displayStatus).withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Text(displayStatus, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: _getStatusColor(displayStatus))))]),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: ApprovalQueueColors.primaryDarkBlue.withValues(
+                        alpha: 0.1,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.receipt_long,
+                      color: ApprovalQueueColors.primaryDarkBlue,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Refund Details",
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: ApprovalQueueColors.textDark,
+                          ),
+                        ),
+                        Text(
+                          refundRequestId,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: ApprovalQueueColors.checkboxColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(
+                        displayStatus,
+                      ).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      displayStatus,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _getStatusColor(displayStatus),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               Expanded(
                 child: ListView(
@@ -2123,21 +3307,122 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                   children: [
                     _buildCompactDetailRow('Patient Name', patientName),
                     _buildCompactDetailRow('UHID', uhid),
-                    _buildCompactDetailRow('Amount', _formatIndianCurrency(refundAmount)),
-                    _buildCompactDetailRow('Requested Date', _formatDateTime(requestedDatetime)),
-                    if (refundNote.isNotEmpty) _buildCompactDetailRow('Refund Note', refundNote),
+                    _buildCompactDetailRow(
+                      'Amount',
+                      _formatIndianCurrency(refundAmount),
+                    ),
+                    _buildCompactDetailRow(
+                      'Requested Date',
+                      _formatDateTime(requestedDatetime),
+                    ),
+                    if (refundNote.isNotEmpty)
+                      _buildCompactDetailRow('Refund Note', refundNote),
                   ],
                 ),
               ),
               if (isActionable)
                 Padding(
                   padding: const EdgeInsets.only(top: 16),
-                  child: Row(children: [Expanded(child: OutlinedButton(onPressed: _isProcessingAction ? null : () { Navigator.pop(context); _cancelRefund(refund); }, style: OutlinedButton.styleFrom(foregroundColor: ApprovalQueueColors.errorRed, side: BorderSide(color: ApprovalQueueColors.errorRed), padding: const EdgeInsets.symmetric(vertical: 12)), child: Text("Cancel Request", style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)))), const SizedBox(width: 12), Expanded(child: ElevatedButton(onPressed: _isProcessingAction ? null : () { Navigator.pop(context); _approveRefund(refund); }, style: ElevatedButton.styleFrom(backgroundColor: ApprovalQueueColors.primaryDarkBlue, padding: const EdgeInsets.symmetric(vertical: 12)), child: Text("Approve", style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600))))]),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _isProcessingAction
+                              ? null
+                              : () {
+                                  Navigator.pop(context);
+                                  _cancelRefund(refund);
+                                },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: ApprovalQueueColors.errorRed,
+                            side: BorderSide(
+                              color: ApprovalQueueColors.errorRed,
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(
+                            "Cancel Request",
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isProcessingAction
+                              ? null
+                              : () {
+                                  Navigator.pop(context);
+                                  _approveRefund(refund);
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                ApprovalQueueColors.primaryDarkBlue,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(
+                            "Approve",
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               if (isApproved)
                 Padding(
                   padding: const EdgeInsets.only(top: 16),
-                  child: Row(children: [Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context), style: OutlinedButton.styleFrom(foregroundColor: ApprovalQueueColors.checkboxColor, side: BorderSide(color: ApprovalQueueColors.dividerColor), padding: const EdgeInsets.symmetric(vertical: 12)), child: Text("Close", style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)))), const SizedBox(width: 12), Expanded(child: ElevatedButton(onPressed: _isProcessingAction ? null : () { Navigator.pop(context); _payRefund(refund); }, style: ElevatedButton.styleFrom(backgroundColor: ApprovalQueueColors.accentTeal, padding: const EdgeInsets.symmetric(vertical: 12)), child: Text("Pay Now", style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600))))]),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: ApprovalQueueColors.checkboxColor,
+                            side: BorderSide(
+                              color: ApprovalQueueColors.dividerColor,
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(
+                            "Close",
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isProcessingAction
+                              ? null
+                              : () {
+                                  Navigator.pop(context);
+                                  _payRefund(refund);
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ApprovalQueueColors.accentTeal,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(
+                            "Pay Now",
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
             ],
           ),
@@ -2150,16 +3435,25 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
     final discountId = discount['discountId']?.toString() ?? 'N/A';
     final patientName = discount['patientName']?.toString() ?? 'N/A';
     final uhid = discount['abrivationId']?.toString() ?? 'N/A';
-    final invoiceAmount = double.tryParse(discount['invoiceAmount']?.toString() ?? '0') ?? 0.0;
-    final totalDiscountAmount = double.tryParse(discount['chargeDiscountAmount']?.toString() ?? '0') ?? 0.0;
-    final afterDiscount = double.tryParse(discount['invoiceAmountAfterDiscount']?.toString() ?? '0') ?? 0.0;
+    final invoiceAmount =
+        double.tryParse(discount['invoiceAmount']?.toString() ?? '0') ?? 0.0;
+    final totalDiscountAmount =
+        double.tryParse(discount['chargeDiscountAmount']?.toString() ?? '0') ??
+        0.0;
+    final afterDiscount =
+        double.tryParse(
+          discount['invoiceAmountAfterDiscount']?.toString() ?? '0',
+        ) ??
+        0.0;
     final statusCode = discount['discountStatus'] as int?;
     final status = _getDiscountStatusFromCode(statusCode);
     final isRequested = statusCode == 1;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       isScrollControlled: true,
       builder: (context) => DraggableScrollableSheet(
         expand: false,
@@ -2171,9 +3465,76 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: Container(width: 40, height: 3, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)))),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               const SizedBox(height: 12),
-              Row(children: [Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: ApprovalQueueColors.primaryDarkBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.discount, color: ApprovalQueueColors.primaryDarkBlue, size: 20)), const SizedBox(width: 8), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text("Discount Details", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: ApprovalQueueColors.textDark)), Text('#$discountId', style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.checkboxColor))])), Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: _getStatusColor(status).withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Text(status, style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: _getStatusColor(status))))]),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: ApprovalQueueColors.primaryDarkBlue.withValues(
+                        alpha: 0.1,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.discount,
+                      color: ApprovalQueueColors.primaryDarkBlue,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Discount Details",
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: ApprovalQueueColors.textDark,
+                          ),
+                        ),
+                        Text(
+                          '#$discountId',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: ApprovalQueueColors.checkboxColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(status).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      status,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: _getStatusColor(status),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               Expanded(
                 child: ListView(
@@ -2182,14 +3543,83 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
                     _buildCompactDetailRow('Patient Name', patientName),
                     _buildCompactDetailRow('UHID', uhid),
                     const SizedBox(height: 8),
-                    Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: ApprovalQueueColors.lightGreyColor, borderRadius: BorderRadius.circular(8)), child: Column(children: [_buildCompactDetailRow('Invoice Amount', _formatIndianCurrency(invoiceAmount)), const SizedBox(height: 4), _buildCompactDetailRow('Total Discount', _formatIndianCurrency(totalDiscountAmount)), const SizedBox(height: 4), _buildCompactDetailRow('After Discount', _formatIndianCurrency(afterDiscount))])),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: ApprovalQueueColors.lightGreyColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildCompactDetailRow(
+                            'Invoice Amount',
+                            _formatIndianCurrency(invoiceAmount),
+                          ),
+                          const SizedBox(height: 4),
+                          _buildCompactDetailRow(
+                            'Total Discount',
+                            _formatIndianCurrency(totalDiscountAmount),
+                          ),
+                          const SizedBox(height: 4),
+                          _buildCompactDetailRow(
+                            'After Discount',
+                            _formatIndianCurrency(afterDiscount),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
               if (isRequested)
                 Padding(
                   padding: const EdgeInsets.only(top: 16),
-                  child: Row(children: [Expanded(child: OutlinedButton(onPressed: () { Navigator.pop(context); }, style: OutlinedButton.styleFrom(foregroundColor: ApprovalQueueColors.errorRed, side: BorderSide(color: ApprovalQueueColors.errorRed), padding: const EdgeInsets.symmetric(vertical: 12)), child: Text("Reject", style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)))), const SizedBox(width: 10), Expanded(child: ElevatedButton(onPressed: () { Navigator.pop(context); _approveDiscount(discount); }, style: ElevatedButton.styleFrom(backgroundColor: ApprovalQueueColors.primaryDarkBlue, padding: const EdgeInsets.symmetric(vertical: 12)), child: Text("Approve", style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600))))]),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: ApprovalQueueColors.errorRed,
+                            side: BorderSide(
+                              color: ApprovalQueueColors.errorRed,
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(
+                            "Reject",
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _approveDiscount(discount);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                ApprovalQueueColors.primaryDarkBlue,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(
+                            "Approve",
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
             ],
           ),
@@ -2199,19 +3629,128 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
   }
 
   Widget _buildCompactDetailRow(String label, String value) {
-    return Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: ApprovalQueueColors.lightGreyColor, borderRadius: BorderRadius.circular(8)), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 110, child: Text('$label:', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: ApprovalQueueColors.textDark))), const SizedBox(width: 8), Expanded(child: Text(value, style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.checkboxColor)))]));
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: ApprovalQueueColors.lightGreyColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              '$label:',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: ApprovalQueueColors.textDark,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: ApprovalQueueColors.checkboxColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildCompactEmptyState() {
-    return Center(child: Padding(padding: const EdgeInsets.all(20), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(_selectedTab == 0 ? Icons.receipt_long_outlined : Icons.discount_outlined, size: 48, color: ApprovalQueueColors.checkboxColor.withOpacity(0.3)), const SizedBox(height: 12), Text(_selectedTab == 0 ? 'No refund requests found' : 'No discount requests found', style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.checkboxColor, fontWeight: FontWeight.w500))])));
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              _selectedTab == 0
+                  ? Icons.receipt_long_outlined
+                  : Icons.discount_outlined,
+              size: 48,
+              color: ApprovalQueueColors.checkboxColor.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _selectedTab == 0
+                  ? 'No refund requests found'
+                  : 'No discount requests found',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: ApprovalQueueColors.checkboxColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
-  
+
   Widget _buildCompactLoadingState() {
-    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const SizedBox(width: 40, height: 40, child: CircularProgressIndicator(strokeWidth: 2.5)), const SizedBox(height: 12), Text('Loading...', style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.checkboxColor, fontWeight: FontWeight.w500))]));
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Loading...',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: ApprovalQueueColors.checkboxColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildCompactApiErrorIndicator(String error) {
-    return Container(margin: const EdgeInsets.fromLTRB(16, 8, 16, 8), padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: ApprovalQueueColors.errorRed.withOpacity(0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: ApprovalQueueColors.errorRed.withOpacity(0.2))), child: Row(children: [Icon(Icons.error_outline, color: ApprovalQueueColors.errorRed, size: 16), const SizedBox(width: 8), Expanded(child: Text(error, style: GoogleFonts.poppins(fontSize: 11, color: ApprovalQueueColors.errorRed)))]));
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: ApprovalQueueColors.errorRed.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: ApprovalQueueColors.errorRed.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.error_outline,
+            color: ApprovalQueueColors.errorRed,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              error,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: ApprovalQueueColors.errorRed,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -2225,42 +3764,280 @@ class _ApprovalQueuePageState extends State<ApprovalQueuePage> with AutomaticKee
         child: Column(
           children: [
             _buildCompactHeader(),
-            if (_refundApiError.isNotEmpty && _selectedTab == 0) _buildCompactApiErrorIndicator('Refunds: $_refundApiError'),
-            if (_discountApiError.isNotEmpty && _selectedTab == 1) _buildCompactApiErrorIndicator('Discounts: $_discountApiError'),
-            if (_locationApiError.isNotEmpty) _buildCompactApiErrorIndicator('Location: $_locationApiError'),
-            if (_invoiceTypeApiError.isNotEmpty) _buildCompactApiErrorIndicator('Invoice Type: $_invoiceTypeApiError'),
-            if (_practitionerApiError.isNotEmpty) _buildCompactApiErrorIndicator('Practitioner: $_practitionerApiError'),
-            if (_bankApiError.isNotEmpty) _buildCompactApiErrorIndicator('Bank: $_bankApiError'),
+            if (_refundApiError.isNotEmpty && _selectedTab == 0)
+              _buildCompactApiErrorIndicator('Refunds: $_refundApiError'),
+            if (_discountApiError.isNotEmpty && _selectedTab == 1)
+              _buildCompactApiErrorIndicator('Discounts: $_discountApiError'),
+            if (_locationApiError.isNotEmpty)
+              _buildCompactApiErrorIndicator('Location: $_locationApiError'),
+            if (_invoiceTypeApiError.isNotEmpty)
+              _buildCompactApiErrorIndicator(
+                'Invoice Type: $_invoiceTypeApiError',
+              ),
+            if (_practitionerApiError.isNotEmpty)
+              _buildCompactApiErrorIndicator(
+                'Practitioner: $_practitionerApiError',
+              ),
+            if (_bankApiError.isNotEmpty)
+              _buildCompactApiErrorIndicator('Bank: $_bankApiError'),
             Expanded(
               child: ListView(
                 children: [
                   _buildCompactSearchBar(),
                   _buildCompactFilters(),
                   _buildCompactStatusCards(),
-                  if (_selectedTab == 0 && _filteredRefunds.isNotEmpty && _selectedRefundsCount > 0)
+                  if (_selectedTab == 0 &&
+                      _filteredRefunds.isNotEmpty &&
+                      _selectedRefundsCount > 0)
                     Container(
-                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: ApprovalQueueColors.primaryDarkBlue, borderRadius: BorderRadius.circular(12)),
-                      child: Row(children: [Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(6)), child: Icon(Icons.check_circle_outline, color: Colors.white, size: 16)), const SizedBox(width: 8), Expanded(child: Text('$_selectedRefundsCount refund${_selectedRefundsCount > 1 ? 's' : ''} selected', style: GoogleFonts.poppins(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600))), ElevatedButton.icon(onPressed: _isProcessingAction ? null : _approveSelectedRefunds, style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: ApprovalQueueColors.primaryDarkBlue, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)), icon: _isProcessingAction ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.check_circle_outline, size: 14), label: Text('Approve Selected', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)))]),
+                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: ApprovalQueueColors.primaryDarkBlue,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(
+                              Icons.check_circle_outline,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '$_selectedRefundsCount refund${_selectedRefundsCount > 1 ? 's' : ''} selected',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: _isProcessingAction
+                                ? null
+                                : _approveSelectedRefunds,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor:
+                                  ApprovalQueueColors.primaryDarkBlue,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            icon: _isProcessingAction
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.check_circle_outline,
+                                    size: 14,
+                                  ),
+                            label: Text(
+                              'Approve Selected',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   if (_selectedTab == 0 && _filteredRefunds.isNotEmpty)
                     Container(
-                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8), padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                      child: Row(children: [Checkbox(value: _selectAll, onChanged: (_selectedTab == 0 && _isProcessingAction) ? null : _handleSelectAll, activeColor: ApprovalQueueColors.checkboxColor), const SizedBox(width: 6), Text('Select All', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: ApprovalQueueColors.textDark)), const Spacer(), Text('${_filteredRefunds.length} items', style: GoogleFonts.poppins(fontSize: 11, color: ApprovalQueueColors.checkboxColor))]),
+                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: _selectAll,
+                            onChanged:
+                                (_selectedTab == 0 && _isProcessingAction)
+                                ? null
+                                : _handleSelectAll,
+                            activeColor: ApprovalQueueColors.checkboxColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Select All',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: ApprovalQueueColors.textDark,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${_filteredRefunds.length} items',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: ApprovalQueueColors.checkboxColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   if (_selectedTab == 0)
-                    _isLoadingRefunds ? _buildCompactLoadingState() : _filteredRefunds.isEmpty ? _buildCompactEmptyState() : Column(children: _filteredRefunds.asMap().entries.map((entry) => _buildCompactRefundCard(entry.value as Map<String, dynamic>, entry.key)).toList()),
-                  if (_selectedTab == 1 && _filteredDiscounts.isNotEmpty && _selectedDiscountsCount > 0)
+                    _isLoadingRefunds
+                        ? _buildCompactLoadingState()
+                        : _filteredRefunds.isEmpty
+                        ? _buildCompactEmptyState()
+                        : Column(
+                            children: _filteredRefunds
+                                .asMap()
+                                .entries
+                                .map(
+                                  (entry) => _buildCompactRefundCard(
+                                    entry.value as Map<String, dynamic>,
+                                    entry.key,
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                  if (_selectedTab == 1 &&
+                      _filteredDiscounts.isNotEmpty &&
+                      _selectedDiscountsCount > 0)
                     Container(
-                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: ApprovalQueueColors.primaryDarkBlue, borderRadius: BorderRadius.circular(12)),
-                      child: Row(children: [Container(padding: const EdgeInsets.all(4), decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(6)), child: Icon(Icons.check_circle_outline, color: Colors.white, size: 16)), const SizedBox(width: 8), Expanded(child: Text('$_selectedDiscountsCount discount${_selectedDiscountsCount > 1 ? 's' : ''} selected', style: GoogleFonts.poppins(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600))), ElevatedButton.icon(onPressed: _isApprovingDiscounts ? null : _approveSelectedDiscounts, style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: ApprovalQueueColors.primaryDarkBlue, padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)), icon: _isApprovingDiscounts ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.check_circle_outline, size: 14), label: Text('Approve Selected', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)))]),
+                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: ApprovalQueueColors.primaryDarkBlue,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Icon(
+                              Icons.check_circle_outline,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '$_selectedDiscountsCount discount${_selectedDiscountsCount > 1 ? 's' : ''} selected',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: _isApprovingDiscounts
+                                ? null
+                                : _approveSelectedDiscounts,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor:
+                                  ApprovalQueueColors.primaryDarkBlue,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                            ),
+                            icon: _isApprovingDiscounts
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.check_circle_outline,
+                                    size: 14,
+                                  ),
+                            label: Text(
+                              'Approve Selected',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   if (_selectedTab == 1 && _filteredDiscounts.isNotEmpty)
                     Container(
-                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8), padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                      child: Row(children: [Checkbox(value: _selectAllDiscounts, onChanged: (_selectedTab == 1 && _isApprovingDiscounts) ? null : _handleSelectAll, activeColor: ApprovalQueueColors.checkboxColor), const SizedBox(width: 6), Text('Select All', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: ApprovalQueueColors.textDark)), const Spacer(), Text('${_filteredDiscounts.length} items', style: GoogleFonts.poppins(fontSize: 11, color: ApprovalQueueColors.checkboxColor))]),
+                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: _selectAllDiscounts,
+                            onChanged:
+                                (_selectedTab == 1 && _isApprovingDiscounts)
+                                ? null
+                                : _handleSelectAll,
+                            activeColor: ApprovalQueueColors.checkboxColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Select All',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: ApprovalQueueColors.textDark,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${_filteredDiscounts.length} items',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: ApprovalQueueColors.checkboxColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   if (_selectedTab == 1)
-                    _isLoadingDiscounts ? _buildCompactLoadingState() : _filteredDiscounts.isEmpty ? _buildCompactEmptyState() : Column(children: _filteredDiscounts.asMap().entries.map((entry) => _buildCompactDiscountCard(entry.value as Map<String, dynamic>, entry.key)).toList()),
+                    _isLoadingDiscounts
+                        ? _buildCompactLoadingState()
+                        : _filteredDiscounts.isEmpty
+                        ? _buildCompactEmptyState()
+                        : Column(
+                            children: _filteredDiscounts
+                                .asMap()
+                                .entries
+                                .map(
+                                  (entry) => _buildCompactDiscountCard(
+                                    entry.value as Map<String, dynamic>,
+                                    entry.key,
+                                  ),
+                                )
+                                .toList(),
+                          ),
                 ],
               ),
             ),
@@ -2278,8 +4055,16 @@ class ApproveNoteDialog extends StatefulWidget {
   final String patientName;
   final String type;
   final Function(String) onApprove;
-  const ApproveNoteDialog({super.key, required this.title, required this.itemId, required this.patientName, required this.type, required this.onApprove});
-  @override State<ApproveNoteDialog> createState() => _ApproveNoteDialogState();
+  const ApproveNoteDialog({
+    super.key,
+    required this.title,
+    required this.itemId,
+    required this.patientName,
+    required this.type,
+    required this.onApprove,
+  });
+  @override
+  State<ApproveNoteDialog> createState() => _ApproveNoteDialogState();
 }
 
 class _ApproveNoteDialogState extends State<ApproveNoteDialog> {
@@ -2291,27 +4076,177 @@ class _ApproveNoteDialogState extends State<ApproveNoteDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: ApprovalQueueColors.primaryDarkBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Icon(Icons.check_circle_outline, color: ApprovalQueueColors.primaryDarkBlue, size: 20)), const SizedBox(width: 8), Expanded(child: Text(widget.title, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: ApprovalQueueColors.textDark)))]),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: ApprovalQueueColors.primaryDarkBlue.withValues(
+                      alpha: 0.1,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.check_circle_outline,
+                    color: ApprovalQueueColors.primaryDarkBlue,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: ApprovalQueueColors.textDark,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
-            if (widget.type == 'Refund') Text('Refund ID: ${widget.itemId}', style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.checkboxColor)) else Text('Discount ID: ${widget.itemId}', style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.checkboxColor)),
-            if (widget.patientName != 'Bulk Approval') Text('Patient: ${widget.patientName}', style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.checkboxColor)),
+            if (widget.type == 'Refund')
+              Text(
+                'Refund ID: ${widget.itemId}',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: ApprovalQueueColors.checkboxColor,
+                ),
+              )
+            else
+              Text(
+                'Discount ID: ${widget.itemId}',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: ApprovalQueueColors.checkboxColor,
+                ),
+              ),
+            if (widget.patientName != 'Bulk Approval')
+              Text(
+                'Patient: ${widget.patientName}',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: ApprovalQueueColors.checkboxColor,
+                ),
+              ),
             const SizedBox(height: 12),
-            Text('Add an approval note (optional):', style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.checkboxColor)),
+            Text(
+              'Add an approval note (optional):',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: ApprovalQueueColors.checkboxColor,
+              ),
+            ),
             const SizedBox(height: 8),
-            Container(decoration: BoxDecoration(color: ApprovalQueueColors.lightGreyColor, borderRadius: BorderRadius.circular(8)), child: TextField(controller: _noteController, decoration: InputDecoration(hintText: 'Enter approval note here...', hintStyle: GoogleFonts.poppins(color: ApprovalQueueColors.checkboxColor, fontSize: 12), border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)), maxLines: 2, style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.textDark))),
+            Container(
+              decoration: BoxDecoration(
+                color: ApprovalQueueColors.lightGreyColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: TextField(
+                controller: _noteController,
+                decoration: InputDecoration(
+                  hintText: 'Enter approval note here...',
+                  hintStyle: GoogleFonts.poppins(
+                    color: ApprovalQueueColors.checkboxColor,
+                    fontSize: 12,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                ),
+                maxLines: 2,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: ApprovalQueueColors.textDark,
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
-            Row(children: [Expanded(child: OutlinedButton(onPressed: _isApproving ? null : () { Navigator.pop(context); }, style: OutlinedButton.styleFrom(foregroundColor: ApprovalQueueColors.checkboxColor, side: BorderSide(color: ApprovalQueueColors.dividerColor), padding: const EdgeInsets.symmetric(vertical: 10)), child: Text('Cancel', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)))), const SizedBox(width: 12), Expanded(child: ElevatedButton(onPressed: _isApproving ? null : () async { setState(() { _isApproving = true; }); await widget.onApprove(_noteController.text.trim()); if (mounted) { Navigator.pop(context); } }, style: ElevatedButton.styleFrom(backgroundColor: ApprovalQueueColors.primaryDarkBlue, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 10)), child: _isApproving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text('Approve Now', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600))))]),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isApproving
+                        ? null
+                        : () {
+                            Navigator.pop(context);
+                          },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ApprovalQueueColors.checkboxColor,
+                      side: BorderSide(color: ApprovalQueueColors.dividerColor),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isApproving
+                        ? null
+                        : () async {
+                            setState(() {
+                              _isApproving = true;
+                            });
+                            await widget.onApprove(_noteController.text.trim());
+                            if (mounted) {
+                              Navigator.pop(context);
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ApprovalQueueColors.primaryDarkBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: _isApproving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'Approve Now',
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
-  @override void dispose() { _noteController.dispose(); super.dispose(); }
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
 }
 
 // Payment Dialog
@@ -2320,8 +4255,15 @@ class PaymentDialog extends StatefulWidget {
   final dynamic invoiceData;
   final Map<int, String> bankNameMap;
   final VoidCallback onPaymentComplete;
-  const PaymentDialog({super.key, required this.refund, required this.invoiceData, required this.bankNameMap, required this.onPaymentComplete});
-  @override State<PaymentDialog> createState() => _PaymentDialogState();
+  const PaymentDialog({
+    super.key,
+    required this.refund,
+    required this.invoiceData,
+    required this.bankNameMap,
+    required this.onPaymentComplete,
+  });
+  @override
+  State<PaymentDialog> createState() => _PaymentDialogState();
 }
 
 class _PaymentDialogState extends State<PaymentDialog> {
@@ -2329,85 +4271,545 @@ class _PaymentDialogState extends State<PaymentDialog> {
   int? _selectedBankId;
   final TextEditingController _creditNoteController = TextEditingController();
   bool _isProcessing = false;
-  final List<Map<String, String>> _paymodeOptions = [{'label': 'Select Paymode', 'value': ''}, {'label': 'Cash', 'value': 'cash'}, {'label': 'D/Card', 'value': 'd_card'}, {'label': 'Cheque', 'value': 'cheque'}, {'label': 'UPI Payment', 'value': 'upi'}, {'label': 'NEFT/RTGS', 'value': 'neft_rtgs'}, {'label': 'Hospital', 'value': 'hospital'}, {'label': 'Credit', 'value': 'credit'}];
+  final List<Map<String, String>> _paymodeOptions = [
+    {'label': 'Select Paymode', 'value': ''},
+    {'label': 'Cash', 'value': 'cash'},
+    {'label': 'D/Card', 'value': 'd_card'},
+    {'label': 'Cheque', 'value': 'cheque'},
+    {'label': 'UPI Payment', 'value': 'upi'},
+    {'label': 'NEFT/RTGS', 'value': 'neft_rtgs'},
+    {'label': 'Hospital', 'value': 'hospital'},
+    {'label': 'Credit', 'value': 'credit'},
+  ];
   final List<String> _paymodesRequiringBank = ['upi', 'd_card', 'neft_rtgs'];
-  bool get _isBankRequired => _selectedPaymode.isNotEmpty && _paymodesRequiringBank.contains(_selectedPaymode);
+  bool get _isBankRequired =>
+      _selectedPaymode.isNotEmpty &&
+      _paymodesRequiringBank.contains(_selectedPaymode);
   @override
   Widget build(BuildContext context) {
-    final refundAmount = double.tryParse(widget.refund['refundAmount']?.toString() ?? '0') ?? 0.0;
+    final refundAmount =
+        double.tryParse(widget.refund['refundAmount']?.toString() ?? '0') ??
+        0.0;
     final invoiceId = widget.refund['invoiceId']?.toString() ?? '';
     final patientName = widget.refund['patientName']?.toString() ?? 'Unknown';
     return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(margin: const EdgeInsets.only(top: 12), width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-          Padding(padding: const EdgeInsets.all(16), child: Row(children: [Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: ApprovalQueueColors.accentTeal.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Icon(Icons.payment, color: ApprovalQueueColors.accentTeal, size: 24)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Are You Sure You Want To Pay?', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: ApprovalQueueColors.textDark)), Text('Refund #$invoiceId', style: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.checkboxColor))]))])),
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: ApprovalQueueColors.accentTeal.withValues(
+                      alpha: 0.1,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.payment,
+                    color: ApprovalQueueColors.accentTeal,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Are You Sure You Want To Pay?',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: ApprovalQueueColors.textDark,
+                        ),
+                      ),
+                      Text(
+                        'Refund #$invoiceId',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: ApprovalQueueColors.checkboxColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           const Divider(height: 1, color: ApprovalQueueColors.dividerColor),
-          Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            _buildInfoRow('Date', _getCurrentDate()), const SizedBox(height: 12),
-            _buildInfoRow('Name', patientName), const SizedBox(height: 12),
-            _buildInfoRow('Invoice', invoiceId), const SizedBox(height: 12),
-            _buildAmountRow('Refund Amount', refundAmount), const SizedBox(height: 16),
-            _buildPaymodeDropdown(), const SizedBox(height: 16),
-            if (_isBankRequired) ...[_buildBankDropdown(), const SizedBox(height: 16)],
-            _buildCreditNoteField(), const SizedBox(height: 24),
-          ]))),
-          Padding(padding: const EdgeInsets.all(16), child: Row(children: [Expanded(child: OutlinedButton(onPressed: _isProcessing ? null : () => Navigator.pop(context), style: OutlinedButton.styleFrom(foregroundColor: ApprovalQueueColors.checkboxColor, side: BorderSide(color: ApprovalQueueColors.dividerColor), padding: const EdgeInsets.symmetric(vertical: 12)), child: Text('Cancel', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)))), const SizedBox(width: 12), Expanded(child: ElevatedButton(onPressed: _isProcessing || !_isFormValid() ? null : _processPayment, style: ElevatedButton.styleFrom(backgroundColor: ApprovalQueueColors.accentTeal, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)), child: _isProcessing ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text('Pay Now', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600))))])),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildInfoRow('Date', _getCurrentDate()),
+                  const SizedBox(height: 12),
+                  _buildInfoRow('Name', patientName),
+                  const SizedBox(height: 12),
+                  _buildInfoRow('Invoice', invoiceId),
+                  const SizedBox(height: 12),
+                  _buildAmountRow('Refund Amount', refundAmount),
+                  const SizedBox(height: 16),
+                  _buildPaymodeDropdown(),
+                  const SizedBox(height: 16),
+                  if (_isBankRequired) ...[
+                    _buildBankDropdown(),
+                    const SizedBox(height: 16),
+                  ],
+                  _buildCreditNoteField(),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isProcessing
+                        ? null
+                        : () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ApprovalQueueColors.checkboxColor,
+                      side: BorderSide(color: ApprovalQueueColors.dividerColor),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: Text(
+                      'Cancel',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _isProcessing || !_isFormValid()
+                        ? null
+                        : _processPayment,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ApprovalQueueColors.accentTeal,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: _isProcessing
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'Pay Now',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
-  String _getCurrentDate() { final now = DateTime.now(); return '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}'; }
-  Widget _buildInfoRow(String label, String value) { return Container(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 100, child: Text('$label:', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: ApprovalQueueColors.checkboxColor))), Expanded(child: Text(value, style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.textDark)))])); }
-  Widget _buildAmountRow(String label, double amount) { return Container(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 100, child: Text('$label:', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: ApprovalQueueColors.checkboxColor))), Expanded(child: Text(_formatIndianCurrency(amount), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: ApprovalQueueColors.primaryDarkBlue)))])); }
-  String _formatIndianCurrency(double amount) { return '₹${amount.toStringAsFixed(2)}'; }
-  Widget _buildPaymodeDropdown() { return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Paymode:', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: ApprovalQueueColors.checkboxColor)), const SizedBox(height: 6), Container(padding: const EdgeInsets.symmetric(horizontal: 12), decoration: BoxDecoration(color: ApprovalQueueColors.lightGreyColor, borderRadius: BorderRadius.circular(10), border: Border.all(color: ApprovalQueueColors.dividerColor)), child: DropdownButtonHideUnderline(child: DropdownButton<String>(value: _selectedPaymode.isEmpty ? null : _selectedPaymode, hint: Text('Select Paymode', style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.checkboxColor)), isExpanded: true, icon: Icon(Icons.arrow_drop_down, color: ApprovalQueueColors.primaryDarkBlue), items: _paymodeOptions.map((option) => DropdownMenuItem<String>(value: option['value'], child: Text(option['label']!, style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.textDark)))).toList(), onChanged: (value) { setState(() { _selectedPaymode = value ?? ''; if (!_isBankRequired) { _selectedBankId = null; } }); })))]); }
-  Widget _buildBankDropdown() { return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Bank Name:', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: ApprovalQueueColors.checkboxColor)), const SizedBox(height: 6), Container(padding: const EdgeInsets.symmetric(horizontal: 12), decoration: BoxDecoration(color: ApprovalQueueColors.lightGreyColor, borderRadius: BorderRadius.circular(10), border: Border.all(color: ApprovalQueueColors.dividerColor)), child: DropdownButtonHideUnderline(child: DropdownButton<int>(value: _selectedBankId, hint: Text('Select Bank', style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.checkboxColor)), isExpanded: true, icon: Icon(Icons.arrow_drop_down, color: ApprovalQueueColors.primaryDarkBlue), items: widget.bankNameMap.entries.map((entry) => DropdownMenuItem<int>(value: entry.key, child: Text(entry.value, style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.textDark), overflow: TextOverflow.ellipsis))).toList(), onChanged: (value) { setState(() { _selectedBankId = value; }); })))]); }
-  Widget _buildCreditNoteField() { return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Credit Note:', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: ApprovalQueueColors.checkboxColor)), const SizedBox(height: 6), Container(decoration: BoxDecoration(color: ApprovalQueueColors.lightGreyColor, borderRadius: BorderRadius.circular(10), border: Border.all(color: ApprovalQueueColors.dividerColor)), child: TextField(controller: _creditNoteController, decoration: InputDecoration(hintText: 'Enter credit note reference...', hintStyle: GoogleFonts.poppins(fontSize: 12, color: ApprovalQueueColors.checkboxColor), border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)), style: GoogleFonts.poppins(fontSize: 13, color: ApprovalQueueColors.textDark)))]); }
-  bool _isFormValid() { if (_selectedPaymode.isEmpty) return false; if (_isBankRequired && _selectedBankId == null) return false; return true; }
+
+  String _getCurrentDate() {
+    final now = DateTime.now();
+    return '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: ApprovalQueueColors.checkboxColor,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: ApprovalQueueColors.textDark,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAmountRow(String label, double amount) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: ApprovalQueueColors.checkboxColor,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              _formatIndianCurrency(amount),
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: ApprovalQueueColors.primaryDarkBlue,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatIndianCurrency(double amount) {
+    return '₹${amount.toStringAsFixed(2)}';
+  }
+
+  Widget _buildPaymodeDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Paymode:',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: ApprovalQueueColors.checkboxColor,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: ApprovalQueueColors.lightGreyColor,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: ApprovalQueueColors.dividerColor),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedPaymode.isEmpty ? null : _selectedPaymode,
+              hint: Text(
+                'Select Paymode',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: ApprovalQueueColors.checkboxColor,
+                ),
+              ),
+              isExpanded: true,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: ApprovalQueueColors.primaryDarkBlue,
+              ),
+              items: _paymodeOptions
+                  .map(
+                    (option) => DropdownMenuItem<String>(
+                      value: option['value'],
+                      child: Text(
+                        option['label']!,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: ApprovalQueueColors.textDark,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedPaymode = value ?? '';
+                  if (!_isBankRequired) {
+                    _selectedBankId = null;
+                  }
+                });
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBankDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Bank Name:',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: ApprovalQueueColors.checkboxColor,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: ApprovalQueueColors.lightGreyColor,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: ApprovalQueueColors.dividerColor),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: _selectedBankId,
+              hint: Text(
+                'Select Bank',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: ApprovalQueueColors.checkboxColor,
+                ),
+              ),
+              isExpanded: true,
+              icon: Icon(
+                Icons.arrow_drop_down,
+                color: ApprovalQueueColors.primaryDarkBlue,
+              ),
+              items: widget.bankNameMap.entries
+                  .map(
+                    (entry) => DropdownMenuItem<int>(
+                      value: entry.key,
+                      child: Text(
+                        entry.value,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: ApprovalQueueColors.textDark,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedBankId = value;
+                });
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCreditNoteField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Credit Note:',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: ApprovalQueueColors.checkboxColor,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            color: ApprovalQueueColors.lightGreyColor,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: ApprovalQueueColors.dividerColor),
+          ),
+          child: TextField(
+            controller: _creditNoteController,
+            decoration: InputDecoration(
+              hintText: 'Enter credit note reference...',
+              hintStyle: GoogleFonts.poppins(
+                fontSize: 12,
+                color: ApprovalQueueColors.checkboxColor,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+            ),
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: ApprovalQueueColors.textDark,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  bool _isFormValid() {
+    if (_selectedPaymode.isEmpty) return false;
+    if (_isBankRequired && _selectedBankId == null) return false;
+    return true;
+  }
+
   Future<void> _processPayment() async {
-    setState(() { _isProcessing = true; });
+    setState(() {
+      _isProcessing = true;
+    });
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('userId') ?? '';
       String bankName = '';
-      if (_selectedBankId != null && widget.bankNameMap.containsKey(_selectedBankId)) { bankName = widget.bankNameMap[_selectedBankId]!; }
+      if (_selectedBankId != null &&
+          widget.bankNameMap.containsKey(_selectedBankId)) {
+        bankName = widget.bankNameMap[_selectedBankId]!;
+      }
       String paymentModeValue = '';
-      switch (_selectedPaymode) { case 'cash': paymentModeValue = 'Cash'; break; case 'd_card': paymentModeValue = 'D/Card'; break; case 'cheque': paymentModeValue = 'Cheque'; break; case 'upi': paymentModeValue = 'UPI'; break; case 'neft_rtgs': paymentModeValue = 'NEFT/RTGS'; break; case 'hospital': paymentModeValue = 'Hospital'; break; case 'credit': paymentModeValue = 'Credit'; break; default: paymentModeValue = _selectedPaymode; }
+      switch (_selectedPaymode) {
+        case 'cash':
+          paymentModeValue = 'Cash';
+          break;
+        case 'd_card':
+          paymentModeValue = 'D/Card';
+          break;
+        case 'cheque':
+          paymentModeValue = 'Cheque';
+          break;
+        case 'upi':
+          paymentModeValue = 'UPI';
+          break;
+        case 'neft_rtgs':
+          paymentModeValue = 'NEFT/RTGS';
+          break;
+        case 'hospital':
+          paymentModeValue = 'Hospital';
+          break;
+        case 'credit':
+          paymentModeValue = 'Credit';
+          break;
+        default:
+          paymentModeValue = _selectedPaymode;
+      }
       final ApprovalService _approvalService = ApprovalService();
       final response = await _approvalService.payRefundAgainstInvoice(
-        admissionId: widget.refund['addmissionId'] is int ? widget.refund['addmissionId'] : int.tryParse(widget.refund['addmissionId']?.toString() ?? '0') ?? 0,
+        admissionId: widget.refund['addmissionId'] is int
+            ? widget.refund['addmissionId']
+            : int.tryParse(widget.refund['addmissionId']?.toString() ?? '0') ??
+                  0,
         bankname: bankName,
-        branchId: widget.refund['branchId'] is int ? widget.refund['branchId'] : int.tryParse(widget.refund['branchId']?.toString() ?? '1') ?? 1,
-        creditNote: _creditNoteController.text.trim().isEmpty ? 'Pay' : _creditNoteController.text.trim(),
+        branchId: widget.refund['branchId'] is int
+            ? widget.refund['branchId']
+            : int.tryParse(widget.refund['branchId']?.toString() ?? '1') ?? 1,
+        creditNote: _creditNoteController.text.trim().isEmpty
+            ? 'Pay'
+            : _creditNoteController.text.trim(),
         invoiceType: 5,
         invtypenew: 5,
         isfrompharmacy: 0,
-        patientId: widget.refund['patientId'] is int ? widget.refund['patientId'] : int.tryParse(widget.refund['patientId']?.toString() ?? '0') ?? 0,
+        patientId: widget.refund['patientId'] is int
+            ? widget.refund['patientId']
+            : int.tryParse(widget.refund['patientId']?.toString() ?? '0') ?? 0,
         patientname: widget.refund['patientName']?.toString() ?? '',
         payby: 'Third Party',
         paymentMode: paymentModeValue,
         pharmacybillno: 0,
-        practitionerId: widget.refund['practitionerId'] is int ? widget.refund['practitionerId'] : int.tryParse(widget.refund['practitionerId']?.toString() ?? '0') ?? 0,
-        refundAgainstInvoceid: widget.refund['invoiceId'] is int ? widget.refund['invoiceId'] : int.tryParse(widget.refund['invoiceId']?.toString() ?? '0') ?? 0,
+        practitionerId: widget.refund['practitionerId'] is int
+            ? widget.refund['practitionerId']
+            : int.tryParse(
+                    widget.refund['practitionerId']?.toString() ?? '0',
+                  ) ??
+                  0,
+        refundAgainstInvoceid: widget.refund['invoiceId'] is int
+            ? widget.refund['invoiceId']
+            : int.tryParse(widget.refund['invoiceId']?.toString() ?? '0') ?? 0,
         refundAmount: widget.refund['refundAmount']?.toString() ?? '0',
         refundnote: widget.refund['refundNote']?.toString() ?? '',
-        refundrequestid: widget.refund['refundRequestId'] is int ? widget.refund['refundRequestId'] : int.tryParse(widget.refund['refundRequestId']?.toString() ?? '0') ?? 0,
+        refundrequestid: widget.refund['refundRequestId'] is int
+            ? widget.refund['refundRequestId']
+            : int.tryParse(
+                    widget.refund['refundRequestId']?.toString() ?? '0',
+                  ) ??
+                  0,
         userid: userId,
       );
       if (mounted) {
         if (response['success'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('✅ Payment processed successfully for refund #${widget.refund['refundRequestId']}', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.successGreen));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '✅ Payment processed successfully for refund #${widget.refund['refundRequestId']}',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: ApprovalQueueColors.successGreen,
+            ),
+          );
           Navigator.pop(context);
           widget.onPaymentComplete();
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ ${response['message'] ?? 'Payment processing failed'}', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '❌ ${response['message'] ?? 'Payment processing failed'}',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: ApprovalQueueColors.errorRed,
+            ),
+          );
         }
       }
     } catch (e) {
-      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('❌ Error processing payment: ${e.toString()}', style: GoogleFonts.poppins()), backgroundColor: ApprovalQueueColors.errorRed)); }
-    } finally { if (mounted) { setState(() { _isProcessing = false; }); } }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '❌ Error processing payment: ${e.toString()}',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: ApprovalQueueColors.errorRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    }
   }
 }

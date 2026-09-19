@@ -7,7 +7,11 @@ import '../models/vitals.dart';
 class VitalsDetailPage extends StatefulWidget {
   final VitalsEntry vitals;
 
-  const VitalsDetailPage({super.key, required this.vitals, required Patient patient});
+  const VitalsDetailPage({
+    super.key,
+    required this.vitals,
+    required Patient patient,
+  });
 
   @override
   State<VitalsDetailPage> createState() => _VitalsDetailPageState();
@@ -19,11 +23,11 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
   bool _isListening = false;
   bool _speechAvailable = false;
   String _recognizedText = '';
-  
+
   // Track current field for sequential voice input
   int _currentFieldIndex = 0;
   bool _sequentialMode = false;
-  
+
   // List of fields for sequential voice input
   final List<Map<String, dynamic>> _fields = [
     {'label': 'Temperature (°F)', 'key': 'tempF'},
@@ -60,7 +64,7 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
           _stopListening();
         },
       );
-      
+
       if (!_speechAvailable) {
         debugPrint('Speech recognition not available on this device');
       }
@@ -145,16 +149,19 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
 
     // Extract numbers from the speech
     final numbers = _extractNumbersFromText(cleanedText);
-    
+
     if (numbers.isNotEmpty) {
       if (_sequentialMode && _currentFieldIndex < _fields.length) {
         // Update the current field in sequential mode
-        _updateVitalsField(_fields[_currentFieldIndex]['key'], numbers.first.toString());
-        
+        _updateVitalsField(
+          _fields[_currentFieldIndex]['key'],
+          numbers.first.toString(),
+        );
+
         // Move to next field or finish
         if (_currentFieldIndex < _fields.length - 1) {
           _currentFieldIndex++;
-          
+
           // Continue with next field after a short delay
           Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted) {
@@ -168,7 +175,7 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
             _sequentialMode = false;
             _currentFieldIndex = 0;
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('All vitals recorded via voice!'),
@@ -184,7 +191,7 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
         }
       }
     }
-    
+
     _stopListening();
   }
 
@@ -197,69 +204,72 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
 
   String? _identifyFieldFromSpeech(String text) {
     final lowerText = text.toLowerCase();
-    
+
     // Temperature patterns
-    if (lowerText.contains('temp') || 
-        lowerText.contains('temperature') || 
+    if (lowerText.contains('temp') ||
+        lowerText.contains('temperature') ||
         lowerText.contains('fever') ||
         lowerText.contains('°f')) {
       return 'tempF';
     }
-    
+
     // Heart rate patterns
-    if (lowerText.contains('heart') || 
-        lowerText.contains('hr') || 
+    if (lowerText.contains('heart') ||
+        lowerText.contains('hr') ||
         lowerText.contains('pulse') ||
         lowerText.contains('bpm')) {
       return 'hr';
     }
-    
+
     // Respiratory rate patterns
-    if (lowerText.contains('respiratory') || 
-        lowerText.contains('rr') || 
+    if (lowerText.contains('respiratory') ||
+        lowerText.contains('rr') ||
         lowerText.contains('breathing') ||
         lowerText.contains('breath')) {
       return 'rr';
     }
-    
+
     // Blood pressure patterns
-    if (lowerText.contains('blood pressure') || 
-        lowerText.contains('bp') || 
+    if (lowerText.contains('blood pressure') ||
+        lowerText.contains('bp') ||
         lowerText.contains('systolic') ||
         lowerText.contains('sys')) {
       return 'sysBp';
     }
-    
-    if (lowerText.contains('diastolic') || 
-        lowerText.contains('dia') || 
+
+    if (lowerText.contains('diastolic') ||
+        lowerText.contains('dia') ||
         lowerText.contains('low bp')) {
       return 'diaBp';
     }
-    
+
     // Blood sugar patterns
-    if (lowerText.contains('rbs') || 
-        lowerText.contains('sugar') || 
+    if (lowerText.contains('rbs') ||
+        lowerText.contains('sugar') ||
         lowerText.contains('glucose') ||
         lowerText.contains('blood sugar')) {
       return 'rbs';
     }
-    
+
     // Oxygen saturation patterns
-    if (lowerText.contains('spo') || 
-        lowerText.contains('oxygen') || 
+    if (lowerText.contains('spo') ||
+        lowerText.contains('oxygen') ||
         lowerText.contains('saturation') ||
         lowerText.contains('spO2')) {
       return 'spo2';
     }
-    
+
     return null;
   }
 
   void _updateVitalsField(String fieldKey, String value) {
     // In a real app, you would update the backend here
     // For demo purposes, we'll just show a snackbar
-    final field = _fields.firstWhere((f) => f['key'] == fieldKey, orElse: () => {'label': 'Unknown'});
-    
+    final field = _fields.firstWhere(
+      (f) => f['key'] == fieldKey,
+      orElse: () => {'label': 'Unknown'},
+    );
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${field['label']} updated to: $value'),
@@ -274,7 +284,7 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
       _currentFieldIndex = 0;
       _sequentialMode = true;
     });
-    
+
     _showNextFieldPrompt();
     _startListening(sequential: true);
   }
@@ -293,17 +303,22 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
   }
 
   Widget _buildRow(String label, String value, {String? fieldKey}) {
-    final isCurrentField = _sequentialMode && 
-        _currentFieldIndex < _fields.length && 
+    final isCurrentField =
+        _sequentialMode &&
+        _currentFieldIndex < _fields.length &&
         _fields[_currentFieldIndex]['key'] == fieldKey;
-    
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Container(
         decoration: BoxDecoration(
-          color: isCurrentField ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+          color: isCurrentField
+              ? Colors.blue.withValues(alpha: 0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          border: isCurrentField ? Border.all(color: Colors.blue, width: 1) : null,
+          border: isCurrentField
+              ? Border.all(color: Colors.blue, width: 1)
+              : null,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
@@ -393,10 +408,7 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
                 'Single Value:',
                 'Temperature ninety eight point six',
               ),
-              _buildVoiceExample(
-                'With Unit:',
-                'Heart rate seventy two',
-              ),
+              _buildVoiceExample('With Unit:', 'Heart rate seventy two'),
               _buildVoiceExample(
                 'Blood Pressure:',
                 'Blood pressure one twenty over eighty',
@@ -404,10 +416,7 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
               const SizedBox(height: 20),
               const Text(
                 'For Sequential Mode:',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               const Padding(
@@ -456,10 +465,7 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
                   padding: const EdgeInsets.only(top: 16),
                   child: Text(
                     'Note: Voice recognition may not be available on this device or emulator.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.orange[700],
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.orange[700]),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -495,10 +501,7 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
             ),
             child: Text(
               example,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 13, color: Colors.black87),
             ),
           ),
         ],
@@ -516,7 +519,9 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
         actions: [
           // Voice input button
           IconButton(
-            onPressed: _isListening ? _stopListening : () => _startListening(sequential: false),
+            onPressed: _isListening
+                ? _stopListening
+                : () => _startListening(sequential: false),
             icon: Icon(
               _isListening ? Icons.mic_off : Icons.mic,
               color: _isListening ? Colors.red : Colors.white,
@@ -536,14 +541,14 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
           if (_isListening)
             Container(
               padding: const EdgeInsets.all(12),
-              color: Colors.blue.withOpacity(0.1),
+              color: Colors.blue.withValues(alpha: 0.1),
               child: Row(
                 children: [
                   const Icon(Icons.mic, color: Colors.blue, size: 16),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _sequentialMode 
+                      _sequentialMode
                           ? 'Sequential mode: ${_fields[_currentFieldIndex]['label']}...'
                           : 'Listening... Say a value',
                       style: const TextStyle(
@@ -565,11 +570,11 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
                 ],
               ),
             ),
-          
+
           if (!_speechAvailable)
             Container(
               padding: const EdgeInsets.all(8),
-              color: Colors.orange.withOpacity(0.1),
+              color: Colors.orange.withValues(alpha: 0.1),
               child: const Row(
                 children: [
                   Icon(Icons.warning, color: Colors.orange, size: 14),
@@ -577,16 +582,13 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
                   Expanded(
                     child: Text(
                       'Speech recognition is not available on this device',
-                      style: TextStyle(
-                        color: Colors.orange,
-                        fontSize: 11,
-                      ),
+                      style: TextStyle(color: Colors.orange, fontSize: 11),
                     ),
                   ),
                 ],
               ),
             ),
-          
+
           // Sequential input button
           if (!_isListening)
             Padding(
@@ -596,7 +598,10 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1A237E),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -608,24 +613,46 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
                 ),
               ),
             ),
-          
+
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: ListView(
                 children: [
                   _buildRow("Patient Name", widget.vitals.patientName),
-                  _buildRow("Date", '${widget.vitals.date.day}-${widget.vitals.date.month}-${widget.vitals.date.year}'),
-                  _buildRow("Time", '${widget.vitals.hour}:${widget.vitals.minute.toString().padLeft(2, '0')}'),
+                  _buildRow(
+                    "Date",
+                    '${widget.vitals.date.day}-${widget.vitals.date.month}-${widget.vitals.date.year}',
+                  ),
+                  _buildRow(
+                    "Time",
+                    '${widget.vitals.hour}:${widget.vitals.minute.toString().padLeft(2, '0')}',
+                  ),
                   const Divider(),
-                  _buildRow("Temperature (°F)", widget.vitals.tempF, fieldKey: 'tempF'),
+                  _buildRow(
+                    "Temperature (°F)",
+                    widget.vitals.tempF,
+                    fieldKey: 'tempF',
+                  ),
                   _buildRow("Heart Rate", widget.vitals.hr, fieldKey: 'hr'),
-                  _buildRow("Respiratory Rate", widget.vitals.rr, fieldKey: 'rr'),
-                  _buildRow("Systolic BP", widget.vitals.sysBp, fieldKey: 'sysBp'),
-                  _buildRow("Diastolic BP", widget.vitals.diaBp, fieldKey: 'diaBp'),
+                  _buildRow(
+                    "Respiratory Rate",
+                    widget.vitals.rr,
+                    fieldKey: 'rr',
+                  ),
+                  _buildRow(
+                    "Systolic BP",
+                    widget.vitals.sysBp,
+                    fieldKey: 'sysBp',
+                  ),
+                  _buildRow(
+                    "Diastolic BP",
+                    widget.vitals.diaBp,
+                    fieldKey: 'diaBp',
+                  ),
                   _buildRow("RBS", widget.vitals.rbs, fieldKey: 'rbs'),
                   _buildRow("SpO₂", widget.vitals.spo2, fieldKey: 'spo2'),
-                  
+
                   // Voice tutorial prompt
                   if (!_isListening && _recognizedText.isEmpty)
                     GestureDetector(
@@ -634,9 +661,11 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
                         margin: const EdgeInsets.only(top: 30),
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.05),
+                          color: Colors.blue.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(15),
-                          border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                          border: Border.all(
+                            color: Colors.blue.withValues(alpha: 0.2),
+                          ),
                         ),
                         child: Column(
                           children: [
@@ -672,7 +701,10 @@ class _VitalsDetailPageState extends State<VitalsDetailPage> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
                               ),
                               child: const Text('Start Sequential Input'),
                             ),

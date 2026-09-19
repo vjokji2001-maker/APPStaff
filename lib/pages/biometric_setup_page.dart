@@ -54,14 +54,15 @@ class _BiometricSetupPageState extends State<BiometricSetupPage>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
 
-    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _slideController, curve: Curves.easeOut),
-    );
+    _fadeAnim = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
 
     _slideController.forward();
   }
@@ -69,7 +70,7 @@ class _BiometricSetupPageState extends State<BiometricSetupPage>
   Future<void> _loadBiometricInfo() async {
     final label = await BiometricAuthService.getBiometricLabel();
     final icon = await BiometricAuthService.getBiometricIcon();
-    final enabled = await BiometricAuthService.isBiometricEnabled(); 
+    final enabled = await BiometricAuthService.isBiometricEnabled();
     if (mounted) {
       setState(() {
         _biometricLabel = label;
@@ -78,50 +79,59 @@ class _BiometricSetupPageState extends State<BiometricSetupPage>
       });
     }
   }
-  Future<void> _handleEnable() async {
-  setState(() => _isLoading = true);
-  final result = await BiometricAuthService.enableBiometric();
-  if (!mounted) return;
-  setState(() => _isLoading = false);
 
-  switch (result) {
-    case BiometricResult.success:
-      setState(() => _isEnabled = true);
-      _showSuccessAndContinue();
-      break;
-    case BiometricResult.cancelled:
-      // User dismissed — do nothing
-      break;
-    case BiometricResult.lockedOut:
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          'Too many attempts. Please use your PIN or password first, then try again.',
-          style: GoogleFonts.poppins(),
-        ),
-        backgroundColor: const Color(0xFFE53935),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ));
-      break;
-    case BiometricResult.notAvailable:
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-          'Biometric sensor not available. Make sure a fingerprint or face is enrolled in your device Settings.',
-          style: GoogleFonts.poppins(),
-        ),
-        backgroundColor: Colors.orange[800],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 5),
-      ));
-      break;
-    case BiometricResult.failed:
-      _showFailureSnackbar();
-      break;
-    default:
-      break;
+  Future<void> _handleEnable() async {
+    setState(() => _isLoading = true);
+    final result = await BiometricAuthService.enableBiometric();
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    switch (result) {
+      case BiometricResult.success:
+        setState(() => _isEnabled = true);
+        _showSuccessAndContinue();
+        break;
+      case BiometricResult.cancelled:
+        // User dismissed — do nothing
+        break;
+      case BiometricResult.lockedOut:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Too many attempts. Please use your PIN or password first, then try again.',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: const Color(0xFFE53935),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+        break;
+      case BiometricResult.notAvailable:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Biometric sensor not available. Make sure a fingerprint or face is enrolled in your device Settings.',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.orange[800],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        break;
+      case BiometricResult.failed:
+        _showFailureSnackbar();
+        break;
+      default:
+        break;
+    }
   }
-}
 
   Future<void> _handleDisable() async {
     setState(() => _isLoading = true);
@@ -134,11 +144,15 @@ class _BiometricSetupPageState extends State<BiometricSetupPage>
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$_biometricLabel login disabled',
-              style: GoogleFonts.poppins()),
+          content: Text(
+            '$_biometricLabel login disabled',
+            style: GoogleFonts.poppins(),
+          ),
           backgroundColor: Colors.grey[800],
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -201,8 +215,11 @@ class _BiometricSetupPageState extends State<BiometricSetupPage>
                     children: [
                       if (widget.isFromSettings)
                         IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new,
-                              color: Colors.white, size: 20),
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           onPressed: () => Navigator.of(context).pop(),
                         )
                       else
@@ -239,7 +256,9 @@ class _BiometricSetupPageState extends State<BiometricSetupPage>
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF1565C0).withOpacity(0.5),
+                            color: const Color(
+                              0xFF1565C0,
+                            ).withValues(alpha: 0.5),
                             blurRadius: 40,
                             spreadRadius: 10,
                           ),
@@ -328,18 +347,23 @@ class _BiometricSetupPageState extends State<BiometricSetupPage>
                     // Already enabled state
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 14),
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF69F0AE).withOpacity(0.12),
+                        color: const Color(0xFF69F0AE).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: const Color(0xFF69F0AE).withOpacity(0.4),
+                          color: const Color(0xFF69F0AE).withValues(alpha: 0.4),
                         ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.check_circle_rounded,
-                              color: Color(0xFF69F0AE), size: 22),
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            color: Color(0xFF69F0AE),
+                            size: 22,
+                          ),
                           const SizedBox(width: 10),
                           Text(
                             '$_biometricLabel is enabled',
@@ -396,9 +420,9 @@ class _FeatureTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
@@ -406,7 +430,7 @@ class _FeatureTile extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 22),
@@ -476,7 +500,7 @@ class _PrimaryButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF1565C0).withOpacity(0.5),
+                color: const Color(0xFF1565C0).withValues(alpha: 0.5),
                 blurRadius: 20,
                 offset: const Offset(0, 6),
               ),
@@ -489,7 +513,9 @@ class _PrimaryButton extends StatelessWidget {
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2.5),
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
                   )
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -540,7 +566,9 @@ class _SuccessDialogState extends State<_SuccessDialog>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
     _scale = CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut);
     _ctrl.forward();
 
@@ -562,8 +590,7 @@ class _SuccessDialogState extends State<_SuccessDialog>
       scale: _scale,
       child: Dialog(
         backgroundColor: const Color(0xFF0D1B3E),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
           child: Column(
@@ -579,7 +606,7 @@ class _SuccessDialogState extends State<_SuccessDialog>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF00BCD4).withOpacity(0.4),
+                      color: const Color(0xFF00BCD4).withValues(alpha: 0.4),
                       blurRadius: 24,
                     ),
                   ],

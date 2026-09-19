@@ -76,7 +76,7 @@
 //                   child: ListTile(
 //                     contentPadding: const EdgeInsets.all(16),
 //                     leading: CircleAvatar(
-//                       backgroundColor: const Color(0xFF1A237E).withOpacity(0.1),
+//                       backgroundColor: const Color(0xFF1A237E).withValues(alpha:0.1),
 //                       child: const Icon(
 //                         Icons.favorite,
 //                         color: Color(0xFF1A237E),

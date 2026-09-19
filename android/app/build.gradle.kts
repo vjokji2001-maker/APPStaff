@@ -99,33 +99,3 @@ dependencies {
     // Multi-DEX support
     implementation("androidx.multidex:multidex:2.0.1")
 }
-
-// Workaround for Flutter CLI not finding the generated APK.
-// This ensures that after 'assemble', the APK is forcefully copied
-// to the 'outputs/flutter-apk' directory where Flutter expects it.
-tasks.whenTaskAdded {
-    if (name.startsWith("assemble")) {
-        doLast {
-            val buildOutputsDir = File(layout.buildDirectory.get().asFile, "outputs")
-            val apkDir = File(buildOutputsDir, "apk")
-            val flutterApkDir = File(buildOutputsDir, "flutter-apk")
-            
-            if (apkDir.exists()) {
-                if (!flutterApkDir.exists()) flutterApkDir.mkdirs()
-                
-                apkDir.walkTopDown().forEach { file ->
-                    if (file.isFile && file.extension == "apk") {
-                        val newFileName = if (file.name.contains("debug", ignoreCase = true)) {
-                            "app-debug.apk"
-                        } else if (file.name.contains("release", ignoreCase = true)) {
-                            "app-release.apk"
-                        } else {
-                            file.name
-                        }
-                        file.copyTo(File(flutterApkDir, newFileName), overwrite = true)
-                    }
-                }
-            }
-        }
-    }
-}

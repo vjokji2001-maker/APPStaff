@@ -49,7 +49,7 @@ class _ProfilePageState extends State<ProfilePage> {
   String country = '';
   String pinCode = '';
   String branchAbbreviation = '';
-  
+
   // Additional fields
   String landLine = '';
   String lastPasswordDate = '';
@@ -63,7 +63,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool isLoading = false;
   bool apiError = false;
   bool hasData = false;
-  
+
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
@@ -108,36 +108,37 @@ class _ProfilePageState extends State<ProfilePage> {
       apiError = false;
       hasData = false;
     });
-    
+
     try {
       final completeData = await UserInformationService.getCompleteUserData();
-      
+
       if (completeData != null && completeData.containsKey('data')) {
         final data = completeData['data'];
         _setUserDataFromMap(data);
         hasData = true;
         return;
       }
-      
+
       final userInfo = await UserInformationService.getSavedUserInformation();
       if (userInfo.isNotEmpty && userInfo['userId']?.isNotEmpty == true) {
         _setUserDataFromInfoMap(userInfo);
         hasData = true;
         return;
       }
-      
-      final profileInfo = await UserInformationService.getUserProfileForDisplay();
-      if (profileInfo.isNotEmpty && profileInfo['fullName']?.isNotEmpty == true) {
+
+      final profileInfo =
+          await UserInformationService.getUserProfileForDisplay();
+      if (profileInfo.isNotEmpty &&
+          profileInfo['fullName']?.isNotEmpty == true) {
         _setUserDataFromProfileMap(profileInfo);
         hasData = true;
         return;
       }
-      
+
       setState(() {
         apiError = true;
         hasData = false;
       });
-      
     } catch (e) {
       debugPrint('Error loading profile data: $e');
       setState(() {
@@ -162,20 +163,20 @@ class _ProfilePageState extends State<ProfilePage> {
       jobTitle = data['jobtitle']?.toString() ?? '';
       clinicName = data['clinicName']?.toString() ?? '';
       userType = data['userType']?.toString() ?? '';
-      
+
       fullName = '$initial $firstName $lastName'.trim();
       if (fullName.isEmpty || fullName == ' ') {
         fullName = userId.isNotEmpty ? userId : 'User';
       }
-      
+
       address = data['address']?.toString() ?? '';
       city = data['city']?.toString() ?? '';
       state = data['state']?.toString() ?? '';
       country = data['country']?.toString() ?? '';
       pinCode = data['pinCode']?.toString() ?? '';
-      
+
       userRole = jobTitle.isNotEmpty ? jobTitle : 'Staff';
-      
+
       _phoneController.text = phoneNumber;
       _emailController.text = email;
       _addressController.text = address;
@@ -196,20 +197,20 @@ class _ProfilePageState extends State<ProfilePage> {
       email = userInfo['email']?.toString() ?? '';
       jobTitle = userInfo['jobtitle']?.toString() ?? '';
       clinicName = userInfo['clinicName']?.toString() ?? '';
-      
+
       fullName = '$initial $firstName $lastName'.trim();
       if (fullName.isEmpty || fullName == ' ') {
         fullName = userId.isNotEmpty ? userId : 'User';
       }
-      
+
       address = userInfo['address']?.toString() ?? '';
       city = userInfo['city']?.toString() ?? '';
       state = userInfo['state']?.toString() ?? '';
       country = userInfo['country']?.toString() ?? '';
       pinCode = userInfo['pinCode']?.toString() ?? '';
-      
+
       userRole = jobTitle.isNotEmpty ? jobTitle : 'Staff';
-      
+
       _phoneController.text = phoneNumber;
       _emailController.text = email;
       _addressController.text = address;
@@ -229,48 +230,54 @@ class _ProfilePageState extends State<ProfilePage> {
       userRole = profileInfo['role'] ?? 'Staff';
       clinicName = profileInfo['clinic'] ?? '';
       branchAbbreviation = profileInfo['branch'] ?? '';
-      
+
       _phoneController.text = phoneNumber;
       _emailController.text = email;
     });
   }
 
-Future<void> logout() async {
-  bool? confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text("Logout", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-      content: const Text("Are you sure you want to log out?"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false), 
-          child: const Text("Cancel")
+  Future<void> logout() async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          "Logout",
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true), 
-          child: Text("Logout", style: GoogleFonts.poppins(color: AppColors.errorRed)),
-        ),
-      ],
-    ),
-  );
+        content: const Text("Are you sure you want to log out?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              "Logout",
+              style: GoogleFonts.poppins(color: AppColors.errorRed),
+            ),
+          ),
+        ],
+      ),
+    );
 
-  if (confirm != true) return;
+    if (confirm != true) return;
 
-  await SessionManager.clearSession();
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.clear();
+    await SessionManager.clearSession();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
 
-  if (!mounted) return;
- 
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(
-      builder: (context) => const WelcomePage(),
-      fullscreenDialog: true,
-    ),
-    (Route<dynamic> route) => false,
-  );
-}
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const WelcomePage(),
+        fullscreenDialog: true,
+      ),
+      (Route<dynamic> route) => false,
+    );
+  }
 
   void _toggleEditMode() {
     setState(() {
@@ -291,15 +298,15 @@ Future<void> logout() async {
     if (_phoneController.text.isEmpty || _emailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Phone and Email are required fields"), 
-          backgroundColor: AppColors.errorRed
+          content: Text("Phone and Email are required fields"),
+          backgroundColor: AppColors.errorRed,
         ),
       );
       return;
     }
 
     final prefs = await SharedPreferences.getInstance();
-    
+
     await prefs.setString('mobileNo', _phoneController.text);
     await prefs.setString('email', _emailController.text);
     await prefs.setString('address', _addressController.text);
@@ -307,7 +314,7 @@ Future<void> logout() async {
     await prefs.setString('state', _stateController.text);
     await prefs.setString('country', _countryController.text);
     await prefs.setString('pinCode', _pinCodeController.text);
-    
+
     setState(() {
       phoneNumber = _phoneController.text;
       email = _emailController.text;
@@ -318,14 +325,17 @@ Future<void> logout() async {
       pinCode = _pinCodeController.text;
       isEditing = false;
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             const Icon(LineIcons.checkCircle, color: Colors.white),
             const SizedBox(width: 10),
-            Text('Profile changes saved!', style: GoogleFonts.nunito(color: Colors.white)),
+            Text(
+              'Profile changes saved!',
+              style: GoogleFonts.nunito(color: Colors.white),
+            ),
           ],
         ),
         backgroundColor: AppColors.successGreen,
@@ -341,222 +351,262 @@ Future<void> logout() async {
       key: _scaffoldKey,
       backgroundColor: AppColors.lightGreyColor,
       drawer: _buildModernDrawer(),
-      body: isLoading 
+      body: isLoading
           ? _buildLoadingScreen()
           : Column(
               children: [
+                // Header stays fixed at the top
                 _buildHeader(),
+
+                // Everything below the header can scroll
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
                     child: Column(
                       children: [
-                        // Personal Details Card (Fixed Box, No Scroll)
-                        Expanded(
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.05), 
-                                  blurRadius: 10, 
-                                  offset: const Offset(0, 5)
-                                )
-                              ],
-                            ),
-                            // Column used instead of ListView to prevent scrolling
-                            child: Column(
-                              children: [
-                                // Title Row
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Personal Information", 
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.bold, 
-                                        fontSize: 15, 
-                                        color: AppColors.primaryDarkBlue
-                                      )
+                        // ==============================
+                        // PERSONAL INFORMATION CARD
+                        // ==============================
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withValues(alpha: 0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // ==============================
+                              // TITLE
+                              // ==============================
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    "Personal Information",
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: AppColors.primaryDarkBlue,
                                     ),
-                                    if(isEditing)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.successGreen.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(15),
+                                  ),
+
+                                  if (isEditing)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.successGreen
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
+                                      child: Text(
+                                        "Editing",
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 9,
+                                          color: AppColors.successGreen,
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                        child: Text(
-                                          "Editing", 
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 9, 
-                                            color: AppColors.successGreen, 
-                                            fontWeight: FontWeight.w600
-                                          )
+                                      ),
+                                    ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              // ==============================
+                              // PROFILE FIELDS
+                              // ==============================
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildProfileField(
+                                    label: "User ID",
+                                    value: userId,
+                                    icon: LineIcons.userCircle,
+                                    isReadOnly: true,
+                                  ),
+
+                                  _buildProfileField(
+                                    label: "Full Name",
+                                    value: fullName,
+                                    icon: LineIcons.user,
+                                    isReadOnly: true,
+                                  ),
+
+                                  _buildProfileField(
+                                    label: "Phone Number",
+                                    controller: _phoneController,
+                                    icon: LineIcons.phone,
+                                    isEditable: isEditing,
+                                  ),
+
+                                  _buildProfileField(
+                                    label: "Email Address",
+                                    controller: _emailController,
+                                    icon: LineIcons.envelope,
+                                    isEditable: isEditing,
+                                  ),
+
+                                  // ==============================
+                                  // ADDRESS
+                                  // ==============================
+                                  if (isEditing || address.isNotEmpty)
+                                    Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        _buildProfileField(
+                                          label: "Address",
+                                          controller: _addressController,
+                                          icon: LineIcons.home,
+                                          isEditable: isEditing,
                                         ),
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                
-                                // Fields distributed evenly in remaining space
-                                Expanded(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: [
-                                      _buildProfileField(
-                                        label: "User ID",
-                                        value: userId,
-                                        icon: LineIcons.userCircle,
-                                        isReadOnly: true,
-                                      ),
-                                      
-                                      _buildProfileField(
-                                        label: "Full Name",
-                                        value: fullName,
-                                        icon: LineIcons.user,
-                                        isReadOnly: true,
-                                      ),
-                                      
-                                      _buildProfileField(
-                                        label: "Phone Number",
-                                        controller: _phoneController,
-                                        icon: LineIcons.phone,
-                                        isEditable: isEditing,
-                                      ),
-                                      
-                                      _buildProfileField(
-                                        label: "Email Address",
-                                        controller: _emailController,
-                                        icon: LineIcons.envelope,
-                                        isEditable: isEditing,
-                                      ),
-                                      
-                                      // Compact Address Section
-                                      if (isEditing || address.isNotEmpty)
-                                        Column(
+
+                                        const SizedBox(height: 4),
+
+                                        // CITY + STATE
+                                        Row(
                                           children: [
-                                            _buildProfileField(
-                                              label: "Address",
-                                              controller: _addressController,
-                                              icon: LineIcons.home,
-                                              isEditable: isEditing,
+                                            Expanded(
+                                              child: _buildProfileField(
+                                                label: "City",
+                                                controller: _cityController,
+                                                icon: LineIcons.city,
+                                                isEditable: isEditing,
+                                              ),
                                             ),
-                                            const SizedBox(height: 4),
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: _buildProfileField(
-                                                    label: "City",
-                                                    controller: _cityController,
-                                                    icon: LineIcons.city,
-                                                    isEditable: isEditing,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: _buildProfileField(
-                                                    label: "State",
-                                                    controller: _stateController,
-                                                    icon: LineIcons.mapMarker,
-                                                    isEditable: isEditing,
-                                                  ),
-                                                ),
-                                              ],
+
+                                            const SizedBox(width: 8),
+
+                                            Expanded(
+                                              child: _buildProfileField(
+                                                label: "State",
+                                                controller: _stateController,
+                                                icon: LineIcons.mapMarker,
+                                                isEditable: isEditing,
+                                              ),
                                             ),
                                           ],
                                         ),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        // ==============================
+                        // ACTION BUTTONS
+                        // ==============================
+                        if (hasData)
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // SAVE / EDIT BUTTON
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: isEditing
+                                      ? _saveChanges
+                                      : _toggleEditMode,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isEditing
+                                        ? AppColors.successGreen
+                                        : AppColors.primaryDarkBlue,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        isEditing
+                                            ? LineIcons.save
+                                            : LineIcons.edit,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        isEditing
+                                            ? "Save Changes"
+                                            : "Edit Profile",
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 10),
-                        
-                        // Action Buttons - ALWAYS VISIBLE below the card
-                        if (hasData) 
-                          SafeArea(
-                            top: false,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Edit/Save Button
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: isEditing ? _saveChanges : _toggleEditMode,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: isEditing 
-                                          ? AppColors.successGreen 
-                                          : AppColors.primaryDarkBlue,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              // LOGOUT BUTTON
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: logout,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.errorRed
+                                        .withValues(alpha: 0.1),
+                                    foregroundColor: AppColors.errorRed,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: BorderSide(
+                                        color: AppColors.errorRed.withValues(
+                                          alpha: 0.3,
+                                        ),
                                       ),
-                                      elevation: 0,
                                     ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          isEditing ? LineIcons.save : LineIcons.edit, 
-                                          size: 16
+                                    elevation: 0,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        LineIcons.alternateSignOut,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        "Log Out",
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          isEditing ? "Save Changes" : "Edit Profile", 
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13
-                                          )
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                
-                                const SizedBox(height: 8),
-                                
-                                // Logout Button
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: logout,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.errorRed.withOpacity(0.1),
-                                      foregroundColor: AppColors.errorRed,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        side: BorderSide(color: AppColors.errorRed.withOpacity(0.3)),
-                                      ),
-                                      elevation: 0,
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(LineIcons.alternateSignOut, size: 16),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          "Log Out", 
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13
-                                          )
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+
+                              const SizedBox(height: 20),
+                            ],
                           ),
                       ],
                     ),
@@ -578,7 +628,10 @@ Future<void> logout() async {
             const SizedBox(height: 20),
             Text(
               'Loading profile information...',
-              style: GoogleFonts.poppins(color: AppColors.textBodyColor, fontSize: 14),
+              style: GoogleFonts.poppins(
+                color: AppColors.textBodyColor,
+                fontSize: 14,
+              ),
             ),
           ],
         ),
@@ -589,16 +642,16 @@ Future<void> logout() async {
   Widget _buildHeader() {
     return Container(
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 5, 
-        left: 20, 
-        right: 20, 
-        bottom: 15
+        top: MediaQuery.of(context).padding.top + 5,
+        left: 20,
+        right: 20,
+        bottom: 15,
       ),
       decoration: const BoxDecoration(
         color: AppColors.primaryDarkBlue,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20)
+          bottomRight: Radius.circular(20),
         ),
       ),
       child: Column(
@@ -614,20 +667,24 @@ Future<void> logout() async {
                 child: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2), 
-                    borderRadius: BorderRadius.circular(10)
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(LineIcons.bars, color: Colors.white, size: 20),
+                  child: const Icon(
+                    LineIcons.bars,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
-              
+
               // Center: Page Title
               Text(
-                "My Profile", 
+                "My Profile",
                 style: GoogleFonts.poppins(
-                  color: Colors.white, 
-                  fontSize: 16, 
-                  fontWeight: FontWeight.w600
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
 
@@ -636,28 +693,35 @@ Future<void> logout() async {
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.5), width: 1),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    width: 1,
+                  ),
                 ),
                 child: const CircleAvatar(
-                  radius: 20, 
+                  radius: 20,
                   backgroundColor: Colors.white,
-                  child: Icon(LineIcons.user, size: 22, color: AppColors.primaryDarkBlue),
+                  child: Icon(
+                    LineIcons.user,
+                    size: 22,
+                    color: AppColors.primaryDarkBlue,
+                  ),
                 ),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 10),
-          
+
           // Row 2: User Information (Centered)
           Column(
             children: [
               Text(
                 fullName,
                 style: GoogleFonts.poppins(
-                  color: Colors.white, 
+                  color: Colors.white,
                   fontSize: 17,
-                  fontWeight: FontWeight.bold
+                  fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
@@ -676,7 +740,10 @@ Future<void> logout() async {
                   padding: const EdgeInsets.only(top: 2.0),
                   child: Text(
                     clinicName,
-                    style: GoogleFonts.nunito(color: AppColors.lightBlue, fontSize: 10),
+                    style: GoogleFonts.nunito(
+                      color: AppColors.lightBlue,
+                      fontSize: 10,
+                    ),
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -698,18 +765,18 @@ Future<void> logout() async {
     bool isReadOnly = false,
   }) {
     final displayValue = value ?? (controller?.text ?? '');
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min, // Important for spaceEvenly
       children: [
         Text(
-          label, 
+          label,
           style: GoogleFonts.poppins(
-            fontSize: 10, 
-            fontWeight: FontWeight.w600, 
-            color: Colors.grey[600]
-          )
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
+          ),
         ),
         const SizedBox(height: 2), // Reduced gap
         Container(
@@ -728,9 +795,9 @@ Future<void> logout() async {
                     ? TextField(
                         controller: controller,
                         style: GoogleFonts.poppins(
-                          fontSize: 12, 
-                          fontWeight: FontWeight.w500, 
-                          color: AppColors.textDark
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textDark,
                         ),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
@@ -741,11 +808,15 @@ Future<void> logout() async {
                     : Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Text(
-                          displayValue.isNotEmpty ? displayValue : 'Not provided',
+                          displayValue.isNotEmpty
+                              ? displayValue
+                              : 'Not provided',
                           style: GoogleFonts.poppins(
-                            fontSize: 12, 
-                            fontWeight: FontWeight.w500, 
-                            color: isReadOnly ? Colors.grey[600] : AppColors.textDark
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: isReadOnly
+                                ? Colors.grey[600]
+                                : AppColors.textDark,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -760,13 +831,13 @@ Future<void> logout() async {
 
   Widget _buildModernDrawer() {
     final size = MediaQuery.of(context).size;
-    
+
     return Drawer(
       width: size.width * 0.75,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
-          topRight: Radius.circular(30), 
-          bottomRight: Radius.circular(30)
+          topRight: Radius.circular(30),
+          bottomRight: Radius.circular(30),
         ),
       ),
       child: Container(
@@ -774,17 +845,27 @@ Future<void> logout() async {
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.only(top: 50, bottom: 30, left: 20, right: 20),
+              padding: const EdgeInsets.only(
+                top: 50,
+                bottom: 30,
+                left: 20,
+                right: 20,
+              ),
               decoration: const BoxDecoration(
                 color: AppColors.primaryDarkBlue,
-                borderRadius: BorderRadius.only(bottomRight: Radius.circular(40)),
+                borderRadius: BorderRadius.only(
+                  bottomRight: Radius.circular(40),
+                ),
               ),
               child: Row(
                 children: [
                   const CircleAvatar(
                     radius: 25,
                     backgroundColor: Colors.white,
-                    child: Icon(LineIcons.user, color: AppColors.primaryDarkBlue),
+                    child: Icon(
+                      LineIcons.user,
+                      color: AppColors.primaryDarkBlue,
+                    ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
@@ -794,16 +875,19 @@ Future<void> logout() async {
                         Text(
                           fullName,
                           style: GoogleFonts.poppins(
-                            color: Colors.white, 
-                            fontWeight: FontWeight.bold, 
-                            fontSize: 16
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                         ),
                         Text(
                           userRole,
-                          style: GoogleFonts.nunito(color: AppColors.lightBlue, fontSize: 12),
+                          style: GoogleFonts.nunito(
+                            color: AppColors.lightBlue,
+                            fontSize: 12,
+                          ),
                           overflow: TextOverflow.ellipsis,
                           maxLines: 1,
                         ),
@@ -812,7 +896,10 @@ Future<void> logout() async {
                             padding: const EdgeInsets.only(top: 2.0),
                             child: Text(
                               clinicName,
-                              style: GoogleFonts.nunito(color: Colors.white70, fontSize: 10),
+                              style: GoogleFonts.nunito(
+                                color: Colors.white70,
+                                fontSize: 10,
+                              ),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
@@ -825,7 +912,10 @@ Future<void> logout() async {
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 10,
+                ),
                 children: [
                   _drawerItem(LineIcons.pieChart, "Dashboard", () {
                     Navigator.pop(context);
@@ -833,40 +923,54 @@ Future<void> logout() async {
                   _drawerItem(LineIcons.paperPlane, "Submit Ticket", () {
                     Navigator.pop(context);
                     Navigator.push(
-                      context, 
-                      MaterialPageRoute(builder: (context) => const SubmitTicketPage())
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SubmitTicketPage(),
+                      ),
                     );
                   }),
                   _drawerItem(LineIcons.history, "History", () {
                     Navigator.pop(context);
                   }),
                   ExpansionTile(
-                    key: const PageStorageKey('attendance_expansion'), 
-                    leading: const Icon(LineIcons.calendar, color: AppColors.midDarkBlue, size: 22),
-                    title: Text(
-                      "Attendance", 
-                      style: GoogleFonts.poppins(
-                        color: AppColors.textDark, 
-                        fontSize: 15, 
-                        fontWeight: FontWeight.w500
-                      )
+                    key: const PageStorageKey('attendance_expansion'),
+                    leading: const Icon(
+                      LineIcons.calendar,
+                      color: AppColors.midDarkBlue,
+                      size: 22,
                     ),
-                    shape: const Border(), 
+                    title: Text(
+                      "Attendance",
+                      style: GoogleFonts.poppins(
+                        color: AppColors.textDark,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    shape: const Border(),
                     collapsedShape: const Border(),
                     childrenPadding: EdgeInsets.zero,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.only(left: 20), 
-                        child: _drawerItem(LineIcons.calendarCheck, "Monthly Report", () {})
+                        padding: const EdgeInsets.only(left: 20),
+                        child: _drawerItem(
+                          LineIcons.calendarCheck,
+                          "Monthly Report",
+                          () {},
+                        ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(left: 20), 
-                        child: _drawerItem(LineIcons.coffee, "Leave Requests", () {})
+                        padding: const EdgeInsets.only(left: 20),
+                        child: _drawerItem(
+                          LineIcons.coffee,
+                          "Leave Requests",
+                          () {},
+                        ),
                       ),
                     ],
                   ),
                   const Divider(),
-                  _drawerItem(LineIcons.cog, "Settings", () { 
+                  _drawerItem(LineIcons.cog, "Settings", () {
                     Navigator.pop(context);
                   }),
                 ],
@@ -875,8 +979,8 @@ Future<void> logout() async {
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Text(
-                "SmartMate v1.0.0", 
-                style: GoogleFonts.nunito(color: Colors.grey, fontSize: 12)
+                "SmartMate v1.0.0",
+                style: GoogleFonts.nunito(color: Colors.grey, fontSize: 12),
               ),
             ),
           ],
@@ -889,16 +993,16 @@ Future<void> logout() async {
     return ListTile(
       leading: Icon(icon, color: AppColors.midDarkBlue, size: 22),
       title: Text(
-        title, 
+        title,
         style: GoogleFonts.poppins(
-          color: AppColors.textDark, 
-          fontSize: 15, 
-          fontWeight: FontWeight.w500
-        )
+          color: AppColors.textDark,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       onTap: onTap,
-      hoverColor: AppColors.lightBlue.withOpacity(0.1),
+      hoverColor: AppColors.lightBlue.withValues(alpha: 0.1),
     );
   }
 }

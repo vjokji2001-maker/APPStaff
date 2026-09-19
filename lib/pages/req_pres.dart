@@ -144,7 +144,9 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
         final List<dynamic> raw = result['data'] ?? [];
         setState(() {
           _locations = raw
-              .map((e) => PrescriptionLocation.fromJson(e as Map<String, dynamic>))
+              .map(
+                (e) => PrescriptionLocation.fromJson(e as Map<String, dynamic>),
+              )
               .toList();
           _locationsLoading = false;
           // Pre-select IPD Pharmacy if available
@@ -223,7 +225,9 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
         if (!permissionGranted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Microphone permission is required for voice input'),
+              content: Text(
+                'Microphone permission is required for voice input',
+              ),
               backgroundColor: Colors.orange,
               duration: Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
@@ -358,13 +362,20 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
 
       // Build summary of what was set
       List<String> setFields = [];
-      if (parsedData['medicine'].toString().isNotEmpty) setFields.add('Medicine');
-      if (parsedData['frequency'].toString().isNotEmpty) setFields.add('Frequency: ${parsedData['frequency']}');
-      if (parsedData['duration'].toString().isNotEmpty) setFields.add('Duration: ${parsedData['duration']} days');
-      if (parsedData['instruction'].toString().isNotEmpty) setFields.add('${parsedData['instruction']}');
-      if (parsedData['unit'].toString().isNotEmpty) setFields.add('Unit: ${parsedData['unit']}');
-      if (parsedData['route'].toString().isNotEmpty) setFields.add('Route: ${parsedData['route']}');
-      if (parsedData['dose'].toString().isNotEmpty) setFields.add('Dose: ${parsedData['dose']}');
+      if (parsedData['medicine'].toString().isNotEmpty)
+        setFields.add('Medicine');
+      if (parsedData['frequency'].toString().isNotEmpty)
+        setFields.add('Frequency: ${parsedData['frequency']}');
+      if (parsedData['duration'].toString().isNotEmpty)
+        setFields.add('Duration: ${parsedData['duration']} days');
+      if (parsedData['instruction'].toString().isNotEmpty)
+        setFields.add('${parsedData['instruction']}');
+      if (parsedData['unit'].toString().isNotEmpty)
+        setFields.add('Unit: ${parsedData['unit']}');
+      if (parsedData['route'].toString().isNotEmpty)
+        setFields.add('Route: ${parsedData['route']}');
+      if (parsedData['dose'].toString().isNotEmpty)
+        setFields.add('Dose: ${parsedData['dose']}');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -372,8 +383,10 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('✓ Voice command processed successfully',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                '✓ Voice command processed successfully',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               if (setFields.length > 1)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
@@ -398,12 +411,16 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
   String _extractMedicineName(String text) {
     String cleanText = text.toLowerCase().trim();
     cleanText = cleanText.replaceAll(
-        RegExp(
-            r'\b(please|can you|i want|give|prescribe|add|the|a|an|for|to|with|and|then|after|before|morning|night|evening|afternoon|day|days|daily|once|twice|thrice|times|tablet|capsule|syrup|injection)\b'),
-        ' ');
+      RegExp(
+        r'\b(please|can you|i want|give|prescribe|add|the|a|an|for|to|with|and|then|after|before|morning|night|evening|afternoon|day|days|daily|once|twice|thrice|times|tablet|capsule|syrup|injection)\b',
+      ),
+      ' ',
+    );
 
-    List<String> words =
-        cleanText.split(' ').where((w) => w.isNotEmpty).toList();
+    List<String> words = cleanText
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .toList();
     if (words.isEmpty) return '';
 
     String medicineName = '';
@@ -421,7 +438,8 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     if (medicineName.isNotEmpty) {
       List<String> nameParts = medicineName.split(' ');
       nameParts[0] =
-          nameParts[0].substring(0, 1).toUpperCase() + nameParts[0].substring(1);
+          nameParts[0].substring(0, 1).toUpperCase() +
+          nameParts[0].substring(1);
       medicineName = nameParts.join(' ');
     }
 
@@ -458,8 +476,10 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             Icon(Icons.warning_amber_rounded, color: Colors.orange[700]),
             const SizedBox(width: 8),
             Expanded(
-              child: Text('Medicine Not Found',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              child: Text(
+                'Medicine Not Found',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),
@@ -467,20 +487,29 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('"$medicineName" is not available in the database.',
-                style: GoogleFonts.poppins(fontSize: 14)),
+            Text(
+              '"$medicineName" is not available in the database.',
+              style: GoogleFonts.poppins(fontSize: 14),
+            ),
             const SizedBox(height: 16),
-            Text('Please check the spelling or try a different medicine name.',
-                style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
+            Text(
+              'Please check the spelling or try a different medicine name.',
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+            ),
             const SizedBox(height: 8),
-            Text('Suggested: Speak clearly with medicine name first',
-                style: GoogleFonts.poppins(fontSize: 12, color: Colors.blue[600])),
+            Text(
+              'Suggested: Speak clearly with medicine name first',
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.blue[600]),
+            ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('OK', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text(
+              'OK',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -491,8 +520,10 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               backgroundColor: const Color(0xFF1A237E),
               foregroundColor: Colors.white,
             ),
-            child: Text('Try Again',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text(
+              'Try Again',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -510,16 +541,17 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             Icon(Icons.error_outline, color: Colors.red[700]),
             const SizedBox(width: 8),
             Expanded(
-                child: Text(title,
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600))),
+              child: Text(
+                title,
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(message, style: GoogleFonts.poppins(fontSize: 14)),
-          ],
+          children: [Text(message, style: GoogleFonts.poppins(fontSize: 14))],
         ),
         actions: [
           TextButton(
@@ -535,8 +567,10 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               backgroundColor: const Color(0xFF1A237E),
               foregroundColor: Colors.white,
             ),
-            child: Text('Try Again',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text(
+              'Try Again',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -567,7 +601,10 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       }
     }
     // Try "650 mg", "500mg", "250 ml" patterns from full text
-    final strengthPattern = RegExp(r'(\d+)\s*(mg|ml|mcg|gm|gram|g)\b', caseSensitive: false);
+    final strengthPattern = RegExp(
+      r'(\d+)\s*(mg|ml|mcg|gm|gram|g)\b',
+      caseSensitive: false,
+    );
     final strengthMatch = strengthPattern.firstMatch(cleanText);
     if (strengthMatch != null && result['strength']!.isEmpty) {
       result['strength'] = strengthMatch.group(1)!;
@@ -575,20 +612,30 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
 
     // ── Dosage extraction ─────────────────────────────────────────────────
     // "dosage 10", "10 mg dosage"
-    final dosagePattern = RegExp(r'dosage\s*(\d+\.?\d*)|(\d+\.?\d*)\s*dosage', caseSensitive: false);
+    final dosagePattern = RegExp(
+      r'dosage\s*(\d+\.?\d*)|(\d+\.?\d*)\s*dosage',
+      caseSensitive: false,
+    );
     final dosageMatch = dosagePattern.firstMatch(cleanText);
     if (dosageMatch != null) {
       result['dosage'] = dosageMatch.group(1) ?? dosageMatch.group(2) ?? '';
     }
 
     // ── Unit extraction ───────────────────────────────────────────────────
-    if (cleanText.contains('tablet') || cleanText.contains('goli') || cleanText.contains('tab')) {
+    if (cleanText.contains('tablet') ||
+        cleanText.contains('goli') ||
+        cleanText.contains('tab')) {
       result['unit'] = 'Tablet';
     } else if (cleanText.contains('capsule') || cleanText.contains('cap')) {
       result['unit'] = 'Capsule';
-    } else if (cleanText.contains('syrup') || cleanText.contains('liquid') || cleanText.contains('sharbat')) {
+    } else if (cleanText.contains('syrup') ||
+        cleanText.contains('liquid') ||
+        cleanText.contains('sharbat')) {
       result['unit'] = 'Syrup';
-    } else if (cleanText.contains('injection') || cleanText.contains('inject') || cleanText.contains('sui') || cleanText.contains('teeka')) {
+    } else if (cleanText.contains('injection') ||
+        cleanText.contains('inject') ||
+        cleanText.contains('sui') ||
+        cleanText.contains('teeka')) {
       result['unit'] = 'Injection';
     } else if (cleanText.contains('drop') || cleanText.contains('boond')) {
       result['unit'] = 'Drops';
@@ -601,50 +648,80 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     }
 
     // ── Route extraction ──────────────────────────────────────────────────
-    if (cleanText.contains('oral') || cleanText.contains('muh se') || cleanText.contains('munh se')) {
+    if (cleanText.contains('oral') ||
+        cleanText.contains('muh se') ||
+        cleanText.contains('munh se')) {
       result['route'] = 'ORAL';
-    } else if (cleanText.contains('iv') || cleanText.contains('intravenous') || cleanText.contains('nass')) {
+    } else if (cleanText.contains('iv') ||
+        cleanText.contains('intravenous') ||
+        cleanText.contains('nass')) {
       result['route'] = 'IV';
-    } else if (cleanText.contains('im') || cleanText.contains('intramuscular')) {
+    } else if (cleanText.contains('im') ||
+        cleanText.contains('intramuscular')) {
       result['route'] = 'IM';
-    } else if (cleanText.contains('subcutaneous') || cleanText.contains('sc') || cleanText.contains('sub cut')) {
+    } else if (cleanText.contains('subcutaneous') ||
+        cleanText.contains('sc') ||
+        cleanText.contains('sub cut')) {
       result['route'] = 'SC';
-    } else if (cleanText.contains('topical') || cleanText.contains('skin') || cleanText.contains('chamdi')) {
+    } else if (cleanText.contains('topical') ||
+        cleanText.contains('skin') ||
+        cleanText.contains('chamdi')) {
       result['route'] = 'TOPICAL';
-    } else if (cleanText.contains('nasal') || cleanText.contains('naak') || cleanText.contains('nose')) {
+    } else if (cleanText.contains('nasal') ||
+        cleanText.contains('naak') ||
+        cleanText.contains('nose')) {
       result['route'] = 'NASAL';
     } else if (cleanText.contains('rectal')) {
       result['route'] = 'RECTAL';
-    } else if (cleanText.contains('eye') || cleanText.contains('aankh') || cleanText.contains('ophthalmic')) {
+    } else if (cleanText.contains('eye') ||
+        cleanText.contains('aankh') ||
+        cleanText.contains('ophthalmic')) {
       result['route'] = 'OPHTHALMIC';
     } else if (cleanText.contains('ear') || cleanText.contains('kaan')) {
       result['route'] = 'OTIC';
     }
 
     // ── Dose count extraction (e.g. "ek goli", "do goli", "2 tablet") ───
-    final doseNumberPattern = RegExp(r'(\d+)\s*(goli|tablet|capsule|tab|cap)', caseSensitive: false);
+    final doseNumberPattern = RegExp(
+      r'(\d+)\s*(goli|tablet|capsule|tab|cap)',
+      caseSensitive: false,
+    );
     final doseNumberMatch = doseNumberPattern.firstMatch(cleanText);
     if (doseNumberMatch != null) {
       result['dose'] = doseNumberMatch.group(1)!;
-    } else if (cleanText.contains('ek goli') || cleanText.contains('one tablet')) {
+    } else if (cleanText.contains('ek goli') ||
+        cleanText.contains('one tablet')) {
       result['dose'] = '1';
-    } else if (cleanText.contains('do goli') || cleanText.contains('two tablet') || cleanText.contains('2 goli')) {
+    } else if (cleanText.contains('do goli') ||
+        cleanText.contains('two tablet') ||
+        cleanText.contains('2 goli')) {
       result['dose'] = '2';
-    } else if (cleanText.contains('teen goli') || cleanText.contains('three tablet') || cleanText.contains('3 goli')) {
+    } else if (cleanText.contains('teen goli') ||
+        cleanText.contains('three tablet') ||
+        cleanText.contains('3 goli')) {
       result['dose'] = '3';
-    } else if (cleanText.contains('aadhi goli') || cleanText.contains('half tablet') || cleanText.contains('aadha')) {
+    } else if (cleanText.contains('aadhi goli') ||
+        cleanText.contains('half tablet') ||
+        cleanText.contains('aadha')) {
       result['dose'] = '0.5';
     }
 
     // ── Duration parsing (Hinglish + English) ─────────────────────────────
-    final durationPattern = RegExp(r'(\d+)\s*(day|days|d|din|mahina|month|mahine|week|hafte|hafta)', caseSensitive: false);
+    final durationPattern = RegExp(
+      r'(\d+)\s*(day|days|d|din|mahina|month|mahine|week|hafte|hafta)',
+      caseSensitive: false,
+    );
     final durationMatch = durationPattern.firstMatch(cleanText);
     if (durationMatch != null) {
       int durValue = int.tryParse(durationMatch.group(1)!) ?? 1;
       String durUnit = durationMatch.group(2)!.toLowerCase();
-      if (durUnit.contains('mahina') || durUnit.contains('month') || durUnit.contains('mahine')) {
+      if (durUnit.contains('mahina') ||
+          durUnit.contains('month') ||
+          durUnit.contains('mahine')) {
         durValue = durValue * 30;
-      } else if (durUnit.contains('week') || durUnit.contains('hafte') || durUnit.contains('hafta')) {
+      } else if (durUnit.contains('week') ||
+          durUnit.contains('hafte') ||
+          durUnit.contains('hafta')) {
         durValue = durValue * 7;
       }
       result['duration'] = durValue.toString();
@@ -652,12 +729,26 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     // Also check Hindi number words: "paanch din", "teen din", "saat din", "das din"
     if (result['duration']!.isEmpty) {
       final hindiNumbers = {
-        'ek': 1, 'do': 2, 'teen': 3, 'char': 4, 'paanch': 5, 'panch': 5,
-        'chhe': 6, 'saat': 7, 'aath': 8, 'nau': 9, 'das': 10,
-        'pandrah': 15, 'bees': 20, 'tees': 30,
+        'ek': 1,
+        'do': 2,
+        'teen': 3,
+        'char': 4,
+        'paanch': 5,
+        'panch': 5,
+        'chhe': 6,
+        'saat': 7,
+        'aath': 8,
+        'nau': 9,
+        'das': 10,
+        'pandrah': 15,
+        'bees': 20,
+        'tees': 30,
       };
       for (final entry in hindiNumbers.entries) {
-        final pattern = RegExp('${entry.key}\\s*(din|day|days)', caseSensitive: false);
+        final pattern = RegExp(
+          '${entry.key}\\s*(din|day|days)',
+          caseSensitive: false,
+        );
         if (pattern.hasMatch(cleanText)) {
           result['duration'] = entry.value.toString();
           break;
@@ -666,18 +757,48 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     }
 
     // ── Frequency parsing (Hinglish + English) ────────────────────────────
-    bool hasMorning = cleanText.contains('morning') || cleanText.contains('morn') || cleanText.contains('subah') || cleanText.contains('savere');
-    bool hasAfternoon = cleanText.contains('afternoon') || cleanText.contains('noon') || cleanText.contains('dopahar') || cleanText.contains('lunch');
-    bool hasNight = cleanText.contains('night') || cleanText.contains('evening') || cleanText.contains('raat') || cleanText.contains('sham') || cleanText.contains('shyam') || cleanText.contains('raat ko');
-    
+    bool hasMorning =
+        cleanText.contains('morning') ||
+        cleanText.contains('morn') ||
+        cleanText.contains('subah') ||
+        cleanText.contains('savere');
+    bool hasAfternoon =
+        cleanText.contains('afternoon') ||
+        cleanText.contains('noon') ||
+        cleanText.contains('dopahar') ||
+        cleanText.contains('lunch');
+    bool hasNight =
+        cleanText.contains('night') ||
+        cleanText.contains('evening') ||
+        cleanText.contains('raat') ||
+        cleanText.contains('sham') ||
+        cleanText.contains('shyam') ||
+        cleanText.contains('raat ko');
+
     // Check Hindi phrase patterns first
-    if (cleanText.contains('din me do baar') || cleanText.contains('din mein do baar') || cleanText.contains('twice') || cleanText.contains('two times') || cleanText.contains('do baar')) {
+    if (cleanText.contains('din me do baar') ||
+        cleanText.contains('din mein do baar') ||
+        cleanText.contains('twice') ||
+        cleanText.contains('two times') ||
+        cleanText.contains('do baar')) {
       result['frequency'] = '1-0-1';
-    } else if (cleanText.contains('din me teen baar') || cleanText.contains('din mein teen baar') || cleanText.contains('thrice') || cleanText.contains('three times') || cleanText.contains('teen baar')) {
+    } else if (cleanText.contains('din me teen baar') ||
+        cleanText.contains('din mein teen baar') ||
+        cleanText.contains('thrice') ||
+        cleanText.contains('three times') ||
+        cleanText.contains('teen baar')) {
       result['frequency'] = '1-1-1';
-    } else if (cleanText.contains('din me char baar') || cleanText.contains('four times') || cleanText.contains('char baar')) {
+    } else if (cleanText.contains('din me char baar') ||
+        cleanText.contains('four times') ||
+        cleanText.contains('char baar')) {
       result['frequency'] = '1-1-1-1';
-    } else if (cleanText.contains('din me ek baar') || cleanText.contains('din mein ek baar') || cleanText.contains('once') || cleanText.contains('one time') || cleanText.contains('ek baar') || cleanText.contains('once daily') || cleanText.contains('daily once')) {
+    } else if (cleanText.contains('din me ek baar') ||
+        cleanText.contains('din mein ek baar') ||
+        cleanText.contains('once') ||
+        cleanText.contains('one time') ||
+        cleanText.contains('ek baar') ||
+        cleanText.contains('once daily') ||
+        cleanText.contains('daily once')) {
       result['frequency'] = '1-0-0';
     } else if (hasMorning && hasNight && hasAfternoon) {
       result['frequency'] = '1-1-1';
@@ -696,17 +817,37 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     }
 
     // ── Instruction parsing (Hinglish + English) ──────────────────────────
-    if (cleanText.contains('khali pet') || cleanText.contains('khane se pehle') || cleanText.contains('before food') || cleanText.contains('before meal') || cleanText.contains('empty stomach') || cleanText.contains('bhooke pet')) {
+    if (cleanText.contains('khali pet') ||
+        cleanText.contains('khane se pehle') ||
+        cleanText.contains('before food') ||
+        cleanText.contains('before meal') ||
+        cleanText.contains('empty stomach') ||
+        cleanText.contains('bhooke pet')) {
       result['instruction'] = 'Before Food';
-    } else if (cleanText.contains('khane ke baad') || cleanText.contains('after food') || cleanText.contains('after meal') || cleanText.contains('khana khane ke baad') || cleanText.contains('bhojan ke baad')) {
+    } else if (cleanText.contains('khane ke baad') ||
+        cleanText.contains('after food') ||
+        cleanText.contains('after meal') ||
+        cleanText.contains('khana khane ke baad') ||
+        cleanText.contains('bhojan ke baad')) {
       result['instruction'] = 'After Food';
-    } else if (cleanText.contains('with food') || cleanText.contains('khane ke sath') || cleanText.contains('khane ke saath')) {
+    } else if (cleanText.contains('with food') ||
+        cleanText.contains('khane ke sath') ||
+        cleanText.contains('khane ke saath')) {
       result['instruction'] = 'With Food';
-    } else if (cleanText.contains('bed time') || cleanText.contains('sone se pehle') || cleanText.contains('bedtime') || cleanText.contains('sote waqt')) {
+    } else if (cleanText.contains('bed time') ||
+        cleanText.contains('sone se pehle') ||
+        cleanText.contains('bedtime') ||
+        cleanText.contains('sote waqt')) {
       result['instruction'] = 'At Bed Time';
-    } else if (cleanText.contains('sos') || cleanText.contains('zaroorat') || cleanText.contains('when needed') || cleanText.contains('as needed')) {
+    } else if (cleanText.contains('sos') ||
+        cleanText.contains('zaroorat') ||
+        cleanText.contains('when needed') ||
+        cleanText.contains('as needed')) {
       result['instruction'] = 'SOS';
-    } else if (cleanText.contains('stat') || cleanText.contains('turant') || cleanText.contains('immediately') || cleanText.contains('abhi')) {
+    } else if (cleanText.contains('stat') ||
+        cleanText.contains('turant') ||
+        cleanText.contains('immediately') ||
+        cleanText.contains('abhi')) {
       result['instruction'] = 'STAT';
     }
 
@@ -722,32 +863,39 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     // ── Step 1: Apply ALL voice-parsed values immediately to the form ────
     setState(() {
       // Set frequency from voice
-      if (parsedData['frequency'] != null && parsedData['frequency'].toString().isNotEmpty) {
+      if (parsedData['frequency'] != null &&
+          parsedData['frequency'].toString().isNotEmpty) {
         selectedFrequency = parsedData['frequency'];
       }
 
       // Set duration from voice
-      if (parsedData['duration'] != null && parsedData['duration'].toString().isNotEmpty) {
+      if (parsedData['duration'] != null &&
+          parsedData['duration'].toString().isNotEmpty) {
         durationController.text = parsedData['duration'];
       }
 
       // Set instruction from voice
-      if (parsedData['instruction'] != null && parsedData['instruction'].toString().isNotEmpty) {
+      if (parsedData['instruction'] != null &&
+          parsedData['instruction'].toString().isNotEmpty) {
         selectedDosageTime = parsedData['instruction'];
         selectedInstruction = parsedData['instruction'];
       }
 
       // Set route from voice
-      if (parsedData['route'] != null && parsedData['route'].toString().isNotEmpty) {
+      if (parsedData['route'] != null &&
+          parsedData['route'].toString().isNotEmpty) {
         selectedRoute = parsedData['route'];
       }
 
       // Set unit from voice
-      if (parsedData['unit'] != null && parsedData['unit'].toString().isNotEmpty) {
+      if (parsedData['unit'] != null &&
+          parsedData['unit'].toString().isNotEmpty) {
         // Find matching unit from loaded units list
         final voiceUnit = parsedData['unit'].toString().toLowerCase();
         final matchedUnit = units.firstWhere(
-          (u) => u.toLowerCase().contains(voiceUnit) || voiceUnit.contains(u.toLowerCase()),
+          (u) =>
+              u.toLowerCase().contains(voiceUnit) ||
+              voiceUnit.contains(u.toLowerCase()),
           orElse: () => '',
         );
         if (matchedUnit.isNotEmpty) {
@@ -756,17 +904,20 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       }
 
       // Set dose from voice
-      if (parsedData['dose'] != null && parsedData['dose'].toString().isNotEmpty) {
+      if (parsedData['dose'] != null &&
+          parsedData['dose'].toString().isNotEmpty) {
         doseController.text = parsedData['dose'];
       }
 
       // Set strength from voice
-      if (parsedData['strength'] != null && parsedData['strength'].toString().isNotEmpty) {
+      if (parsedData['strength'] != null &&
+          parsedData['strength'].toString().isNotEmpty) {
         strengthController.text = parsedData['strength'];
       }
 
       // Set dosage from voice
-      if (parsedData['dosage'] != null && parsedData['dosage'].toString().isNotEmpty) {
+      if (parsedData['dosage'] != null &&
+          parsedData['dosage'].toString().isNotEmpty) {
         dosageController.text = parsedData['dosage'];
       }
     });
@@ -780,12 +931,16 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       _typeAheadController.text = parsedData['medicine'];
       await Future.delayed(const Duration(milliseconds: 300));
       await _fetchMedicineDetailsWithVoiceData(
-          parsedData['medicine'].split(' ')[0], parsedData);
+        parsedData['medicine'].split(' ')[0],
+        parsedData,
+      );
     }
   }
 
   Future<void> _fetchMedicineDetailsWithVoiceData(
-      String medicineName, Map<String, dynamic> voiceData) async {
+    String medicineName,
+    Map<String, dynamic> voiceData,
+  ) async {
     setState(() => _isSearchingMedicine = true);
 
     try {
@@ -796,9 +951,11 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
           _isSearchingMedicine = false;
 
           // ── Strength: voice wins, else API ────────────────────────────
-          if (voiceData['strength'] != null && voiceData['strength'].toString().isNotEmpty) {
+          if (voiceData['strength'] != null &&
+              voiceData['strength'].toString().isNotEmpty) {
             strengthController.text = voiceData['strength'];
-          } else if (strengthController.text.isEmpty && details['strength'] != null) {
+          } else if (strengthController.text.isEmpty &&
+              details['strength'] != null) {
             strengthController.text = details['strength']?.toString() ?? '';
           }
 
@@ -814,7 +971,8 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
 
           // ── Unit: voice wins, else API ────────────────────────────────
           if (selectedUnit == null || selectedUnit!.isEmpty) {
-            if (voiceData['unit'] != null && voiceData['unit'].toString().isNotEmpty) {
+            if (voiceData['unit'] != null &&
+                voiceData['unit'].toString().isNotEmpty) {
               // Already set by _applyParsedDataToForm, just get unitId from API
               if (details['unitid'] != null) {
                 selectedUnitId = details['unitid'] is int
@@ -845,9 +1003,11 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
 
           // ── Route: voice wins, else API ───────────────────────────────
           if (selectedRoute == null || selectedRoute!.isEmpty) {
-            if (voiceData['route'] != null && voiceData['route'].toString().isNotEmpty) {
+            if (voiceData['route'] != null &&
+                voiceData['route'].toString().isNotEmpty) {
               selectedRoute = voiceData['route'];
-            } else if (details['route'] != null && details['route'].toString().isNotEmpty) {
+            } else if (details['route'] != null &&
+                details['route'].toString().isNotEmpty) {
               selectedRoute = details['route']?.toString();
             } else if (routes.isNotEmpty) {
               selectedRoute = 'ORAL';
@@ -904,18 +1064,23 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       MaterialPageRoute(builder: (context) => const OcrScannerScreen()),
     );
     if (extractedText != null && extractedText is String) {
-      final lines = extractedText.split('\n').where((l) => l.trim().isNotEmpty).toList();
+      final lines = extractedText
+          .split('\n')
+          .where((l) => l.trim().isNotEmpty)
+          .toList();
       if (lines.isNotEmpty) {
         String firstMed = lines.first;
         medicineController.text = firstMed;
         _typeAheadController.text = firstMed;
         await _fetchMedicineDetails(firstMed);
-        
+
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text("OCR found: $firstMed\nCheck search results."),
-            duration: const Duration(seconds: 3),
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("OCR found: $firstMed\nCheck search results."),
+              duration: const Duration(seconds: 3),
+            ),
+          );
         }
       }
     }
@@ -999,9 +1164,11 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                   int.tryParse(part) ?? double.tryParse(part)?.toInt() ?? 0;
             }
             final totalQuantity = dailyDose * duration;
-            if (mounted) setState(() => qtyController.text = totalQuantity.toString());
+            if (mounted)
+              setState(() => qtyController.text = totalQuantity.toString());
           } else {
-            if (mounted) setState(() => qtyController.text = duration.toString());
+            if (mounted)
+              setState(() => qtyController.text = duration.toString());
           }
         } else {
           if (mounted) setState(() => qtyController.text = '');
@@ -1025,7 +1192,8 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
         _patientId = _patient.patientid;
         _clientId = _patient.clientId;
         _admissionId = _patient.admissionId;
-        _practitionerId = _patient.practitionerid ??
+        _practitionerId =
+            _patient.practitionerid ??
             widget.practitionerId ??
             prefs.getString('practitionerId') ??
             '';
@@ -1065,12 +1233,18 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       final fetchedData = await FrequencyService.fetchFrequencies();
       if (mounted) {
         setState(() {
-          frequencies =
-              (fetchedData['frequencies'] ?? []).map((e) => e.toString()).toSet().toList();
-          routes =
-              (fetchedData['routes'] ?? []).map((e) => e.toString()).toSet().toList();
-          dosageTimes =
-              (fetchedData['dosageTimes'] ?? []).map((e) => e.toString()).toSet().toList();
+          frequencies = (fetchedData['frequencies'] ?? [])
+              .map((e) => e.toString())
+              .toSet()
+              .toList();
+          routes = (fetchedData['routes'] ?? [])
+              .map((e) => e.toString())
+              .toSet()
+              .toList();
+          dosageTimes = (fetchedData['dosageTimes'] ?? [])
+              .map((e) => e.toString())
+              .toSet()
+              .toList();
           frequencyDataLoading = false;
         });
       }
@@ -1078,12 +1252,18 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       final cached = await FrequencyService.getCachedData();
       if (mounted) {
         setState(() {
-          frequencies =
-              (cached['frequencies'] ?? []).map((e) => e.toString()).toSet().toList();
-          routes =
-              (cached['routes'] ?? []).map((e) => e.toString()).toSet().toList();
-          dosageTimes =
-              (cached['dosageTimes'] ?? []).map((e) => e.toString()).toSet().toList();
+          frequencies = (cached['frequencies'] ?? [])
+              .map((e) => e.toString())
+              .toSet()
+              .toList();
+          routes = (cached['routes'] ?? [])
+              .map((e) => e.toString())
+              .toSet()
+              .toList();
+          dosageTimes = (cached['dosageTimes'] ?? [])
+              .map((e) => e.toString())
+              .toSet()
+              .toList();
           frequencyDataLoading = false;
         });
       }
@@ -1101,8 +1281,14 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
 
   // ── Smart Drug Safety AI ──────────────────────────────────────────────────
   Future<bool> _checkDrugSafety(Map<String, dynamic> newMedicineBody) async {
-    final newGeneric = (newMedicineBody['genericname'] ?? '').toString().toLowerCase().trim();
-    final newMedName = (newMedicineBody['medicine_name'] ?? '').toString().toLowerCase().trim();
+    final newGeneric = (newMedicineBody['genericname'] ?? '')
+        .toString()
+        .toLowerCase()
+        .trim();
+    final newMedName = (newMedicineBody['medicine_name'] ?? '')
+        .toString()
+        .toLowerCase()
+        .trim();
 
     if (newGeneric.isEmpty && newMedName.isEmpty) return true;
 
@@ -1111,29 +1297,48 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     // 1. Duplicate Generic Check
     if (newGeneric.isNotEmpty && newGeneric != 'null') {
       for (var item in _prescriptionItems) {
-        final existingBody = item['medicineBody'] as Map<String, dynamic>? ?? {};
-        final existingGeneric = (existingBody['genericname'] ?? '').toString().toLowerCase().trim();
-        
+        final existingBody =
+            item['medicineBody'] as Map<String, dynamic>? ?? {};
+        final existingGeneric = (existingBody['genericname'] ?? '')
+            .toString()
+            .toLowerCase()
+            .trim();
+
         if (existingGeneric.isNotEmpty && existingGeneric == newGeneric) {
-          warnings.add("Duplicate Generic: '${item['medicine']}' already contains '$newGeneric'.");
+          warnings.add(
+            "Duplicate Generic: '${item['medicine']}' already contains '$newGeneric'.",
+          );
           break; // One warning is enough
         }
       }
     }
 
     // 2. Simple Interaction Mock (Example: NSAIDs + Blood thinners)
-    final List<String> currentMedNames = _prescriptionItems.map((e) => (e['medicine'] ?? '').toString().toLowerCase()).toList();
-    
-    bool hasNsaid(String name) => name.contains('ibuprofen') || name.contains('diclofenac') || name.contains('naproxen') || name.contains('aspirin');
-    bool hasBloodThinner(String name) => name.contains('warfarin') || name.contains('clopidogrel') || name.contains('heparin');
+    final List<String> currentMedNames = _prescriptionItems
+        .map((e) => (e['medicine'] ?? '').toString().toLowerCase())
+        .toList();
+
+    bool hasNsaid(String name) =>
+        name.contains('ibuprofen') ||
+        name.contains('diclofenac') ||
+        name.contains('naproxen') ||
+        name.contains('aspirin');
+    bool hasBloodThinner(String name) =>
+        name.contains('warfarin') ||
+        name.contains('clopidogrel') ||
+        name.contains('heparin');
 
     if (hasNsaid(newMedName)) {
       if (currentMedNames.any(hasBloodThinner)) {
-        warnings.add("Severe Interaction: NSAID with Blood Thinner increases bleeding risk.");
+        warnings.add(
+          "Severe Interaction: NSAID with Blood Thinner increases bleeding risk.",
+        );
       }
     } else if (hasBloodThinner(newMedName)) {
       if (currentMedNames.any(hasNsaid)) {
-         warnings.add("Severe Interaction: Blood Thinner with NSAID increases bleeding risk.");
+        warnings.add(
+          "Severe Interaction: Blood Thinner with NSAID increases bleeding risk.",
+        );
       }
     }
 
@@ -1142,37 +1347,74 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       await showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 28,
+              ),
               const SizedBox(width: 10),
-              Text("Drug Safety Alert", style: GoogleFonts.poppins(color: Colors.red[800], fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(
+                "Drug Safety Alert",
+                style: GoogleFonts.poppins(
+                  color: Colors.red[800],
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: warnings.map((w) => Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text("• $w", style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87)),
-            )).toList(),
+            children: warnings
+                .map(
+                  (w) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(
+                      "• $w",
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey[700])),
+              child: Text(
+                "Cancel",
+                style: GoogleFonts.poppins(color: Colors.grey[700]),
+              ),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               onPressed: () {
                 proceed = true;
                 Navigator.pop(ctx);
               },
-              child: Text("Ignore & Add", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w500)),
+              child: Text(
+                "Ignore & Add",
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
           ],
-        )
+        ),
       );
       return proceed;
     }
@@ -1183,22 +1425,26 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
   // ── Add medicine – shows inline, does NOT save yet ────────────────────────
   void _addPrescriptionItem() async {
     if (_prescriptionItems.length >= _maxMedicineLimit) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Limit Reached"),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Limit Reached"),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
+        ),
+      );
       return;
     }
     if (medicineController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Please select a medicine"),
-        duration: Duration(seconds: 1),
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please select a medicine"),
+          duration: Duration(seconds: 1),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
+        ),
+      );
       return;
     }
 
@@ -1251,7 +1497,9 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      final response = await AddMedicineService.postMedicineDetails(medicineBody);
+      final response = await AddMedicineService.postMedicineDetails(
+        medicineBody,
+      );
 
       if (mounted) Navigator.of(context, rootNavigator: true).pop();
 
@@ -1275,49 +1523,59 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       _clearForm();
     } catch (e) {
       if (mounted) Navigator.of(context, rootNavigator: true).pop();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text("Error: $e"),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: $e"),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
+        ),
+      );
     }
   }
 
   // ── Save – shows confirmation popup first ────────────────────────────────
   void _savePrescription() async {
     if (_prescriptionItems.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Please add medicine"),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please add medicine"),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
+        ),
+      );
       return;
     }
 
     if (_admissionId == null || _admissionId!.isEmpty || _admissionId == '0') {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text(
-            "Patient admission data is missing. Please select a patient from IPD dashboard."),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Patient admission data is missing. Please select a patient from IPD dashboard.",
+          ),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
+        ),
+      );
       return;
     }
 
     if (_practitionerId == null || _practitionerId!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text(
-            "Practitioner data is missing. Please select a patient from IPD dashboard."),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Practitioner data is missing. Please select a patient from IPD dashboard.",
+          ),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
+        ),
+      );
       return;
     }
 
@@ -1336,17 +1594,23 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF1A237E).withOpacity(0.1),
+                color: const Color(0xFF1A237E).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.save_alt, color: Color(0xFF1A237E), size: 22),
+              child: const Icon(
+                Icons.save_alt,
+                color: Color(0xFF1A237E),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'Save Prescription?',
                 style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w700, fontSize: 16),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
               ),
             ),
           ],
@@ -1360,7 +1624,9 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               Text(
                 'The following medicines will be prescribed:',
                 style: GoogleFonts.poppins(
-                    fontSize: 13, color: Colors.grey[600]),
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                ),
               ),
               const SizedBox(height: 12),
               ConstrainedBox(
@@ -1384,14 +1650,16 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                         children: [
                           CircleAvatar(
                             radius: 13,
-                            backgroundColor:
-                                const Color(0xFF1A237E).withOpacity(0.15),
+                            backgroundColor: const Color(
+                              0xFF1A237E,
+                            ).withValues(alpha: 0.15),
                             child: Text(
                               '${index + 1}',
                               style: const TextStyle(
-                                  color: Color(0xFF1A237E),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold),
+                                color: Color(0xFF1A237E),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -1402,13 +1670,16 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                                 Text(
                                   item['medicine'] ?? '',
                                   style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
                                 ),
                                 Text(
                                   '${item['frequency'] ?? ''} · ${item['duration'] ?? ''} days · ${item['unit'] ?? ''}',
                                   style: GoogleFonts.poppins(
-                                      fontSize: 11, color: Colors.grey[600]),
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                  ),
                                 ),
                               ],
                             ),
@@ -1422,8 +1693,10 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               if (_selectedLocation != null) ...[
                 const SizedBox(height: 12),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.green[50],
                     borderRadius: BorderRadius.circular(10),
@@ -1431,15 +1704,19 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.local_pharmacy_outlined,
-                          size: 16, color: Colors.green[700]),
+                      Icon(
+                        Icons.local_pharmacy_outlined,
+                        size: 16,
+                        color: Colors.green[700],
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Loc: ${_selectedLocation!.name}',
                         style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.green[800]),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.green[800],
+                        ),
                       ),
                     ],
                   ),
@@ -1451,8 +1728,10 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: GoogleFonts.poppins(color: Colors.grey[600])),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1463,10 +1742,13 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               backgroundColor: const Color(0xFF1A237E),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: Text('Confirm & Save',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text(
+              'Confirm & Save',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -1488,55 +1770,56 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedRemarksList = await AddMedicineService.getRemarks();
-      final remarksString =
-          savedRemarksList.isNotEmpty ? savedRemarksList.join(', ') : '';
+      final remarksString = savedRemarksList.isNotEmpty
+          ? savedRemarksList.join(', ')
+          : '';
 
       final List<Map<String, dynamic>> prescriptionMedicines =
           _prescriptionItems.map((item) {
-        final medicineBody = item['medicineBody'] as Map<String, dynamic>;
-        return {
-          "categoryid": 0,
-          "code": "",
-          "datetime": "",
-          "days": medicineBody['days']?.toString() ?? "5",
-          "deliver_statuss": 0,
-          "deliverd_datetime": "",
-          "deliverd_userid": "",
-          "dispriscsrno": "",
-          "dosage": medicineBody['dosage']?.toString() ?? "0.00",
-          "dose": medicineBody['dosefreq']?.toString() ?? "1-0-1",
-          "dr_qty": medicineBody['qty']?.toString() ?? "1",
-          "frequency": medicineBody['dosefreq']?.toString() ?? "1-0-1",
-          "frequency_id": medicineBody['frequencyid'] ?? 0,
-          "frequency_name": item['instruction'] ?? "Not specified",
-          "id": medicineBody['id'] ?? 0,
-          "instructions": item['instruction'] ?? "",
-          "intreatmentgiven": 0,
-          "ipdremovedt": "",
-          "ipdremoveuserid": "",
-          "ipdtimeshow": "",
-          "isipdremove": 0,
-          "isnurseprisc": 0,
-          "masterdose": "0",
-          "medicine_id": medicineBody['catalogueid'] ?? 0,
-          "medicinename": medicineBody['medicine_name'] ?? "",
-          "nurse_qty": medicineBody['qty']?.toString() ?? "",
-          "nurseuserid": "",
-          "parentid": 0,
-          "patientid": _clientId ?? _patientId,
-          "practitionerid": _practitionerId,
-          "priscdurationtype": "",
-          "route": medicineBody['route'] ?? "ORAL",
-          "specializationid": 0,
-          "sqno": 0,
-          "total": "",
-          "type": "",
-          "strength": medicineBody['strength'] ?? 0,
-          "unitextension": item['unit'] ?? "",
-          "remark": medicineBody['remark'] ?? "",
-          "productMasterId": medicineBody['catalogueid'] ?? 0,
-        };
-      }).toList();
+            final medicineBody = item['medicineBody'] as Map<String, dynamic>;
+            return {
+              "categoryid": 0,
+              "code": "",
+              "datetime": "",
+              "days": medicineBody['days']?.toString() ?? "5",
+              "deliver_statuss": 0,
+              "deliverd_datetime": "",
+              "deliverd_userid": "",
+              "dispriscsrno": "",
+              "dosage": medicineBody['dosage']?.toString() ?? "0.00",
+              "dose": medicineBody['dosefreq']?.toString() ?? "1-0-1",
+              "dr_qty": medicineBody['qty']?.toString() ?? "1",
+              "frequency": medicineBody['dosefreq']?.toString() ?? "1-0-1",
+              "frequency_id": medicineBody['frequencyid'] ?? 0,
+              "frequency_name": item['instruction'] ?? "Not specified",
+              "id": medicineBody['id'] ?? 0,
+              "instructions": item['instruction'] ?? "",
+              "intreatmentgiven": 0,
+              "ipdremovedt": "",
+              "ipdremoveuserid": "",
+              "ipdtimeshow": "",
+              "isipdremove": 0,
+              "isnurseprisc": 0,
+              "masterdose": "0",
+              "medicine_id": medicineBody['catalogueid'] ?? 0,
+              "medicinename": medicineBody['medicine_name'] ?? "",
+              "nurse_qty": medicineBody['qty']?.toString() ?? "",
+              "nurseuserid": "",
+              "parentid": 0,
+              "patientid": _clientId ?? _patientId,
+              "practitionerid": _practitionerId,
+              "priscdurationtype": "",
+              "route": medicineBody['route'] ?? "ORAL",
+              "specializationid": 0,
+              "sqno": 0,
+              "total": "",
+              "type": "",
+              "strength": medicineBody['strength'] ?? 0,
+              "unitextension": item['unit'] ?? "",
+              "remark": medicineBody['remark'] ?? "",
+              "productMasterId": medicineBody['catalogueid'] ?? 0,
+            };
+          }).toList();
 
       final prescriptionBody = {
         "admission": "",
@@ -1579,13 +1862,15 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
 
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Saved!"),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Saved!"),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
+        ),
+      );
       setState(() => _prescriptionItems.clear());
       await AddMedicineService.clearRemarks();
       _clearForm();
@@ -1593,13 +1878,15 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text("Error: $e"),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: $e"),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
+        ),
+      );
     }
   }
 
@@ -1613,16 +1900,23 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF1A237E).withOpacity(0.1),
+                color: const Color(0xFF1A237E).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.info_outline, color: Color(0xFF1A237E), size: 22),
+              child: const Icon(
+                Icons.info_outline,
+                color: Color(0xFF1A237E),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'Prescription Details',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
               ),
             ),
           ],
@@ -1632,10 +1926,19 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(item['medicine'] ?? 'Unknown Medicine', 
-                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF1A237E))),
+              Text(
+                item['medicine'] ?? 'Unknown Medicine',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A237E),
+                ),
+              ),
               const SizedBox(height: 12),
-              _buildDetailRow("Dosage", "${item['dosage']} ${item['unit'] ?? ''}"),
+              _buildDetailRow(
+                "Dosage",
+                "${item['dosage']} ${item['unit'] ?? ''}",
+              ),
               _buildDetailRow("Strength", "${item['strength'] ?? 'N/A'}"),
               _buildDetailRow("Frequency", "${item['frequency'] ?? 'N/A'}"),
               _buildDetailRow("Dose", "${item['dose'] ?? 'N/A'}"),
@@ -1643,9 +1946,17 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               _buildDetailRow("Instruction", "${item['instruction'] ?? 'N/A'}"),
               _buildDetailRow("Duration", "${item['duration']} Days"),
               _buildDetailRow("Total Qty", "${item['quantity'] ?? 'N/A'}"),
-              if (item['remark'] != null && item['remark'].toString().isNotEmpty) ...[
+              if (item['remark'] != null &&
+                  item['remark'].toString().isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text("Remarks:", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey[700])),
+                Text(
+                  "Remarks:",
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Colors.grey[700],
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Container(
                   width: double.infinity,
@@ -1654,7 +1965,10 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text("${item['remark']}", style: GoogleFonts.poppins(fontSize: 13)),
+                  child: Text(
+                    "${item['remark']}",
+                    style: GoogleFonts.poppins(fontSize: 13),
+                  ),
                 ),
               ],
             ],
@@ -1666,9 +1980,14 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF1A237E),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: Text('Close', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text(
+              'Close',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -1683,11 +2002,25 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
         children: [
           Expanded(
             flex: 2,
-            child: Text(label, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+            child: Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
           Expanded(
             flex: 3,
-            child: Text(value.trim().isEmpty ? 'N/A' : value, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
+            child: Text(
+              value.trim().isEmpty ? 'N/A' : value,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
           ),
         ],
       ),
@@ -1715,17 +2048,24 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10)),
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Prescription List",
-                      style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold, fontSize: 18)),
-                  Text("${_prescriptionItems.length}/$_maxMedicineLimit",
-                      style: GoogleFonts.poppins(color: Colors.grey)),
+                  Text(
+                    "Prescription List",
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  Text(
+                    "${_prescriptionItems.length}/$_maxMedicineLimit",
+                    style: GoogleFonts.poppins(color: Colors.grey),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -1747,51 +2087,62 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: Colors.grey[200]!),
                           ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor:
-                                Colors.indigo.withOpacity(0.1),
-                            radius: 14,
-                            child: Text(
-                              '${index + 1}',
-                              style: const TextStyle(
-                                  color: Colors.indigo,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(item['medicine'],
-                                    style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14)),
-                                Text(
-                                  "${item['dosage']}${item['unit']} | ${item['frequency']} | ${item['duration']} Days",
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey[600]),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: Colors.indigo.withValues(
+                                  alpha: 0.1,
                                 ),
-                              ],
-                            ),
+                                radius: 14,
+                                child: Text(
+                                  '${index + 1}',
+                                  style: const TextStyle(
+                                    color: Colors.indigo,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item['medicine'],
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    Text(
+                                      "${item['dosage']}${item['unit']} | ${item['frequency']} | ${item['duration']} Days",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // ── Delete with confirmation ──────────────────
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.redAccent,
+                                ),
+                                onPressed: () => _confirmDeleteItem(
+                                  index,
+                                  ctx,
+                                  setBottomState,
+                                ),
+                              ),
+                            ],
                           ),
-                          // ── Delete with confirmation ──────────────────
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline,
-                                color: Colors.redAccent),
-                            onPressed: () => _confirmDeleteItem(
-                                index, ctx, setBottomState),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-                );
-              },
+                    );
+                  },
                 ),
               ),
             ],
@@ -1801,22 +2152,25 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     );
   }
 
-  void _confirmDeleteItem(int index, BuildContext sheetCtx,
-      StateSetter setBottomState) {
+  void _confirmDeleteItem(
+    int index,
+    BuildContext sheetCtx,
+    StateSetter setBottomState,
+  ) {
     final item = _prescriptionItems[index];
     showDialog(
       context: context,
       builder: (dCtx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.red[700]),
             const SizedBox(width: 8),
             Expanded(
-              child: Text('Remove Medicine?',
-                  style:
-                      GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              child: Text(
+                'Remove Medicine?',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),
@@ -1826,8 +2180,7 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
           children: [
             Text(
               'Are you sure you want to remove:',
-              style: GoogleFonts.poppins(
-                  fontSize: 13, color: Colors.grey[600]),
+              style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]),
             ),
             const SizedBox(height: 10),
             Container(
@@ -1844,13 +2197,16 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                   Text(
                     item['medicine'] ?? '',
                     style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.red[800]),
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red[800],
+                    ),
                   ),
                   Text(
                     '${item['frequency'] ?? ''} · ${item['duration'] ?? ''} days',
                     style: GoogleFonts.poppins(
-                        fontSize: 12, color: Colors.red[600]),
+                      fontSize: 12,
+                      color: Colors.red[600],
+                    ),
                   ),
                 ],
               ),
@@ -1860,23 +2216,29 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dCtx),
-            child: Text('Cancel',
-                style: GoogleFonts.poppins(color: Colors.grey[600])),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(dCtx);
               setState(() => _prescriptionItems.removeAt(index));
               setBottomState(() {}); // refresh bottom sheet
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content:
-                    Text('${item['medicine']} removed'),
-                backgroundColor: Colors.red[700],
-                duration: const Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-                margin: const EdgeInsets.only(
-                    bottom: 20, left: 20, right: 20),
-              ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${item['medicine']} removed'),
+                  backgroundColor: Colors.red[700],
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                  margin: const EdgeInsets.only(
+                    bottom: 20,
+                    left: 20,
+                    right: 20,
+                  ),
+                ),
+              );
               if (_prescriptionItems.isEmpty) {
                 Navigator.pop(sheetCtx); // close bottom sheet if empty
               }
@@ -1885,10 +2247,13 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: Text('Remove',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            child: Text(
+              'Remove',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -1931,11 +2296,14 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[600])),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
+          ),
+        ),
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(
@@ -1950,16 +2318,19 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             maxLines: maxLines,
             readOnly: readOnly,
             style: GoogleFonts.poppins(
-                fontSize: 14, fontWeight: FontWeight.w500),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
             decoration: InputDecoration(
               prefixIcon: Icon(icon, color: Colors.grey[500], size: 18),
               border: InputBorder.none,
               isDense: true,
               hintText: label.isNotEmpty ? "Enter $label" : "",
-              hintStyle:
-                  TextStyle(color: Colors.grey[400], fontSize: 13),
+              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
               contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 12),
+                horizontal: 14,
+                vertical: 12,
+              ),
             ),
           ),
         ),
@@ -1978,11 +2349,14 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[600])),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
+          ),
+        ),
         const SizedBox(height: 6),
         GestureDetector(
           onTap: () {
@@ -2002,11 +2376,13 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             ),
             child: Row(
               children: [
-                Icon(icon,
-                    color: value != null
-                        ? const Color(0xFF1A237E)
-                        : Colors.grey[500],
-                    size: 18),
+                Icon(
+                  icon,
+                  color: value != null
+                      ? const Color(0xFF1A237E)
+                      : Colors.grey[500],
+                  size: 18,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -2020,8 +2396,11 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Icon(Icons.keyboard_arrow_down,
-                    color: Colors.grey[500], size: 18),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  color: Colors.grey[500],
+                  size: 18,
+                ),
               ],
             ),
           ),
@@ -2035,11 +2414,14 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Location',
-            style: GoogleFonts.poppins(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[600])),
+        Text(
+          'Location',
+          style: GoogleFonts.poppins(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[600],
+          ),
+        ),
         const SizedBox(height: 6),
         GestureDetector(
           onTap: _locationsLoading ? null : _showLocationSheet,
@@ -2053,11 +2435,13 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             ),
             child: Row(
               children: [
-                Icon(Icons.local_pharmacy_outlined,
-                    color: _selectedLocation != null
-                        ? const Color(0xFF1A237E)
-                        : Colors.grey[500],
-                    size: 18),
+                Icon(
+                  Icons.local_pharmacy_outlined,
+                  color: _selectedLocation != null
+                      ? const Color(0xFF1A237E)
+                      : Colors.grey[500],
+                  size: 18,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _locationsLoading
@@ -2067,14 +2451,18 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                               width: 14,
                               height: 14,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.grey[400]),
+                                strokeWidth: 2,
+                                color: Colors.grey[400],
+                              ),
                             ),
                             const SizedBox(width: 8),
-                            Text('Loading...',
-                                style: GoogleFonts.poppins(
-                                    fontSize: 13,
-                                    color: Colors.grey[400])),
+                            Text(
+                              'Loading...',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                color: Colors.grey[400],
+                              ),
+                            ),
                           ],
                         )
                       : Text(
@@ -2090,8 +2478,11 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                           overflow: TextOverflow.ellipsis,
                         ),
                 ),
-                Icon(Icons.keyboard_arrow_down,
-                    color: Colors.grey[500], size: 18),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  color: Colors.grey[500],
+                  size: 18,
+                ),
               ],
             ),
           ),
@@ -2124,15 +2515,20 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                 height: 4,
                 margin: const EdgeInsets.only(top: 12, bottom: 20),
                 decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2)),
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text('Select Location',
-                  style: GoogleFonts.poppins(
-                      fontSize: 18, fontWeight: FontWeight.w600)),
+              child: Text(
+                'Select Location',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
             const SizedBox(height: 15),
             if (suggestions.isNotEmpty) ...[
@@ -2142,11 +2538,14 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                   children: [
                     Icon(Icons.bolt, size: 16, color: Colors.orange[700]),
                     const SizedBox(width: 6),
-                    Text('Suggested',
-                        style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[600])),
+                    Text(
+                      'Suggested',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[600],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -2165,25 +2564,29 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? const Color(0xFF1A237E)
                               : const Color(0xFFE8EAF6),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                              color: isSelected
-                                  ? const Color(0xFF1A237E)
-                                  : const Color(0xFFC5CAE9)),
+                            color: isSelected
+                                ? const Color(0xFF1A237E)
+                                : const Color(0xFFC5CAE9),
+                          ),
                         ),
                         child: Text(
                           loc.name,
                           style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              color: isSelected
-                                  ? Colors.white
-                                  : const Color(0xFF1A237E),
-                              fontWeight: FontWeight.w500),
+                            fontSize: 13,
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF1A237E),
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     );
@@ -2195,17 +2598,23 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             ],
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 15, 20, 5),
-              child: Text('All Locations',
-                  style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[600])),
+              child: Text(
+                'All Locations',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[600],
+                ),
+              ),
             ),
             Expanded(
               child: _locations.isEmpty
                   ? Center(
-                      child: Text('No locations available',
-                          style: GoogleFonts.poppins(color: Colors.grey)))
+                      child: Text(
+                        'No locations available',
+                        style: GoogleFonts.poppins(color: Colors.grey),
+                      ),
+                    )
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       itemCount: _locations.length,
@@ -2217,28 +2626,39 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                           leading: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                                color: isSelected
-                                    ? const Color(0xFF1A237E).withOpacity(0.1)
-                                    : Colors.grey[100],
-                                borderRadius: BorderRadius.circular(8)),
-                            child: Icon(Icons.local_pharmacy_outlined,
-                                size: 16,
-                                color: isSelected
-                                    ? const Color(0xFF1A237E)
-                                    : Colors.grey),
+                              color: isSelected
+                                  ? const Color(
+                                      0xFF1A237E,
+                                    ).withValues(alpha: 0.1)
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.local_pharmacy_outlined,
+                              size: 16,
+                              color: isSelected
+                                  ? const Color(0xFF1A237E)
+                                  : Colors.grey,
+                            ),
                           ),
-                          title: Text(loc.name,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
-                                  color: isSelected
-                                      ? const Color(0xFF1A237E)
-                                      : Colors.black87)),
+                          title: Text(
+                            loc.name,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                              color: isSelected
+                                  ? const Color(0xFF1A237E)
+                                  : Colors.black87,
+                            ),
+                          ),
                           trailing: isSelected
-                              ? const Icon(Icons.check_circle,
-                                  color: Color(0xFF1A237E), size: 18)
+                              ? const Icon(
+                                  Icons.check_circle,
+                                  color: Color(0xFF1A237E),
+                                  size: 18,
+                                )
                               : null,
                           onTap: () {
                             setState(() => _selectedLocation = loc);
@@ -2256,9 +2676,13 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
   // ──────────────────────────────────────────────────────────────────────────
 
   void _showSmartSelectionSheet(
-      String title, List<String> items, Function(String) onSelect) {
-    final List<String> suggestions =
-        items.length > 6 ? items.sublist(0, 6) : [];
+    String title,
+    List<String> items,
+    Function(String) onSelect,
+  ) {
+    final List<String> suggestions = items.length > 6
+        ? items.sublist(0, 6)
+        : [];
     final List<String> remainingItems = items;
 
     showModalBottomSheet(
@@ -2270,25 +2694,31 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
           height: MediaQuery.of(context).size.height * 0.7,
           decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius:
-                BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
-                  child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(top: 12, bottom: 20),
-                      decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2)))),
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 12, bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text("Select $title",
-                    style: GoogleFonts.poppins(
-                        fontSize: 18, fontWeight: FontWeight.w600)),
+                child: Text(
+                  "Select $title",
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               const SizedBox(height: 15),
               if (suggestions.isNotEmpty) ...[
@@ -2296,14 +2726,16 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     children: [
-                      Icon(Icons.bolt,
-                          size: 16, color: Colors.orange[700]),
+                      Icon(Icons.bolt, size: 16, color: Colors.orange[700]),
                       const SizedBox(width: 6),
-                      Text("Suggested",
-                          style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey[600])),
+                      Text(
+                        "Suggested",
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[600],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -2321,18 +2753,22 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFE8EAF6),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color: const Color(0xFFC5CAE9)),
+                            border: Border.all(color: const Color(0xFFC5CAE9)),
                           ),
-                          child: Text(item,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  color: const Color(0xFF1A237E),
-                                  fontWeight: FontWeight.w500)),
+                          child: Text(
+                            item,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: const Color(0xFF1A237E),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
                       );
                     }).toList(),
@@ -2343,21 +2779,25 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               ],
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 15, 20, 5),
-                child: Text("All Options",
-                    style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[600])),
+                child: Text(
+                  "All Options",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[600],
+                  ),
+                ),
               ),
               Expanded(
                 child: items.isEmpty
                     ? Center(
-                        child: Text("No items available",
-                            style:
-                                GoogleFonts.poppins(color: Colors.grey)))
+                        child: Text(
+                          "No items available",
+                          style: GoogleFonts.poppins(color: Colors.grey),
+                        ),
+                      )
                     : ListView.builder(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
                         itemCount: remainingItems.length,
                         itemBuilder: (context, index) {
                           return ListTile(
@@ -2365,16 +2805,19 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                             leading: Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius:
-                                      BorderRadius.circular(8)),
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                               child: const Icon(
-                                  Icons.check_circle_outline,
-                                  size: 16,
-                                  color: Colors.grey),
+                                Icons.check_circle_outline,
+                                size: 16,
+                                color: Colors.grey,
+                              ),
                             ),
-                            title: Text(remainingItems[index],
-                                style: GoogleFonts.poppins(fontSize: 14)),
+                            title: Text(
+                              remainingItems[index],
+                              style: GoogleFonts.poppins(fontSize: 14),
+                            ),
                             onTap: () {
                               onSelect(remainingItems[index]);
                               Navigator.pop(context);
@@ -2410,10 +2853,11 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                   style: GoogleFonts.poppins(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: "Search Medicine...",
-                    hintStyle:
-                        GoogleFonts.poppins(color: Colors.grey[400]),
-                    prefixIcon: const Icon(Icons.search,
-                        color: Color(0xFF1A237E)),
+                    hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: Color(0xFF1A237E),
+                    ),
                     suffixIcon: _isSearchingMedicine
                         ? Container(
                             width: 20,
@@ -2422,22 +2866,26 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                             child: const CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color(0xFF1A237E)),
+                                Color(0xFF1A237E),
+                              ),
                             ),
                           )
                         : (controller.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.close,
-                                    color: Colors.grey, size: 18),
-                                onPressed: () {
-                                  controller.clear();
-                                  medicineController.clear();
-                                  _clearForm();
-                                })
-                            : null),
+                              ? IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.grey,
+                                    size: 18,
+                                  ),
+                                  onPressed: () {
+                                    controller.clear();
+                                    medicineController.clear();
+                                    _clearForm();
+                                  },
+                                )
+                              : null),
                     border: InputBorder.none,
-                    contentPadding:
-                        const EdgeInsets.symmetric(vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onChanged: (val) {
                     if (medicineController.text != val) {
@@ -2450,21 +2898,19 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               Container(
                 margin: const EdgeInsets.only(right: 8),
                 child: IconButton(
-                  onPressed:
-                      _isListening ? _stopListening : _startListening,
+                  onPressed: _isListening ? _stopListening : _startListening,
                   icon: Icon(
                     _isListening ? Icons.mic_off : Icons.mic,
-                    color: _isListening
-                        ? Colors.red
-                        : const Color(0xFF1A237E),
+                    color: _isListening ? Colors.red : const Color(0xFF1A237E),
                     size: 22,
                   ),
                   style: IconButton.styleFrom(
                     backgroundColor: _isListening
-                        ? Colors.red.withOpacity(0.1)
-                        : const Color(0xFF1A237E).withOpacity(0.1),
+                        ? Colors.red.withValues(alpha: 0.1)
+                        : const Color(0xFF1A237E).withValues(alpha: 0.1),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),
@@ -2473,10 +2919,12 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
         );
       },
       itemBuilder: (context, suggestion) => ListTile(
-        leading: const Icon(Icons.medication,
-            size: 18, color: Color(0xFF1A237E)),
-        title: Text(suggestion,
-            style: GoogleFonts.poppins(fontSize: 13)),
+        leading: const Icon(
+          Icons.medication,
+          size: 18,
+          color: Color(0xFF1A237E),
+        ),
+        title: Text(suggestion, style: GoogleFonts.poppins(fontSize: 13)),
         dense: true,
       ),
       onSelected: (suggestion) {
@@ -2500,7 +2948,7 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.2),
+            color: Colors.blue.withValues(alpha: 0.2),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -2516,8 +2964,8 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: _isListening
-                  ? Colors.blue.withOpacity(0.1)
-                  : Colors.green.withOpacity(0.1),
+                  ? Colors.blue.withValues(alpha: 0.1)
+                  : Colors.green.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -2547,7 +2995,9 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               child: Text(
                 _recognizedWords.join(' '),
                 style: GoogleFonts.poppins(
-                    fontSize: 16, fontWeight: FontWeight.w500),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -2556,8 +3006,7 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             _isListening
                 ? 'Speak clearly...\nExample: "Dolo 650, 5 days, morning and night"'
                 : 'Processing your voice command...',
-            style:
-                GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]),
+            style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 15),
@@ -2565,162 +3014,205 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
             TextButton.icon(
               onPressed: _cancelVoiceInput,
               icon: const Icon(Icons.close, color: Colors.red),
-              label: Text('Cancel',
-                  style: GoogleFonts.poppins(color: Colors.red)),
+              label: Text(
+                'Cancel',
+                style: GoogleFonts.poppins(color: Colors.red),
+              ),
             ),
         ],
       ),
     );
   }
 
- void _showVoiceTutorial() {
-  showModalBottomSheet(
-    context: context,
-    shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-    isScrollControlled: true,
-    builder: (context) {
-      return DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.75,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) {
-          return Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Drag handle + close button row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const SizedBox(width: 32), // balance the close button
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2)),
-                    ),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 32,
-                        height: 32,
+  void _showVoiceTutorial() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.75,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag handle + close button row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const SizedBox(width: 32), // balance the close button
+                      Container(
+                        width: 40,
+                        height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        child: const Icon(Icons.close, size: 18, color: Colors.black54),
                       ),
-                    ),
-                  ],
-                ),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            size: 18,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
 
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                Text('Voice Command Examples',
+                  Text(
+                    'Voice Command Examples',
                     style: GoogleFonts.poppins(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1A237E))),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF1A237E),
+                    ),
+                  ),
 
-                const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-                // Scrollable content
-                Flexible(
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildVoiceExample('Basic Medicine:',
-                            '"Dolo 650, 5 days, morning and night"'),
-                        _buildVoiceExample('With Instructions:',
-                            '"Paracetamol 500 mg tablet, 3 days, after food, twice daily"'),
-                        _buildVoiceExample('Hinglish Command:',
-                            '"Amoxicillin 250 mg, paanch din, subah aur raat, khane ke baad"'),
-                        _buildVoiceExample('Complete (Hindi):',
-                            '"Dolo 650 ek goli, saat din, subah dopahar raat, khane ke baad"'),
-                        _buildVoiceExample('With Route:',
-                            '"Injection Ceftriaxone 1 gm, IV, 5 days, twice daily"'),
+                  // Scrollable content
+                  Flexible(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildVoiceExample(
+                            'Basic Medicine:',
+                            '"Dolo 650, 5 days, morning and night"',
+                          ),
+                          _buildVoiceExample(
+                            'With Instructions:',
+                            '"Paracetamol 500 mg tablet, 3 days, after food, twice daily"',
+                          ),
+                          _buildVoiceExample(
+                            'Hinglish Command:',
+                            '"Amoxicillin 250 mg, paanch din, subah aur raat, khane ke baad"',
+                          ),
+                          _buildVoiceExample(
+                            'Complete (Hindi):',
+                            '"Dolo 650 ek goli, saat din, subah dopahar raat, khane ke baad"',
+                          ),
+                          _buildVoiceExample(
+                            'With Route:',
+                            '"Injection Ceftriaxone 1 gm, IV, 5 days, twice daily"',
+                          ),
 
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-                        Text('Tips for best results:',
+                          Text(
+                            'Tips for best results:',
                             style: GoogleFonts.poppins(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
-
-                        const SizedBox(height: 8),
-
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildTip('Speak clearly and at a normal pace'),
-                              _buildTip('Start with medicine name (e.g., "Dolo 650")'),
-                              _buildTip('Specify duration: "5 days", "paanch din", "1 week"'),
-                              _buildTip('Mention frequency: "subah raat", "morning night", "do baar"'),
-                              _buildTip('Add instructions: "khane ke baad", "after food", "khali pet"'),
-                              _buildTip('Specify type: "tablet/goli", "syrup/sharbat", "injection/sui"'),
-                              _buildTip('Route: "oral", "IV", "IM", "topical"'),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _startListening();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1A237E),
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.mic, size: 20),
-                              const SizedBox(width: 10),
-                              Text('Try Voice Command',
-                                  style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
-
-                        if (!_speechAvailable)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 16),
-                            child: Text(
-                              'Note: Voice recognition may not be available on this device or emulator.',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 12, color: Colors.orange),
-                              textAlign: TextAlign.center,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
 
-                        const SizedBox(height: 16),
-                      ],
+                          const SizedBox(height: 8),
+
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildTip('Speak clearly and at a normal pace'),
+                                _buildTip(
+                                  'Start with medicine name (e.g., "Dolo 650")',
+                                ),
+                                _buildTip(
+                                  'Specify duration: "5 days", "paanch din", "1 week"',
+                                ),
+                                _buildTip(
+                                  'Mention frequency: "subah raat", "morning night", "do baar"',
+                                ),
+                                _buildTip(
+                                  'Add instructions: "khane ke baad", "after food", "khali pet"',
+                                ),
+                                _buildTip(
+                                  'Specify type: "tablet/goli", "syrup/sharbat", "injection/sui"',
+                                ),
+                                _buildTip(
+                                  'Route: "oral", "IV", "IM", "topical"',
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _startListening();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1A237E),
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.mic, size: 20),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Try Voice Command',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          if (!_speechAvailable)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 16),
+                              child: Text(
+                                'Note: Voice recognition may not be available on this device or emulator.',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.orange,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+
+                          const SizedBox(height: 16),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   Widget _buildVoiceExample(String title, String example) {
     return Container(
@@ -2728,11 +3220,14 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[600])),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+            ),
+          ),
           const SizedBox(height: 4),
           Container(
             width: double.infinity,
@@ -2742,11 +3237,14 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.grey[200]!),
             ),
-            child: Text(example,
-                style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: Colors.black87,
-                    fontStyle: FontStyle.italic)),
+            child: Text(
+              example,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.black87,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
           ),
         ],
       ),
@@ -2762,9 +3260,10 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
           const Icon(Icons.check_circle, size: 14, color: Colors.green),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(text,
-                style: GoogleFonts.poppins(
-                    fontSize: 12, color: Colors.grey[600])),
+            child: Text(
+              text,
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
+            ),
           ),
         ],
       ),
@@ -2809,11 +3308,14 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.arrow_back,
-                            color: Colors.white, size: 20),
+                        child: const Icon(
+                          Icons.arrow_back,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -2821,28 +3323,40 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Req Prescription",
-                              style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600)),
-                          Text(_patient.patientname,
-                              style: GoogleFonts.poppins(
-                                  color: Colors.white70, fontSize: 12)),
+                          Text(
+                            "Req Prescription",
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            _patient.patientname,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
                           if (_patient.ipdNo.isNotEmpty &&
                               _patient.ipdNo != 'N/A')
                             Text(
                               "IPD: ${_patient.ipdNo} | Bed: ${_patient.bedname}",
                               style: GoogleFonts.poppins(
-                                  color: Colors.white60, fontSize: 10),
+                                color: Colors.white60,
+                                fontSize: 10,
+                              ),
                             ),
                         ],
                       ),
                     ),
                     IconButton(
                       onPressed: _showVoiceTutorial,
-                      icon: const Icon(Icons.help_outline,
-                          color: Colors.white70, size: 22),
+                      icon: const Icon(
+                        Icons.help_outline,
+                        color: Colors.white70,
+                        size: 22,
+                      ),
                       tooltip: 'Voice command help',
                     ),
                   ],
@@ -2850,17 +3364,16 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                 const SizedBox(height: 12),
                 _buildSearchBarWithVoice(),
                 if (medicineDetails['genericname'] != null &&
-                    medicineDetails['genericname']
-                        .toString()
-                        .isNotEmpty)
+                    medicineDetails['genericname'].toString().isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 8, left: 4),
                     child: Text(
                       "Generic: ${medicineDetails['genericname']}",
                       style: GoogleFonts.poppins(
-                          color: Colors.white60,
-                          fontSize: 11,
-                          fontStyle: FontStyle.italic),
+                        color: Colors.white60,
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ),
                 Padding(
@@ -2868,8 +3381,9 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                   child: Text(
                     "Admission ID: $_admissionId | Patient ID: $_patientId",
                     style: GoogleFonts.poppins(
-                        color: Colors.white.withOpacity(0.5),
-                        fontSize: 9),
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 9,
+                    ),
                   ),
                 ),
               ],
@@ -2883,18 +3397,22 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                 children: [
                   _buildVoiceInputPanel(),
 
-                  if (medicineController.text.isEmpty &&
-                      !_showVoiceInput) ...[
+                  if (medicineController.text.isEmpty && !_showVoiceInput) ...[
                     // A sleek banner for Voice Command instead of giant card
                     GestureDetector(
                       onTap: _showVoiceTutorial,
                       child: Container(
                         margin: const EdgeInsets.only(top: 10, bottom: 20),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.05),
+                          color: Colors.blue.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(15),
-                          border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                          border: Border.all(
+                            color: Colors.blue.withValues(alpha: 0.2),
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -2904,22 +3422,46 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                                 color: Colors.white,
                                 shape: BoxShape.circle,
                                 boxShadow: [
-                                  BoxShadow(color: Colors.blue.withOpacity(0.1), blurRadius: 4)
+                                  BoxShadow(
+                                    color: Colors.blue.withValues(alpha: 0.1),
+                                    blurRadius: 4,
+                                  ),
                                 ],
                               ),
-                              child: const Icon(Icons.mic, color: Colors.blue, size: 20),
+                              child: const Icon(
+                                Icons.mic,
+                                color: Colors.blue,
+                                size: 20,
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text("Try Voice Command", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: darkBlue)),
-                                  Text("Tap mic or say 'Dolo 650, 5 days...'", style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
+                                  Text(
+                                    "Try Voice Command",
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                      color: darkBlue,
+                                    ),
+                                  ),
+                                  Text(
+                                    "Tap mic or say 'Dolo 650, 5 days...'",
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
-                            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.blue),
+                            const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 14,
+                              color: Colors.blue,
+                            ),
                           ],
                         ),
                       ),
@@ -2937,19 +3479,43 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.manage_search, size: 64, color: Colors.grey[300]),
+                          Icon(
+                            Icons.manage_search,
+                            size: 64,
+                            color: Colors.grey[300],
+                          ),
                           const SizedBox(height: 16),
-                          Text("No Medicine Selected", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[800])),
+                          Text(
+                            "No Medicine Selected",
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[800],
+                            ),
+                          ),
                           const SizedBox(height: 8),
-                          Text("Please search for a medicine above or use voice input to automatically fill prescription details.", textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500])),
+                          Text(
+                            "Please search for a medicine above or use voice input to automatically fill prescription details.",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: Colors.grey[500],
+                            ),
+                          ),
                           const SizedBox(height: 24),
                           Row(
                             children: [
                               Expanded(
                                 child: ElevatedButton.icon(
                                   onPressed: _scanBarcode,
-                                  icon: const Icon(Icons.qr_code_scanner, size: 18),
-                                  label: Text("Barcode", style: GoogleFonts.poppins(fontSize: 12)),
+                                  icon: const Icon(
+                                    Icons.qr_code_scanner,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    "Barcode",
+                                    style: GoogleFonts.poppins(fontSize: 12),
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.blue[50],
                                     foregroundColor: Colors.blue[800],
@@ -2961,8 +3527,14 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                               Expanded(
                                 child: ElevatedButton.icon(
                                   onPressed: _scanPrescriptionOcr,
-                                  icon: const Icon(Icons.document_scanner, size: 18),
-                                  label: Text("OCR", style: GoogleFonts.poppins(fontSize: 12)),
+                                  icon: const Icon(
+                                    Icons.document_scanner,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    "OCR",
+                                    style: GoogleFonts.poppins(fontSize: 12),
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green[50],
                                     foregroundColor: Colors.green[800],
@@ -2970,8 +3542,8 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                                   ),
                                 ),
                               ),
-                            ]
-                          )
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -2982,22 +3554,27 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                                color: Colors.grey.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 5))
-                          ]),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Dosage & Strength",
-                              style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: darkBlue)),
+                          Text(
+                            "Dosage & Strength",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: darkBlue,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -3060,22 +3637,27 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                     Container(
                       padding: const EdgeInsets.all(11),
                       decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                                color: Colors.grey.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 5))
-                          ]),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Schedule & Timing",
-                              style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: darkBlue)),
+                          Text(
+                            "Schedule & Timing",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: darkBlue,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
@@ -3087,8 +3669,7 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                                   label: "Frequency",
                                   icon: Icons.access_time_filled,
                                   onSelect: (v) {
-                                    setState(
-                                        () => selectedFrequency = v);
+                                    setState(() => selectedFrequency = v);
                                     _calculateQuantity();
                                   },
                                 ),
@@ -3126,22 +3707,27 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                     Container(
                       padding: const EdgeInsets.all(11),
                       decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                                color: Colors.grey.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 5))
-                          ]),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Dispensing Location",
-                              style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: darkBlue)),
+                          Text(
+                            "Dispensing Location",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: darkBlue,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           _buildLocationField(),
                         ],
@@ -3153,40 +3739,47 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                     Container(
                       padding: const EdgeInsets.all(11),
                       decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                                color: Colors.grey.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 5))
-                          ]),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text("Remarks",
-                                  style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: darkBlue)),
+                              Text(
+                                "Remarks",
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: darkBlue,
+                                ),
+                              ),
                               if (qtyController.text.isNotEmpty)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
-                                      color: Colors.green[50],
-                                      borderRadius:
-                                          BorderRadius.circular(8)),
+                                    color: Colors.green[50],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                   child: Text(
                                     "Total Qty: ${qtyController.text}",
                                     style: GoogleFonts.poppins(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
                                   ),
                                 ),
                             ],
@@ -3218,9 +3811,10 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -5))
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
           ],
         ),
         child: SafeArea(
@@ -3230,19 +3824,31 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
               Expanded(
                 flex: 4,
                 child: ElevatedButton(
-                  onPressed: medicineController.text.isNotEmpty ? _addPrescriptionItem : null,
+                  onPressed: medicineController.text.isNotEmpty
+                      ? _addPrescriptionItem
+                      : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: medicineController.text.isNotEmpty ? Colors.white : Colors.grey[100],
-                    foregroundColor: medicineController.text.isNotEmpty ? darkBlue : Colors.grey[400],
-                    side: BorderSide(color: medicineController.text.isNotEmpty ? darkBlue : Colors.transparent),
+                    backgroundColor: medicineController.text.isNotEmpty
+                        ? Colors.white
+                        : Colors.grey[100],
+                    foregroundColor: medicineController.text.isNotEmpty
+                        ? darkBlue
+                        : Colors.grey[400],
+                    side: BorderSide(
+                      color: medicineController.text.isNotEmpty
+                          ? darkBlue
+                          : Colors.transparent,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: 0,
                   ),
-                  child: Text("Add +",
-                      style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600)),
+                  child: Text(
+                    "Add +",
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -3259,7 +3865,8 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                     foregroundColor: Colors.black87,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: 0,
                   ),
                   child: Row(
@@ -3271,14 +3878,16 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                         Container(
                           padding: const EdgeInsets.all(4),
                           decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle),
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
                           child: Text(
                             "${_prescriptionItems.length}",
                             style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.white,
-                                height: 1),
+                              fontSize: 10,
+                              color: Colors.white,
+                              height: 1,
+                            ),
                           ),
                         ),
                       ],
@@ -3294,19 +3903,19 @@ class _ReqPrescriptionPageState extends State<ReqPrescriptionPage> {
                 child: ElevatedButton(
                   onPressed: canSave ? _savePrescription : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        canSave ? darkBlue : Colors.grey[300],
-                    foregroundColor:
-                        canSave ? Colors.white : Colors.grey[500],
+                    backgroundColor: canSave ? darkBlue : Colors.grey[300],
+                    foregroundColor: canSave ? Colors.white : Colors.grey[500],
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: canSave ? 5 : 0,
-                    shadowColor: darkBlue.withOpacity(0.3),
+                    shadowColor: darkBlue.withValues(alpha: 0.3),
                   ),
-                  child: Text("Save",
-                      style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600)),
+                  child: Text(
+                    "Save",
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ],
