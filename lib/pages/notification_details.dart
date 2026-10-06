@@ -1080,9 +1080,13 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage>
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
-                            Row(
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 6,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
                                       Icons.calendar_today,
@@ -1092,19 +1096,21 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage>
                                           : Colors.grey[600],
                                     ),
                                     const SizedBox(width: 4),
-                                    Text(
-                                      inv['date'],
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: isToday
-                                            ? Colors.green[700]
-                                            : Colors.grey[700],
+                                    Flexible(
+                                      child: Text(
+                                        inv['date'],
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          color: isToday
+                                              ? Colors.green[700]
+                                              : Colors.grey[700],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(width: 12),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 8,
@@ -1149,7 +1155,6 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage>
                                     ],
                                   ),
                                 ),
-                                const SizedBox(width: 12),
                                 InkWell(
                                   onTap: () {
                                     print("Printing ${inv['type']}");
@@ -1232,31 +1237,39 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildMiniDetailInvestigation(
-                                "Requested by",
-                                inv['requested_by'],
+                              Expanded(
+                                child: _buildMiniDetailInvestigation(
+                                  "Requested by",
+                                  inv['requested_by'],
+                                ),
                               ),
-                              _buildMiniDetailInvestigation(
-                                "Doctor",
-                                inv['practitioner_name'],
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildMiniDetailInvestigation(
+                                  "Doctor",
+                                  inv['practitioner_name'],
+                                ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              _buildMiniDetailInvestigation(
-                                "Request Date",
-                                _formatDisplayDate(inv['request_date']),
+                              Expanded(
+                                child: _buildMiniDetailInvestigation(
+                                  "Request Date",
+                                  _formatDisplayDate(inv['request_date']),
+                                ),
                               ),
+                              const SizedBox(width: 8),
                               if (inv['charge_status'] != null &&
                                   inv['charge_status'].toString().isNotEmpty)
-                                _buildMiniDetailInvestigation(
-                                  "Charge Status",
-                                  inv['charge_status'],
+                                Expanded(
+                                  child: _buildMiniDetailInvestigation(
+                                    "Charge Status",
+                                    inv['charge_status'],
+                                  ),
                                 ),
                             ],
                           ),
@@ -1298,6 +1311,7 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage>
           label,
           style: GoogleFonts.poppins(fontSize: 9, color: Colors.grey[500]),
         ),
+        const SizedBox(height: 2),
         Text(
           value,
           style: GoogleFonts.poppins(
@@ -1307,6 +1321,7 @@ class _NotificationDetailsPageState extends State<NotificationDetailsPage>
           ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
+          softWrap: true,
         ),
       ],
     );

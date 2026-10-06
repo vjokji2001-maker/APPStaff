@@ -589,7 +589,12 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.poppins(
                                       fontSize: 13,
-                                      color: const Color.fromARGB(255, 11, 24, 29),
+                                      color: const Color.fromARGB(
+                                        255,
+                                        11,
+                                        24,
+                                        29,
+                                      ),
                                       fontStyle: FontStyle.italic,
                                     ),
                                   ),
@@ -598,18 +603,18 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                             ),
                           )
                         : Align(
-    alignment: Alignment.centerLeft,
-    child: Text(
-      _aiInsightText,
-      maxLines: 2,
-      softWrap: true,
-      overflow: TextOverflow.ellipsis,
-      style: GoogleFonts.poppins(
-        fontSize: 13,
-        color: HRTheme.textPrimary,
-      ),
-    ),
-  ),
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _aiInsightText,
+                              maxLines: 2,
+                              softWrap: true,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                color: HRTheme.textPrimary,
+                              ),
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -1281,8 +1286,10 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                             )
                           : DropdownButtonFormField<LeaveBalance>(
                               value: selectedBalance,
+                              isExpanded: true,
                               hint: Text(
                                 'Select Leave Name',
+                                overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(
                                   fontSize: 13,
                                   color: HRTheme.textSecondary,
@@ -1304,12 +1311,15 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                               dropdownColor: isDark
                                   ? HRTheme.bgCardDark
                                   : Colors.white,
+                              menuMaxHeight: 240,
                               items: dialogBalances
                                   .map(
                                     (b) => DropdownMenuItem<LeaveBalance>(
                                       value: b,
                                       child: Text(
                                         b.leaveType,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
                                         style: GoogleFonts.poppins(
                                           fontSize: 13,
                                         ),
@@ -1599,7 +1609,7 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                       ),
                       const SizedBox(height: 14),
 
-                                      // 6. Reason *
+                      // 6. Reason *
                       TextFormField(
                         controller: reasonCtrl,
                         maxLines: 3,
@@ -1656,11 +1666,103 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                               child: SizedBox(
                                 height: 48,
                                 child: ElevatedButton(
-                                  onPressed: () {
-                                    // TODO: hook up real submit logic
-                                    // (validate selectedBalance/from/to/reason,
-                                    // call HRApiService.applyLeave(...), then
-                                    // Navigator.pop(ctx) and _fetchData()).
+                                  onPressed: () async {
+                                    final reason = reasonCtrl.text.trim();
+
+                                    if (selectedBalance == null) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Please select a leave type.',
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    if (from == null || to == null) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Please select from and to dates.',
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    if (reason.isEmpty) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Please enter a reason for leave.',
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    try {
+                                      final empId =
+                                          await HRApiService.getLoggedEmpId();
+                                      final payload = {
+                                        'employeeId': empId,
+                                        'yearId': selectedYearId,
+                                        'leaveNameId':
+                                            selectedBalance?.leaveNameId,
+                                        'leaveType': selectedBalance?.leaveType,
+                                        'fromDate': from!
+                                            .toIso8601String()
+                                            .split('T')
+                                            .first,
+                                        'toDate': to!
+                                            .toIso8601String()
+                                            .split('T')
+                                            .first,
+                                        'applicationDate': appDate
+                                            ?.toIso8601String()
+                                            .split('T')
+                                            .first,
+                                        'fromDuration': fromDuration,
+                                        'toDuration': toDuration,
+                                        'noOfDays': totalDays,
+                                        'reason': reason,
+                                      };
+
+                                      await HRApiService.applyLeave(payload);
+
+                                      if (context.mounted) {
+                                        Navigator.pop(ctx);
+                                        _fetchData();
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Leave request submitted successfully.',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Failed to submit leave: $e',
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF2E8B36),
@@ -1704,8 +1806,6 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
     ); // close showDialog
   } // close _showApplyLeave()
 } // close _HRLeaveScreenState
-             
-    
 
 class _LeaveCard extends StatelessWidget {
   final LeaveApplication app;
@@ -1827,5 +1927,3 @@ class _LeaveCard extends StatelessWidget {
     );
   }
 }
-
-

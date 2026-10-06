@@ -35,6 +35,36 @@ class _ShiftBedDialogState extends State<ShiftBedDialog> {
   bool _smsOnBedChange = false;
   bool _whatsappOnBedChange = false;
 
+  String? _idOf(dynamic item, {required bool bed}) {
+    if (item is! Map) return null;
+    final value = bed
+        ? (item['bedid'] ??
+              item['bedId'] ??
+              item['bed_id'] ??
+              item['bedno'] ??
+              item['bedNo'] ??
+              item['id'])
+        : (item['id'] ?? item['wardid'] ?? item['wardId'] ?? item['ward_id']);
+    return value?.toString();
+  }
+
+  String _nameOf(dynamic item, {required bool bed}) {
+    if (item is! Map) return 'Unknown';
+    return (bed
+                ? (item['bedName'] ??
+                      item['bedname'] ??
+                      item['bed_name'] ??
+                      item['bedNo'] ??
+                      item['bedno'] ??
+                      item['name'])
+                : (item['wardname'] ??
+                      item['wardName'] ??
+                      item['ward_name'] ??
+                      item['name']))
+            ?.toString() ??
+        'Unknown';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -49,26 +79,26 @@ class _ShiftBedDialogState extends State<ShiftBedDialog> {
         setState(() {
           final seenIds = <String>{};
           _wards = wards.where((w) {
-            final id = w['id']?.toString();
+            final id = _idOf(w, bed: false);
             if (id == null || id.isEmpty) return false;
             return seenIds.add(id);
           }).toList();
-          
+
           // If the previously selected ward is no longer in the list, reset it
           if (_selectedWardId != null && !seenIds.contains(_selectedWardId)) {
             _selectedWardId = null;
             _selectedWardName = null;
           }
-          
+
           _isLoadingWards = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingWards = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load wards: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to load wards: $e')));
       }
     }
   }
@@ -80,32 +110,56 @@ class _ShiftBedDialogState extends State<ShiftBedDialog> {
       _selectedBedName = null;
       _availableBeds = [];
     });
+
     try {
       final beds = await _ipdService.fetchAvailableBedsInWard(wardId: wardId);
+
+      debugPrint('========== AVAILABLE BEDS ==========');
+      debugPrint('Ward ID: $wardId');
+      debugPrint('Beds count: ${beds.length}');
+      debugPrint('Beds response: $beds');
+
+      if (!mounted) return;
+
+      final seenIds = <String>{};
+
+      final validBeds = <dynamic>[];
+
+      for (final bed in beds) {
+        debugPrint('RAW BED: $bed');
+
+        final bedId = _idOf(bed, bed: true);
+        final bedName = _nameOf(bed, bed: true);
+
+        debugPrint('BED ID: $bedId');
+        debugPrint('BED NAME: $bedName');
+
+        if (bedId != null && bedId.isNotEmpty) {
+          if (seenIds.add(bedId)) {
+            validBeds.add(bed);
+          }
+        }
+      }
+
+      setState(() {
+        _availableBeds = validBeds;
+        _isLoadingBeds = false;
+      });
+
+      debugPrint('VALID AVAILABLE BEDS: ${_availableBeds.length}');
+    } catch (e, stackTrace) {
+      debugPrint('ERROR LOADING BEDS: $e');
+      debugPrint('$stackTrace');
+
       if (mounted) {
         setState(() {
-          final seenIds = <String>{};
-          _availableBeds = beds.where((b) {
-            final id = b['id']?.toString();
-            if (id == null || id.isEmpty) return false;
-            return seenIds.add(id);
-          }).toList();
-          
-          // If the previously selected bed is no longer in the list, reset it
-          if (_selectedBedId != null && !seenIds.contains(_selectedBedId)) {
-            _selectedBedId = null;
-            _selectedBedName = null;
-          }
-          
           _isLoadingBeds = false;
+          _availableBeds = [];
         });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoadingBeds = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load beds: $e')),
-        );
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to load beds: $e')));
       }
     }
   }
@@ -121,8 +175,10 @@ class _ShiftBedDialogState extends State<ShiftBedDialog> {
     setState(() => _isShifting = true);
 
     try {
-      final shiftingTime = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
-      
+      final shiftingTime = DateFormat(
+        'yyyy-MM-dd HH:mm:ss',
+      ).format(DateTime.now());
+
       final result = await _ipdService.shiftPatientBed(
         patientId: widget.patient.patientId.toString(),
         admissionId: widget.patient.admissionId,
@@ -131,7 +187,7 @@ class _ShiftBedDialogState extends State<ShiftBedDialog> {
         bedId: _selectedBedId!,
         bedName: _selectedBedName!,
         shiftingTime: shiftingTime,
-        branchId: '1', // default to 1, or get from session
+        branchId: '1',
         patientName: widget.patient.patientname,
         smsOnBedChange: _smsOnBedChange,
         whatsappOnBedChange: _whatsappOnBedChange,
@@ -147,16 +203,18 @@ class _ShiftBedDialogState extends State<ShiftBedDialog> {
           Navigator.pop(context);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'] ?? 'Failed to shift patient')),
+            SnackBar(
+              content: Text(result['message'] ?? 'Failed to shift patient'),
+            ),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isShifting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -200,41 +258,68 @@ class _ShiftBedDialogState extends State<ShiftBedDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Patient: ${widget.patient.patientname}',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
+                  Text(
+                    'Patient: ${widget.patient.patientname}',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Current Bed: ${widget.patient.bedname}',
-                      style: GoogleFonts.inter(color: Colors.grey[600], fontSize: 12)),
+                  Text(
+                    'Current Bed: ${widget.patient.bedname}',
+                    style: GoogleFonts.inter(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
             Text(
               'Select Target Ward',
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[700]),
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
+              ),
             ),
             const SizedBox(height: 6),
             _isLoadingWards
                 ? const Center(child: CircularProgressIndicator())
                 : DropdownButtonFormField<String>(
                     decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
                       isDense: true,
                     ),
-                    hint: const Text('Select Ward', style: TextStyle(fontSize: 13)),
+                    hint: const Text(
+                      'Select Ward',
+                      style: TextStyle(fontSize: 13),
+                    ),
                     value: _selectedWardId,
                     items: _wards.map((ward) {
                       return DropdownMenuItem<String>(
-                        value: ward['id']?.toString(),
-                        child: Text(ward['wardname']?.toString() ?? 'Unknown', style: const TextStyle(fontSize: 13)),
+                        value: _idOf(ward, bed: false),
+                        child: Text(
+                          _nameOf(ward, bed: false),
+                          style: const TextStyle(fontSize: 13),
+                        ),
                       );
                     }).toList(),
                     onChanged: (value) {
                       setState(() {
                         _selectedWardId = value;
-                        final selectedWard = _wards.firstWhere((w) => w['id']?.toString() == value);
-                        _selectedWardName = selectedWard['wardname']?.toString();
+                        final selectedWard = _wards.firstWhere(
+                          (w) => _idOf(w, bed: false) == value,
+                        );
+                        _selectedWardName = _nameOf(selectedWard, bed: false);
                       });
                       if (value != null) {
                         _fetchAvailableBeds(value);
@@ -242,78 +327,139 @@ class _ShiftBedDialogState extends State<ShiftBedDialog> {
                     },
                   ),
             const SizedBox(height: 20),
+
             Text(
               'Select Available Bed',
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey[700]),
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
+              ),
             ),
+
             const SizedBox(height: 6),
+
             _isLoadingBeds
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                : _availableBeds.isEmpty
+                ? Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    ),
+                    child: const Text(
+                      'No available beds found for this ward.',
+                      style: TextStyle(fontSize: 13, color: Colors.orange),
+                    ),
+                  )
                 : DropdownButtonFormField<String>(
                     decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
                       isDense: true,
                     ),
-                    hint: const Text('Select Bed', style: TextStyle(fontSize: 13)),
+                    hint: const Text(
+                      'Select Bed',
+                      style: TextStyle(fontSize: 13),
+                    ),
                     value: _selectedBedId,
                     items: _availableBeds.map((bed) {
+                      final bedId = _idOf(bed, bed: true);
+                      final bedName = _nameOf(bed, bed: true);
+
                       return DropdownMenuItem<String>(
-                        value: bed['id']?.toString(),
-                        child: Text(bed['bedName']?.toString() ?? 'Unknown', style: const TextStyle(fontSize: 13)),
+                        value: bedId,
+                        child: Text(
+                          bedName,
+                          style: const TextStyle(fontSize: 13),
+                        ),
                       );
                     }).toList(),
-                    onChanged: _selectedWardId == null
-                        ? null
-                        : (value) {
-                            setState(() {
-                              _selectedBedId = value;
-                              final selectedBed = _availableBeds.firstWhere((b) => b['id']?.toString() == value);
-                              _selectedBedName = selectedBed['bedName']?.toString();
-                            });
-                          },
+                    onChanged: (value) {
+                      if (value == null) return;
+
+                      final selectedBed = _availableBeds.firstWhere(
+                        (b) => _idOf(b, bed: true) == value,
+                      );
+
+                      setState(() {
+                        _selectedBedId = value;
+                        _selectedBedName = _nameOf(selectedBed, bed: true);
+                      });
+
+                      debugPrint('Selected Bed ID: $_selectedBedId');
+                      debugPrint('Selected Bed Name: $_selectedBedName');
+                    },
                   ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Checkbox(
-                  value: _smsOnBedChange,
-                  onChanged: (val) => setState(() => _smsOnBedChange = val ?? false),
-                ),
-                Text('Send SMS Alert', style: GoogleFonts.inter()),
-              ],
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: Text(
+                'Send SMS alert',
+                style: GoogleFonts.inter(fontSize: 13),
+              ),
+              value: _smsOnBedChange,
+              activeColor: const Color(0xFF1A237E),
+              onChanged: _isShifting
+                  ? null
+                  : (value) => setState(() => _smsOnBedChange = value),
             ),
-            Row(
-              children: [
-                Checkbox(
-                  value: _whatsappOnBedChange,
-                  onChanged: (val) => setState(() => _whatsappOnBedChange = val ?? false),
-                ),
-                Text('Send WhatsApp Alert', style: GoogleFonts.inter()),
-              ],
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: Text(
+                'Send WhatsApp alert',
+                style: GoogleFonts.inter(fontSize: 13),
+              ),
+              value: _whatsappOnBedChange,
+              activeColor: const Color(0xFF1A237E),
+              onChanged: _isShifting
+                  ? null
+                  : (value) => setState(() => _whatsappOnBedChange = value),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
-              height: 44,
-              child: ElevatedButton(
-                onPressed: _isShifting ? null : _shiftPatient,
+              child: ElevatedButton.icon(
+                onPressed:
+                    _isShifting ||
+                        _selectedWardId == null ||
+                        _selectedBedId == null
+                    ? null
+                    : _shiftPatient,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1A237E),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  elevation: 0,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-                child: _isShifting
+                icon: _isShifting
                     ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
-                    : Text(
-                        'Shift Patient',
-                        style: GoogleFonts.inter(
-                            color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
+                    : const Icon(Icons.swap_horiz),
+                label: Text(_isShifting ? 'Shifting...' : 'Shift Patient'),
               ),
             ),
           ],

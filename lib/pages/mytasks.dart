@@ -854,7 +854,8 @@ class _MyTasksPageState extends State<MyTasksPage>
             width: menuWidth,
             child: _buildSideMenu(urgentTasks),
           ),
-          Positioned(bottom: 28, right: 24, child: _buildFAB()),
+          if (!_isSideMenuOpen)
+            Positioned(bottom: 28, right: 24, child: _buildFAB()),
         ],
       ),
     );

@@ -17,7 +17,7 @@ class DayToDayNotesDialog extends StatefulWidget {
 class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
   final IpdService _ipdService = IpdService();
   final TextEditingController _notesController = TextEditingController();
-  
+
   bool _isLoading = true;
   bool _isSaving = false;
   List<dynamic> _notesList = [];
@@ -41,8 +41,8 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
   Future<void> _fetchNotes() async {
     setState(() => _isLoading = true);
     try {
-      final admissionDate = widget.patient.admissionDate.isNotEmpty 
-          ? widget.patient.admissionDate 
+      final admissionDate = widget.patient.admissionDate.isNotEmpty
+          ? widget.patient.admissionDate
           : DateFormat('yyyy-MM-dd').format(DateTime.now());
 
       final result = await _ipdService.fetchDayToDayNotes(
@@ -63,7 +63,9 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
             });
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(result['message'] ?? 'Failed to load notes')),
+              SnackBar(
+                content: Text(result['message'] ?? 'Failed to load notes'),
+              ),
             );
           }
         });
@@ -71,9 +73,9 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading notes: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading notes: $e')));
       }
     }
   }
@@ -81,9 +83,9 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
   Future<void> _saveNote() async {
     final noteText = _notesController.text.trim();
     if (noteText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a note.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a note.')));
       return;
     }
 
@@ -92,16 +94,18 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('userId') ?? '0';
 
-      final admissionDate = widget.patient.admissionDate.isNotEmpty 
-          ? widget.patient.admissionDate 
+      final admissionDate = widget.patient.admissionDate.isNotEmpty
+          ? widget.patient.admissionDate
           : DateFormat('yyyy-MM-dd').format(DateTime.now());
-          
+
       // If editing, use the existing note's day, otherwise calculate
       int dayToUse = _editingNoteDay;
       if (_editingNoteId == 0) {
         // Calculate day based on admission date
         try {
-          DateTime admnDate = DateFormat('yyyy-MM-dd').parse(admissionDate.substring(0, 10));
+          DateTime admnDate = DateFormat(
+            'yyyy-MM-dd',
+          ).parse(admissionDate.substring(0, 10));
           dayToUse = DateTime.now().difference(admnDate).inDays + 1;
         } catch (_) {
           dayToUse = 1;
@@ -113,7 +117,7 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
         admissiondate: admissionDate,
         notes: noteText,
         day: dayToUse,
-        id: _editingNoteId, 
+        id: _editingNoteId,
         createdByUserId: userId,
         status: 1, // 1 = New, 0 = Read
       );
@@ -129,7 +133,7 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Note saved successfully!')),
           );
-          _fetchNotes(); 
+          _fetchNotes();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(result['message'] ?? 'Failed to save note')),
@@ -139,9 +143,9 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving note: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving note: $e')));
       }
     }
   }
@@ -162,7 +166,8 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
 
       await _ipdService.saveDayToDayNote(
         ipdid: note['ipdid']?.toString() ?? widget.patient.admissionId,
-        admissiondate: note['admissiondate']?.toString() ?? widget.patient.admissionDate,
+        admissiondate:
+            note['admissiondate']?.toString() ?? widget.patient.admissionDate,
         notes: note['notes']?.toString() ?? '',
         day: int.tryParse(note['day']?.toString() ?? '1') ?? 1,
         id: int.tryParse(note['id']?.toString() ?? '0') ?? 0,
@@ -200,7 +205,9 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
     int currentDay = 1;
     if (widget.patient.admissionDate.isNotEmpty) {
       try {
-        DateTime admnDate = DateFormat('yyyy-MM-dd').parse(widget.patient.admissionDate.substring(0, 10));
+        DateTime admnDate = DateFormat(
+          'yyyy-MM-dd',
+        ).parse(widget.patient.admissionDate.substring(0, 10));
         currentDay = DateTime.now().difference(admnDate).inDays + 1;
       } catch (_) {}
     }
@@ -223,7 +230,9 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    _editingNoteId > 0 ? 'Edit Day To Day Notes' : 'Add Day To Day Notes',
+                    _editingNoteId > 0
+                        ? 'Edit Day To Day Notes'
+                        : 'Add Day To Day Notes',
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       color: Colors.grey.shade800,
@@ -237,7 +246,7 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
               ),
             ),
             const Divider(height: 1, thickness: 1),
-            
+
             // Body
             Expanded(
               child: Padding(
@@ -265,7 +274,9 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
                         maxLines: 5,
                         decoration: InputDecoration(
                           hintText: 'Enter Day To Day Notes',
-                          hintStyle: GoogleFonts.inter(color: Colors.grey.shade500),
+                          hintStyle: GoogleFonts.inter(
+                            color: Colors.grey.shade500,
+                          ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.all(12),
                         ),
@@ -278,7 +289,9 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
                         if (_editingNoteId > 0) ...[
                           TextButton(
                             onPressed: _cancelEdit,
-                            style: TextButton.styleFrom(foregroundColor: Colors.red),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.red,
+                            ),
                             child: const Text('Cancel'),
                           ),
                           const SizedBox(width: 8),
@@ -286,37 +299,98 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
                         ElevatedButton(
                           onPressed: _isSaving ? null : _saveNote,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1E88E5), // Blue like web app, or green 
+                            backgroundColor: const Color(
+                              0xFF1E88E5,
+                            ), // Blue like web app, or green
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
                           ),
-                          child: _isSaving 
-                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          child: _isSaving
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : const Text('Save'),
                         ),
                       ],
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Table Header
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 0,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.blue.shade50,
                         border: Border.all(color: Colors.blue.shade100),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(4),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          Expanded(flex: 1, child: Text('Day', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade800))),
-                          Expanded(flex: 3, child: Text('Date', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade800))),
-                          Expanded(flex: 5, child: Text('Notes', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade800))),
-                          Expanded(flex: 1, child: Text('Actions', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade800))),
+                          SizedBox(
+                            width: 40,
+                            child: Text(
+                              'Day',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade800,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 80,
+                            child: Text(
+                              'Date',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade800,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              'Notes',
+                              softWrap: false,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade800,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 64,
+                            child: Text(
+                              'Actions',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade800,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    
+
                     // Table Body
                     Expanded(
                       child: Container(
@@ -326,91 +400,162 @@ class _DayToDayNotesDialogState extends State<DayToDayNotesDialog> {
                             right: BorderSide(color: Colors.blue.shade100),
                             bottom: BorderSide(color: Colors.blue.shade100),
                           ),
-                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(4)),
+                          borderRadius: const BorderRadius.vertical(
+                            bottom: Radius.circular(4),
+                          ),
                         ),
-                        child: _isLoading 
+                        child: _isLoading
                             ? const Center(child: CircularProgressIndicator())
                             : _notesList.isEmpty
-                                ? Center(child: Text('No notes found.', style: GoogleFonts.inter(color: Colors.grey)))
-                                : ListView.separated(
-                                    itemCount: _notesList.length,
-                                    separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
-                                    itemBuilder: (context, index) {
-                                      final note = _notesList[index];
-                                      final day = note['day']?.toString() ?? '1';
-                                      final dateStr = note['date']?.toString() ?? 'N/A';
-                                      final byUser = note['createdByName']?.toString() ?? note['createdByUserId']?.toString() ?? 'N/A';
-                                      final noteText = note['notes']?.toString() ?? '';
-                                      
-                                      final status = note['status']?.toString();
-                                      final isNew = status == '1' || status == 'true';
-                                      
-                                      return InkWell(
-                                        onTap: () => _updateNoteStatus(note),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                          child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              // Day
-                                              Expanded(
-                                                flex: 1, 
-                                                child: Text('Day\n$day', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade800)),
+                            ? Center(
+                                child: Text(
+                                  'No notes found.',
+                                  style: GoogleFonts.inter(color: Colors.grey),
+                                ),
+                              )
+                            : ListView.separated(
+                                itemCount: _notesList.length,
+                                separatorBuilder: (_, __) => Divider(
+                                  height: 1,
+                                  color: Colors.grey.shade200,
+                                ),
+                                itemBuilder: (context, index) {
+                                  final note = _notesList[index];
+                                  final day = note['day']?.toString() ?? '1';
+                                  final dateStr =
+                                      note['date']?.toString() ?? 'N/A';
+                                  final byUser =
+                                      note['createdByName']?.toString() ??
+                                      note['createdByUserId']?.toString() ??
+                                      'N/A';
+                                  final noteText =
+                                      note['notes']?.toString() ?? '';
+
+                                  final status = note['status']?.toString();
+                                  final isNew =
+                                      status == '1' || status == 'true';
+
+                                  return InkWell(
+                                    onTap: () => _updateNoteStatus(note),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 0,
+                                        vertical: 12,
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // Day
+                                          SizedBox(
+                                            width: 40,
+                                            child: Text(
+                                              'Day\n$day',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                color: Colors.grey.shade800,
                                               ),
-                                              
-                                              // Date & Status
-                                              Expanded(
-                                                flex: 3, 
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(dateStr, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500)),
-                                                    const SizedBox(height: 4),
-                                                    Text('By $byUser', style: GoogleFonts.inter(fontSize: 11, color: Colors.blue.shade400)),
-                                                    const SizedBox(height: 6),
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: isNew ? Colors.red.shade50 : Colors.green.shade50,
-                                                        borderRadius: BorderRadius.circular(12),
-                                                      ),
-                                                      child: Text(
-                                                        isNew ? 'New' : 'Read',
-                                                        style: GoogleFonts.inter(
-                                                          fontSize: 10, 
-                                                          fontWeight: FontWeight.w600,
-                                                          color: isNew ? Colors.red.shade700 : Colors.green.shade700,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              
-                                              // Notes
-                                              Expanded(
-                                                flex: 5, 
-                                                child: Text(noteText, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade800)),
-                                              ),
-                                              
-                                              // Actions
-                                              Expanded(
-                                                flex: 1, 
-                                                child: Center(
-                                                  child: IconButton(
-                                                    icon: const Icon(Icons.edit_square, color: Colors.blue, size: 18),
-                                                    onPressed: () => _editNote(note),
-                                                    constraints: const BoxConstraints(),
-                                                    padding: EdgeInsets.zero,
+                                            ),
+                                          ),
+
+                                          // Date & Status
+                                          SizedBox(
+                                            width: 80,
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  dateStr,
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
                                                   ),
                                                 ),
-                                              ),
-                                            ],
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  'By $byUser',
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 11,
+                                                    color: Colors.blue.shade400,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 2,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: isNew
+                                                        ? Colors.red.shade50
+                                                        : Colors.green.shade50,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    isNew ? 'New' : 'Read',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 10,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: isNew
+                                                          ? Colors.red.shade700
+                                                          : Colors
+                                                                .green
+                                                                .shade700,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                      );
-                                    },
-                                  ),
+
+                                          // Notes
+                                          Expanded(
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(
+                                                right: 8,
+                                              ),
+                                              child: Text(
+                                                noteText,
+                                                maxLines: 4,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 12,
+                                                  color: Colors.grey.shade800,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+
+                                          // Actions
+                                          SizedBox(
+                                            width: 64,
+                                            child: Center(
+                                              child: IconButton(
+                                                icon: const Icon(
+                                                  Icons.edit_square,
+                                                  color: Colors.blue,
+                                                  size: 18,
+                                                ),
+                                                onPressed: () =>
+                                                    _editNote(note),
+                                                constraints:
+                                                    const BoxConstraints(),
+                                                padding: EdgeInsets.zero,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                       ),
                     ),
                   ],

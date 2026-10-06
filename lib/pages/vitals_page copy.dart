@@ -955,6 +955,7 @@ class _VitalsTabState extends State<VitalsTab> {
   }
 
   Future<void> _onSaveVitals() async {
+    debugPrint('========== SAVE VITALS BUTTON CLICKED ==========');
     setState(() {
       _errorMessage = null;
     });

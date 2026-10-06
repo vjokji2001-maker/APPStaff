@@ -2488,8 +2488,8 @@ class _TrainingRegistrationPageState extends State<TrainingRegistrationPage> {
                       ],
 
                       style: GoogleFonts.poppins(
-                        fontSize: 22,
-                        fontWeight: FontWeight.normal, // 👈 important
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                         color: Colors.black87,
                       ),
 
@@ -2497,8 +2497,8 @@ class _TrainingRegistrationPageState extends State<TrainingRegistrationPage> {
                         hintText: 'Phone Number',
 
                         hintStyle: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.normal,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                           color: Colors.grey,
                         ),
 

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:staff_mate/api/event_api_service.dart';
 import 'package:staff_mate/pages/smartcarehomescreen.dart'; // For AppColors if needed, though they hardcoded colors
 import 'package:flutter/services.dart';
+
 class EventManagementPortalScreen extends StatefulWidget {
   const EventManagementPortalScreen({super.key});
 
@@ -1168,84 +1169,21 @@ class _CreateNewHospitalEventDialogState
   final _emergencyProtocolController = TextEditingController();
 
   bool _isSaving = false;
-  bool _categoriesLoading = false;
-  List<Map<String, dynamic>> _loadedCategories = [];
-  String? _errorMessage; // ← Error banner message
 
   @override
   void initState() {
     super.initState();
-    // Default values
+    // Default mock values for testing
     _startDateController.text = "2026-08-25";
     _endDateController.text = "2026-08-25";
     _startTimeController.text = "10:00:00";
     _endTimeController.text = "16:00:00";
-
-    // If parent passed categories, use them; else load fresh from API
-    if (widget.categories.isNotEmpty) {
-      _loadedCategories = widget.categories;
-    } else {
-      _fetchCategoriesInDialog();
-    }
-  }
-
-  /// Load event categories directly inside the dialog
-  Future<void> _fetchCategoriesInDialog() async {
-    setState(() {
-      _categoriesLoading = true;
-      _errorMessage = null;
-    });
-    try {
-      final response = await EventApiService.getEventCategories();
-      debugPrint('EVENT CATEGORIES RAW RESPONSE: $response');
-      List<dynamic> list = [];
-
-      if (response is List) {
-        list = response;
-      } else if (response is Map) {
-        final data = response['data'];
-        if (data is List) {
-          list = data;
-        } else if (data is Map) {
-          list = (data['list'] ?? data['content'] ?? data['records'] ?? []) as List;
-        }
-      }
-
-      if (list.isEmpty && response != null) {
-        debugPrint('EVENT CATEGORIES: Parsed empty list. Response: $response');
-      }
-
-      final mapped = list.map((e) {
-        final m = Map<String, dynamic>.from(e as Map);
-        // Normalise field names — API may return different key names
-        return {
-          'eventCategoryId': m['eventCategoryId'] ?? m['id'] ?? m['categoryId'],
-          'categoryName'   : m['categoryName'] ?? m['name'] ?? m['category'] ?? 'Unknown',
-          ...m,
-        };
-      }).toList();
-
-      setState(() {
-        _loadedCategories = mapped;
-        _categoriesLoading = false;
-        if (mapped.isEmpty) {
-          _errorMessage = 'No event categories found. Please add categories first.';
-        }
-      });
-    } catch (e) {
-      debugPrint('Error loading categories in dialog: $e');
-      setState(() {
-        _categoriesLoading = false;
-        _errorMessage = 'Could not load event categories: ${e.toString()}';
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Build deduplicated list from loaded categories
     final uniqueCategories = <String, Map<String, dynamic>>{};
-    for (final category in _loadedCategories) {
+    for (final category in widget.categories) {
       final name = category['categoryName']?.toString() ?? 'Other';
       uniqueCategories[name] = category;
     }
@@ -1263,7 +1201,7 @@ class _CreateNewHospitalEventDialogState
         ),
         child: Column(
           children: [
-            // ── Header ──────────────────────────────────────
+            // Header
             Container(
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
@@ -1292,43 +1230,7 @@ class _CreateNewHospitalEventDialogState
               ),
             ),
 
-            // ── Error / Warning Banner (form ke upar) ───────
-            if (_errorMessage != null)
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF3CD),
-                  border: Border.all(color: const Color(0xFFFFCA2C), width: 1.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.warning_amber_rounded,
-                        color: Color(0xFFB45309), size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: const Color(0xFF92400E),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => setState(() => _errorMessage = null),
-                      child: const Icon(Icons.close,
-                          color: Color(0xFFB45309), size: 16),
-                    ),
-                  ],
-                ),
-              ),
-
-            // ── Form Body ───────────────────────────────────
+            // Form Body
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
@@ -1359,88 +1261,37 @@ class _CreateNewHospitalEventDialogState
                       maxLines: 3,
                     ),
                     const SizedBox(height: 16),
-
-                    // ── Event Category Dropdown ─────────────
-                    _categoriesLoading
-                        ? Container(
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: const Color(0xFFE2E8F0)),
-                            ),
-                            child: Row(
-                              children: [
-                                const SizedBox(width: 16),
-                                const SizedBox(
-                                  height: 18,
-                                  width: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Color(0xFF182875),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Loading categories...',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 13,
-                                      color: const Color(0xFF94A3B8)),
-                                ),
-                              ],
-                            ),
-                          )
-                        : DropdownButtonFormField<Map<String, dynamic>>(
-                            decoration: InputDecoration(
-                              labelText: 'Event Category *',
-                              prefixIcon: const Icon(
-                                Icons.category,
-                                color: Color(0xFF182875),
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              filled: true,
-                              fillColor: const Color(0xFFF8FAFC),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              // Retry hint if empty
-                              suffixIcon: categoriesList.isEmpty
-                                  ? IconButton(
-                                      icon: const Icon(
-                                          Icons.refresh,
-                                          color: Color(0xFF182875)),
-                                      tooltip: 'Retry loading categories',
-                                      onPressed: _fetchCategoriesInDialog,
-                                    )
-                                  : null,
-                            ),
-                            value: _selectedCategory,
-                            hint: Text(
-                              categoriesList.isEmpty
-                                  ? 'No categories available — tap ↻ to retry'
-                                  : 'Select a category',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  color: const Color(0xFF94A3B8)),
-                            ),
-                            items: categoriesList.map((category) {
-                              return DropdownMenuItem<Map<String, dynamic>>(
-                                value: category,
-                                child: Text(
-                                  category['categoryName']?.toString() ?? 'Other',
-                                  style: GoogleFonts.poppins(fontSize: 14),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: categoriesList.isEmpty
-                                ? null
-                                : (value) => setState(
-                                    () => _selectedCategory = value),
+                    DropdownButtonFormField<Map<String, dynamic>>(
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'Event Category *',
+                        prefixIcon: const Icon(
+                          Icons.category,
+                          color: Color(0xFF182875),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      value: _selectedCategory,
+                      items: categoriesList.map((category) {
+                        return DropdownMenuItem<Map<String, dynamic>>(
+                          value: category,
+                          child: Text(
+                            category['categoryName']?.toString() ?? 'Other',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: GoogleFonts.poppins(fontSize: 14),
                           ),
+                        );
+                      }).toList(),
+                      onChanged: (value) =>
+                          setState(() => _selectedCategory = value),
+                    ),
                     const SizedBox(height: 32),
 
                     _buildSectionHeader(Icons.schedule, 'Timing'),
@@ -1509,53 +1360,53 @@ class _CreateNewHospitalEventDialogState
                       ],
                     ),
                     const SizedBox(height: 16),
-                  LayoutBuilder(
-  builder: (context, constraints) {
-    final isMobile = constraints.maxWidth < 500;
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isMobile = constraints.maxWidth < 500;
 
-    if (isMobile) {
-      return Column(
-        children: [
-          _buildTextField(
-            _expectedAttendeesController,
-            'Expected Attendees',
-            Icons.groups,
-            isNumber: true,
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
-            _budgetController,
-            'Budget Estimate',
-            Icons.attach_money,
-            isNumber: true,
-          ),
-        ],
-      );
-    }
+                        if (isMobile) {
+                          return Column(
+                            children: [
+                              _buildTextField(
+                                _expectedAttendeesController,
+                                'Expected Attendees',
+                                Icons.groups,
+                                isNumber: true,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                _budgetController,
+                                'Budget Estimate',
+                                Icons.attach_money,
+                                isNumber: true,
+                              ),
+                            ],
+                          );
+                        }
 
-    return Row(
-      children: [
-        Expanded(
-          child: _buildTextField(
-            _expectedAttendeesController,
-            'Expected Attendees',
-            Icons.groups,
-            isNumber: true,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildTextField(
-            _budgetController,
-            'Budget Estimate',
-            Icons.attach_money,
-            isNumber: true,
-          ),
-        ),
-      ],
-    );
-  },
-),
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: _buildTextField(
+                                _expectedAttendeesController,
+                                'Expected Attendees',
+                                Icons.groups,
+                                isNumber: true,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildTextField(
+                                _budgetController,
+                                'Budget Estimate',
+                                Icons.attach_money,
+                                isNumber: true,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                     const SizedBox(height: 32),
 
                     _buildSectionHeader(Icons.person, 'Management'),
@@ -1570,7 +1421,6 @@ class _CreateNewHospitalEventDialogState
                       'Organizer Contact',
                       Icons.phone,
                       isNumber: true,
-                      
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
@@ -1579,51 +1429,51 @@ class _CreateNewHospitalEventDialogState
                       Icons.manage_accounts,
                     ),
                     const SizedBox(height: 16),
-                   LayoutBuilder(
-  builder: (context, constraints) {
-    final isMobile = constraints.maxWidth < 500;
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isMobile = constraints.maxWidth < 500;
 
-    if (isMobile) {
-      return Column(
-        children: [
-          _buildTextField(
-            _managerDesignationController,
-            'Manager Designation',
-            Icons.badge,
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
-            _managerContactController,
-            'Manager Contact',
-            Icons.phone_android,
-            isNumber: true,
-          ),
-        ],
-      );
-    }
+                        if (isMobile) {
+                          return Column(
+                            children: [
+                              _buildTextField(
+                                _managerDesignationController,
+                                'Manager Designation',
+                                Icons.badge,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildTextField(
+                                _managerContactController,
+                                'Manager Contact',
+                                Icons.phone_android,
+                                isNumber: true,
+                              ),
+                            ],
+                          );
+                        }
 
-    return Row(
-      children: [
-        Expanded(
-          child: _buildTextField(
-            _managerDesignationController,
-            'Manager Designation',
-            Icons.badge,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildTextField(
-            _managerContactController,
-            'Manager Contact',
-            Icons.phone_android,
-            isNumber: true,
-          ),
-        ),
-      ],
-    );
-  },
-),
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: _buildTextField(
+                                _managerDesignationController,
+                                'Manager Designation',
+                                Icons.badge,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _buildTextField(
+                                _managerContactController,
+                                'Manager Contact',
+                                Icons.phone_android,
+                                isNumber: true,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                     const SizedBox(height: 32),
 
                     _buildSectionHeader(
@@ -1751,90 +1601,67 @@ class _CreateNewHospitalEventDialogState
     );
   }
 
- Widget _buildTextField(
-  TextEditingController controller,
-  String label,
-  IconData icon, {
-  int maxLines = 1,
-  bool isNumber = false,
-}) {
-  return TextField(
-    controller: controller,
-    maxLines: maxLines,
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    int maxLines = 1,
+    bool isNumber = false,
+  }) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
 
-    // Keyboard
-    keyboardType: isNumber
-        ? TextInputType.phone
-        : TextInputType.text,
+      // Keyboard
+      keyboardType: isNumber ? TextInputType.phone : TextInputType.text,
 
-    // Restrict number fields to digits and maximum 10 digits
-    inputFormatters: isNumber
-        ? [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(10),
-          ]
-        : null,
+      // Restrict number fields to digits and maximum 10 digits
+      inputFormatters: isNumber
+          ? [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10),
+            ]
+          : null,
 
-    style: GoogleFonts.poppins(
-      fontSize: 13,
-      color: const Color(0xFF0F172A),
-    ),
+      style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A)),
 
-    decoration: InputDecoration(
-      labelText: label,
-      labelStyle: GoogleFonts.poppins(
-        color: const Color(0xFF64748B),
-        fontSize: 13,
-      ),
-      prefixIcon: Icon(
-        icon,
-        color: const Color(0xFF94A3B8),
-        size: 20,
-      ),
-      filled: true,
-      fillColor: const Color(0xFFF8FAFC),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(
-          color: Color(0xFF182875),
-          width: 1.5,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.poppins(
+          color: const Color(0xFF64748B),
+          fontSize: 13,
+        ),
+        prefixIcon: Icon(icon, color: const Color(0xFF94A3B8), size: 20),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF182875), width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
         ),
       ),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 12,
-      ),
-    ),
-  );
-}
+    );
+  }
 
   Future<void> _saveEvent() async {
-    // ── Validation: show errors in banner at top of form ──
-    if (_titleController.text.trim().isEmpty) {
-      setState(() => _errorMessage = '⚠ Event Title is required.');
-      return;
-    }
-    if (_selectedCategory == null) {
-      setState(() => _errorMessage = '⚠ Please select an Event Category before creating.');
-      return;
-    }
-    if (_startDateController.text.trim().isEmpty || _endDateController.text.trim().isEmpty) {
-      setState(() => _errorMessage = '⚠ Start Date and End Date are required.');
+    if (_titleController.text.isEmpty || _selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required (*) fields')),
+      );
       return;
     }
 
-    // Clear any previous error
-    setState(() {
-      _errorMessage = null;
-      _isSaving = true;
-    });
+    setState(() => _isSaving = true);
 
     final payload = {
-      "eventTitle": _titleController.text.trim(),
+      "eventTitle": _titleController.text,
       "subtitle": _subtitleController.text,
       "eventCategoryId": _selectedCategory!['eventCategoryId'],
       "status": "UPCOMING",
@@ -1848,7 +1675,7 @@ class _CreateNewHospitalEventDialogState
       "organizerName": _organizerNameController.text,
       "organizerContact": _organizerContactController.text,
       "budgetEstimate": int.tryParse(_budgetController.text) ?? 0,
-      "eventManagerId": 101,
+      "eventManagerId": 101, // Mock manager ID
       "managerName": _managerNameController.text.isEmpty
           ? "System User"
           : _managerNameController.text,
@@ -1860,29 +1687,31 @@ class _CreateNewHospitalEventDialogState
     };
 
     final res = await EventApiService.createEvent(payload);
+
     setState(() => _isSaving = false);
 
     if (res != null &&
-        (res['statusCode'] == 200 ||
-            res['statusCode'] == 201 ||
-            res['status_code'] == 200 ||
-            res['status_code'] == 201)) {
+        (res['status_code'] == 200 || res['status_code'] == 201)) {
       widget.onEventCreated();
       if (mounted) Navigator.pop(context);
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Event Created Successfully',
-                style: TextStyle(color: Colors.white)),
+            content: Text(
+              'Event Created Successfully',
+              style: TextStyle(color: Colors.white),
+            ),
             backgroundColor: Colors.green,
           ),
         );
     } else {
-      // Show error in banner
-      final msg = res?['message']?.toString() ??
-          res?['error']?.toString() ??
-          'Failed to create event. Please try again.';
-      setState(() => _errorMessage = '❌ $msg');
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to create event'),
+            backgroundColor: Colors.red,
+          ),
+        );
     }
   }
 }

@@ -7,16 +7,19 @@ import '../../../theme/hr_theme.dart';
 
 class FaceAttendanceErrorView extends StatefulWidget {
   final String rawError;
+  final VoidCallback onCancel;
   final VoidCallback onRetry;
 
   const FaceAttendanceErrorView({
     super.key,
     required this.rawError,
+    required this.onCancel,
     required this.onRetry,
   });
 
   @override
-  State<FaceAttendanceErrorView> createState() => _FaceAttendanceErrorViewState();
+  State<FaceAttendanceErrorView> createState() =>
+      _FaceAttendanceErrorViewState();
 }
 
 class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
@@ -38,7 +41,10 @@ class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
         final jsonStr = errorString.substring(start, end + 1);
         final data = json.decode(jsonStr);
         if (data is Map<String, dynamic>) {
-          final message = data['message'] ?? data['error']?['message'] ?? 'Unknown Server Error';
+          final message =
+              data['message'] ??
+              data['error']?['message'] ??
+              'Unknown Server Error';
           String details = '';
           if (data['error'] != null && data['error'] is Map) {
             details = data['error']['cause'] ?? data['error']['message'] ?? '';
@@ -49,7 +55,7 @@ class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
           return {
             'message': message.toString(),
             'details': details.isNotEmpty ? details.toString() : jsonStr,
-            'type': 'API_ERROR'
+            'type': 'API_ERROR',
           };
         }
       }
@@ -61,19 +67,16 @@ class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
     var cleanMsg = errorString;
     cleanMsg = cleanMsg.replaceAll(RegExp(r'^Exception:\s*'), '');
     cleanMsg = cleanMsg.replaceAll(RegExp(r'Exception:\s*'), '');
-    return {
-      'message': cleanMsg,
-      'details': errorString,
-      'type': 'GENERIC'
-    };
+    return {'message': cleanMsg, 'details': errorString, 'type': 'GENERIC'};
   }
 
   void _copyToClipboard() {
-    final copyText = '--- Staff Mate Attendance Error Log ---\n'
+    final copyText =
+        '--- Staff Mate Attendance Error Log ---\n'
         'Message: ${_parsedError['message']}\n'
         'Details: ${_parsedError['details']}\n'
         'Raw: ${widget.rawError}';
-        
+
     Clipboard.setData(ClipboardData(text: copyText));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -99,9 +102,9 @@ class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
   Widget build(BuildContext context) {
     final message = _parsedError['message'] ?? 'Failed to record attendance';
     final details = _parsedError['details'] ?? '';
-    final isJpaError = details.contains('JPA') || details.contains('EntityManager') || widget.rawError.contains('EntityManager');
-    final isFaceMismatch = message.toLowerCase().contains('face');
-    final isLocationError = message.toLowerCase().contains('location') || details.toLowerCase().contains('location');
+    final isLocationError =
+        message.toLowerCase().contains('location') ||
+        details.toLowerCase().contains('location');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
@@ -110,84 +113,6 @@ class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 20),
-          // Pulsing / Styled Red Error Icon
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.red.shade100, width: 4),
-            ),
-            child: Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.red.shade600,
-              size: 54,
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          // Title
-          Text(
-            'Verification Failed',
-            style: GoogleFonts.poppins(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: HRTheme.primary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          
-          // Cleaned-up primary error message
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.red.shade700,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // User-friendly contextual tip
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.shade100),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.info_outline_rounded,
-                  color: Colors.orange.shade800,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    isLocationError
-                        ? 'Your device\'s location services or permissions are disabled. Please enable them in your device settings to proceed with attendance.'
-                        : isJpaError
-                            ? 'This is a server-side database issue. Please copy the technical details below and share it with your administrator/IT support.'
-                            : isFaceMismatch
-                                ? 'The system was unable to verify your face. Please ensure you are standing in a well-lit area, looking straight at the camera, and not wearing sunglasses or masks.'
-                                : 'An unexpected verification error occurred. Please verify your internet connection and try again.',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      height: 1.4,
-                      color: Colors.orange.shade900,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
           // Technical Details Container
           Container(
             decoration: BoxDecoration(
@@ -206,13 +131,20 @@ class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
                   },
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 14.0,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.code_rounded, color: Colors.grey.shade600, size: 20),
+                            Icon(
+                              Icons.code_rounded,
+                              color: Colors.grey.shade600,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               'Technical Logs',
@@ -225,7 +157,9 @@ class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
                           ],
                         ),
                         Icon(
-                          _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          _isExpanded
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
                           color: Colors.grey.shade600,
                         ),
                       ],
@@ -295,7 +229,10 @@ class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
                             ),
                             style: TextButton.styleFrom(
                               foregroundColor: HRTheme.primary,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
                             ),
                           ),
                         ),
@@ -340,7 +277,7 @@ class _FaceAttendanceErrorViewState extends State<FaceAttendanceErrorView> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: widget.onCancel,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     side: BorderSide(color: Colors.grey.shade300),

@@ -193,6 +193,7 @@ class _VitalsEntrySheetState extends State<VitalsEntrySheet> {
   }
 
   Future<void> _onSaveVitals() async {
+    debugPrint('========== SAVE VITALS BUTTON CLICKED ==========');
     setState(() {
       _errorMessage = null;
     });
@@ -246,6 +247,13 @@ class _VitalsEntrySheetState extends State<VitalsEntrySheet> {
         return;
       }
 
+      debugPrint('========== CALLING SAVE VITALS API ==========');
+      debugPrint('Patient ID: $patientId');
+      debugPrint('Admission ID: $admissionId');
+      debugPrint('Date: ${_dateController.text}');
+      debugPrint('Time: $_selectedHH:$_selectedMM');
+      debugPrint('Vital Entries: $vitalEntries');
+
       final response = await _ipdService.savePatientVitals(
         patientId: patientId,
         admissionId: admissionId,
@@ -253,7 +261,6 @@ class _VitalsEntrySheetState extends State<VitalsEntrySheet> {
         time: '$_selectedHH:$_selectedMM',
         vitalEntries: vitalEntries,
       );
-
       if (response['success'] == true) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

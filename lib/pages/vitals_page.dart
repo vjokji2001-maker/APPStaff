@@ -1301,6 +1301,7 @@ class _VitalsTabState extends State<VitalsTab> {
   }
 
   Future<void> _onSaveVitals() async {
+    debugPrint('========== SAVE VITALS BUTTON CLICKED ==========');
     setState(() => _errorMessage = null);
     if (_dateController.text.isEmpty) {
       setState(() => _errorMessage = 'Please select a date');
@@ -1349,6 +1350,12 @@ class _VitalsTabState extends State<VitalsTab> {
         });
         return;
       }
+      debugPrint('========== CALLING SAVE VITALS API ==========');
+      debugPrint('Patient ID: $patientId');
+      debugPrint('Admission ID: $admissionId');
+      debugPrint('Date: ${_dateController.text}');
+      debugPrint('Time: $_selectedHH:$_selectedMM');
+      debugPrint('Vital Entries: $vitalEntries');
       final response = await _ipdService.savePatientVitals(
         patientId: patientId,
         admissionId: admissionId,
