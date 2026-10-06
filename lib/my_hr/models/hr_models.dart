@@ -1207,3 +1207,28 @@ class HRPolicy {
     required this.pages,
   });
 }
+
+
+class LeaveTemplate {
+  final int id;
+  final String name;
+  final String code;
+  final double totalLeaveDays;
+
+  const LeaveTemplate({
+    required this.id,
+    required this.name,
+    required this.code,
+    required this.totalLeaveDays,
+  });
+
+  factory LeaveTemplate.fromJson(Map<String, dynamic> json) {
+    return LeaveTemplate(
+      id: json['id'] ?? 0,
+      name: json['name'] ?? '',
+      code: json['code'] ?? '',
+      totalLeaveDays:
+          (json['totalLeaveDays'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}

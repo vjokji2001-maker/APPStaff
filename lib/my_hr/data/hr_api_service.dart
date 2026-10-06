@@ -4,6 +4,7 @@ import 'package:staff_mate/APIs/api_endpoints.dart';
 import 'package:staff_mate/APIs/api_headers.dart';
 import 'package:staff_mate/APIs/api_request.dart';
 import 'package:staff_mate/APIs/api_host.dart';
+import '../models/hr_models.dart';
 
 class HRApiService {
   static Future<Map<String, String>> _hrHeaders() {
@@ -182,6 +183,44 @@ class HRApiService {
       return [];
     }
   }
+
+
+/// Get Leave Templates
+static Future<List<LeaveTemplate>> getLeaveTemplates({
+  String name = '',
+  String code = '',
+}) async {
+  try {
+    final response = await ApiRequest.post(
+      '${ApiHost.hrBaseUrl}/hr/master/attendance/leaveTemplate/get/all',
+      {
+        'name': name,
+        'code': code,
+      },
+      headers: await _hrHeaders(),
+    );
+
+    final dynamic data =
+        response is Map ? response['data'] : response;
+
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map(
+            (item) => LeaveTemplate.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList();
+    }
+
+    return <LeaveTemplate>[];
+  } catch (e) {
+    print('Error fetching leave templates: $e');
+    rethrow;
+  }
+}
+
 
   /// Helper to determine the current year cycle ID
   static Future<int?> getCurrentYearCycleId() async {
