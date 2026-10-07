@@ -1,11 +1,11 @@
 // lib/di/providers.dart
 import 'dart:convert';
-import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:staff_mate/APIs/api_host.dart';
+import 'package:staff_mate/APIs/api_headers.dart';
 import 'package:staff_mate/APIs/api_request.dart';
 import 'package:staff_mate/domain/entities/attendance.dart';
 import 'package:get_it/get_it.dart';
@@ -18,16 +18,24 @@ final GetIt getIt = GetIt.instance;
 
 void setupProviders() {
   // Register use cases (you may replace with real implementations later)
-  getIt.registerLazySingleton<FaceEnrollmentUseCase>(() => FaceEnrollmentUseCaseImpl());
-  getIt.registerLazySingleton<FaceRecognitionUseCase>(() => FaceRecognitionUseCaseImpl());
-  getIt.registerLazySingleton<LivenessCheckUseCase>(() => LivenessCheckUseCaseImpl());
+  getIt.registerLazySingleton<FaceEnrollmentUseCase>(
+    () => FaceEnrollmentUseCaseImpl(),
+  );
+  getIt.registerLazySingleton<FaceRecognitionUseCase>(
+    () => FaceRecognitionUseCaseImpl(),
+  );
+  getIt.registerLazySingleton<LivenessCheckUseCase>(
+    () => LivenessCheckUseCaseImpl(),
+  );
 
   // Register FaceAttendanceCubit
-  getIt.registerFactory<FaceAttendanceCubit>(() => FaceAttendanceCubit(
-        enrollmentUseCase: getIt<FaceEnrollmentUseCase>(),
-        recognitionUseCase: getIt<FaceRecognitionUseCase>(),
-        livenessUseCase: getIt<LivenessCheckUseCase>(),
-      ));
+  getIt.registerFactory<FaceAttendanceCubit>(
+    () => FaceAttendanceCubit(
+      enrollmentUseCase: getIt<FaceEnrollmentUseCase>(),
+      recognitionUseCase: getIt<FaceRecognitionUseCase>(),
+      livenessUseCase: getIt<LivenessCheckUseCase>(),
+    ),
+  );
 }
 
 // Stub implementations – replace with real logic later
@@ -43,21 +51,23 @@ class FaceEnrollmentUseCaseImpl implements FaceEnrollmentUseCase {
   }) async {
     final nowIso = DateTime.now().toIso8601String();
     final timeParam = Uri.encodeComponent(nowIso);
-    final url = '${ApiHost.hrBaseUrl}/hr/attendance/daily/punch/log/attndnce?currentTime=$timeParam';
-    
+    final url =
+        '${ApiHost.hrBaseUrl}/hr/attendance/daily/punch/log/attndnce?currentTime=$timeParam';
+
     final body = {
       "empId": empId,
       "punchType": punchType,
       "punchDirection": punchDirection,
       "faceEmbedding": faceEmbedding,
       "latitude": latitude,
-      "longitude": longitude
+      "longitude": longitude,
     };
 
     try {
       final response = await ApiRequest.post(
         url,
         body,
+        headers: await ApiHeaders.getHeaders(isHrRequest: true),
       );
 
       // ApiRequest.post handles parsing and throws on error based on status code
@@ -71,41 +81,38 @@ class FaceEnrollmentUseCaseImpl implements FaceEnrollmentUseCase {
 class FaceRecognitionUseCaseImpl implements FaceRecognitionUseCase {
   @override
   Future<dynamic> extractEmbedding(dynamic image) async {
-    // Helper to generate a 128-dimensional dummy embedding
-    List<double> generateDummyEmbedding128() {
-      final random = math.Random();
-      return List.generate(128, (_) => (random.nextDouble() * 2 - 1) * 0.2); // Random floats around -0.2 to 0.2
+    if (image is! XFile) {
+      throw StateError('Invalid camera image for face recognition.');
     }
 
-    if (image is XFile) {
-      if (kIsWeb) {
-        // ML Kit is not supported on Web. Return realistic 128-dim dummy payload.
-        return generateDummyEmbedding128();
-      }
-      
-      final inputImage = InputImage.fromFilePath(image.path);
-      final faceDetector = FaceDetector(
-        options: FaceDetectorOptions(
-          enableLandmarks: true,
-          enableClassification: true,
-        ),
+    if (kIsWeb) {
+      throw UnsupportedError(
+        'Face recognition is not available on web because no recognition model is configured.',
       );
-      
-      try {
-        final faces = await faceDetector.processImage(inputImage);
-        faceDetector.close();
-        
-        if (faces.isNotEmpty) {
-          // google_mlkit_face_detection DOES NOT generate 128-D recognition embeddings. 
-          // We return a dummy 128-D array so the backend length check doesn't fail.
-          return generateDummyEmbedding128();
-        }
-      } catch (e) {
-        faceDetector.close();
-      }
     }
-    
-    return generateDummyEmbedding128();
+
+    final faceDetector = FaceDetector(
+      options: FaceDetectorOptions(
+        enableLandmarks: true,
+        enableClassification: true,
+      ),
+    );
+
+    try {
+      final faces = await faceDetector.processImage(
+        InputImage.fromFilePath(image.path),
+      );
+      if (faces.isEmpty) {
+        throw StateError('No face was detected. Please try again.');
+      }
+    } finally {
+      await faceDetector.close();
+    }
+
+    throw UnsupportedError(
+      'Face detection succeeded, but face matching is not configured. '
+      'A trained recognition model and matching enrollment data are required.',
+    );
   }
 }
 

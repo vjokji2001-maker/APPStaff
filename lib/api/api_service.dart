@@ -83,7 +83,9 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>?> loginUser(
-      String userName, String password) async {
+    String userName,
+    String password,
+  ) async {
     try {
       final encryptedUsername = _encryptCryptoJS(userName.trim());
       final encryptedPassword = _encryptCryptoJS(password.trim());
@@ -97,7 +99,8 @@ class ApiService {
       debugPrint('Login status: ${response.statusCode}');
       debugPrint('Login body: ${response.body}');
 
-      if (response.statusCode == 409 && _isActiveSessionConflict(response.body)) {
+      if (response.statusCode == 409 &&
+          _isActiveSessionConflict(response.body)) {
         debugPrint('Active session detected. Retrying with forceLogin=true');
 
         final forcedResponse = await _performLoginRequest(
@@ -159,7 +162,8 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>?> _handleLoginResponse(
-      http.Response response) async {
+    http.Response response,
+  ) async {
     if (response.statusCode != 200) {
       debugPrint('Login failed - status: ${response.statusCode}');
       debugPrint('Body: ${response.body}');
@@ -191,8 +195,9 @@ class ApiService {
   }
 
   static Future<void> _extractAndStoreTokens(
-      Map<String, String> headers,
-      Map<String, dynamic> responseData) async {
+    Map<String, String> headers,
+    Map<String, dynamic> responseData,
+  ) async {
     final data = responseData['data'];
     if (data == null) return;
 
@@ -280,7 +285,8 @@ class ApiService {
       debugPrint('Refresh status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        final newData = (jsonDecode(response.body) as Map<String, dynamic>)['data'];
+        final newData =
+            (jsonDecode(response.body) as Map<String, dynamic>)['data'];
         if (newData != null) {
           _tokenPrefix = _defaultTokenPrefix;
           if (newData['token'] != null) accessToken = newData['token'];
@@ -346,6 +352,7 @@ class ApiService {
     String method = 'GET',
     Map<String, String>? headers,
     dynamic body,
+    bool isHrRequest = false,
   }) async {
     try {
       SessionManager.updateUserActivity();
@@ -361,8 +368,9 @@ class ApiService {
       }
 
       final sessionData = await SessionManager.getSession();
-      
-      final authHeader = (_tokenPrefix?.isNotEmpty == true
+
+      final authHeader =
+          (_tokenPrefix?.isNotEmpty == true
               ? _tokenPrefix!
               : _defaultTokenPrefix) +
           (accessToken ?? '');
@@ -371,13 +379,22 @@ class ApiService {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': authHeader,
-        'clinicid': sessionData['clinicId']?.toString() ?? '',
+        'clinicid': isHrRequest
+            ? 'aureus_hrms'
+            : (sessionData['clinicId']?.toString() ?? ''),
         'zoneid': sessionData['zoneid']?.toString() ?? '',
         'userid': sessionData['userId']?.toString() ?? '',
         'branchId': sessionData['branchId']?.toString() ?? '',
         if (headers != null) ...headers,
       };
-
+      debugPrint('===== AUTH REQUEST HEADERS =====');
+      debugPrint('URL: $url');
+      debugPrint('isHrRequest: $isHrRequest');
+      debugPrint('clinicid: ${requestHeaders['clinicid']}');
+      debugPrint('userid: ${requestHeaders['userid']}');
+      debugPrint('branchId: ${requestHeaders['branchId']}');
+      debugPrint('zoneid: ${requestHeaders['zoneid']}');
+      debugPrint('================================');
       var response = await _makeRequest(
         method,
         Uri.parse(url),
@@ -390,9 +407,9 @@ class ApiService {
         if (await refreshUserToken() && accessToken != null) {
           requestHeaders['Authorization'] =
               (_tokenPrefix?.isNotEmpty == true
-                      ? _tokenPrefix!
-                      : _defaultTokenPrefix) +
-                  accessToken!;
+                  ? _tokenPrefix!
+                  : _defaultTokenPrefix) +
+              accessToken!;
           response = await _makeRequest(
             method,
             Uri.parse(url),
@@ -430,5 +447,3 @@ class ApiService {
     }
   }
 }
-
-

@@ -26,10 +26,46 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
   List<dynamic> _publicHolidays = [];
   String _aiInsightText = "Loading AI insights...";
   bool _isLoadingInsight = false;
+  List<LeaveTemplate> _leaveTemplates = [];
+  LeaveTemplate? _selectedLeaveTemplate;
+  bool _isLoadingLeaveTemplates = true;
+
+  Future<void> _fetchLeaveTemplates() async {
+    try {
+      final templates = await HRApiService.getLeaveTemplates();
+      print('========== LEAVE TEMPLATES ==========');
+      for (final template in templates) {
+        print('ID: ${template.id}');
+        print('NAME: ${template.name}');
+        print('CODE: ${template.code}');
+        print('====================================');
+      }
+      if (!mounted) return;
+
+      setState(() {
+        _leaveTemplates = templates;
+        _isLoadingLeaveTemplates = false;
+      });
+
+      print('Leave templates loaded: ${templates.length}');
+    } catch (e) {
+      print('Error fetching leave templates: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _leaveTemplates = [];
+        _isLoadingLeaveTemplates = false;
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+
+    _fetchLeaveTemplates();
+
     _fetchData();
   }
 
@@ -42,57 +78,28 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
 
   Future<void> _fetchPublicHolidays(int year) async {
     try {
-      final response = await http.post(
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer YOUR_OPENAI_API_KEY_HERE',
-        },
-        body: jsonEncode({
-          "model": "gpt-3.5-turbo",
-          "messages": [
-            {
-              "role": "system",
-              "content":
-                  "You are a JSON API. Return ONLY a valid JSON array. No markdown, no explanation.",
-            },
-            {
-              "role": "user",
-              "content":
-                  "List 10 major public holidays in India for the year $year (including Diwali, Holi, Eid, Independence Day, etc. with accurate dates for $year). Format MUST be exactly: [{\"date\": \"YYYY-MM-DD\", \"name\": \"Holiday Name\"}]",
-            },
-          ],
-          "temperature": 0.0,
-        }),
+      final response = await http.get(
+        Uri.https('date.nager.at', '/api/v3/PublicHolidays/$year/IN'),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final content = data['choices'][0]['message']['content']
-            .toString()
-            .trim();
-
-        // Ensure no markdown block
-        String jsonStr = content;
-        if (jsonStr.startsWith('```json')) {
-          jsonStr = jsonStr
-              .replaceAll('```json', '')
-              .replaceAll('```', '')
-              .trim();
-        } else if (jsonStr.startsWith('```')) {
-          jsonStr = jsonStr.replaceAll('```', '').trim();
-        }
-
         if (mounted) {
           setState(() {
-            _publicHolidays = jsonDecode(jsonStr);
+            _publicHolidays = data is List ? data : [];
           });
         }
       } else {
-        debugPrint('GPT API Holiday Error: ${response.body}');
+        debugPrint('Public holiday API error: ${response.statusCode}');
+        if (mounted) {
+          setState(() => _publicHolidays = []);
+        }
       }
     } catch (e) {
-      debugPrint('Error fetching dynamic holidays via AI: $e');
+      debugPrint('Error fetching public holidays: $e');
+      if (mounted) {
+        setState(() => _publicHolidays = []);
+      }
     }
   }
 
@@ -549,9 +556,9 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
           ),
           const SizedBox(height: 14),
 
-          // AI Smart Insights
+          // Leave Insight
           const HRSectionHeader(
-            title: 'AI Smart Insights',
+            title: 'Leave Insight',
             icon: Icons.auto_awesome,
           ),
           HRCard(
@@ -645,13 +652,7 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
   }
 
   Future<void> _fetchAiInsight() async {
-    if (_isLoadingInsight) return;
     if (!mounted) return;
-
-    setState(() {
-      _isLoadingInsight = true;
-      _aiInsightText = "Analyzing your schedule with AI...";
-    });
 
     int approvedThisMonth = _applications.where((a) {
       if (a.status != 'Approved') return false;
@@ -663,58 +664,17 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
       }
     }).length;
 
-    try {
-      final response = await http.post(
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer YOUR_OPENAI_API_KEY_HERE',
-        },
-        body: jsonEncode({
-          "model": "gpt-3.5-turbo",
-          "messages": [
-            {
-              "role": "system",
-              "content":
-                  "You are a helpful and positive HR assistant. Keep responses under 2 short sentences. Be encouraging and friendly.",
-            },
-            {
-              "role": "user",
-              "content":
-                  "The user has taken $approvedThisMonth approved leaves in the month of ${_calendarDate.month}/${_calendarDate.year}. Give a short, encouraging message about their work-life balance.",
-            },
-          ],
-          "max_tokens": 60,
-          "temperature": 0.7,
-        }),
-      );
+    final requestLabel = approvedThisMonth == 1
+        ? 'approved leave request'
+        : 'approved leave requests';
+    final insight = approvedThisMonth == 0
+        ? 'No approved leave is scheduled this month. Remember to plan time to recharge.'
+        : 'You have $approvedThisMonth $requestLabel this month. Keep making time to recharge.';
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (mounted) {
-          setState(() {
-            _aiInsightText = data['choices'][0]['message']['content']
-                .toString()
-                .trim();
-            _isLoadingInsight = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _aiInsightText = "Failed to load AI insight from server.";
-            _isLoadingInsight = false;
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _aiInsightText = "Could not connect to AI service.";
-          _isLoadingInsight = false;
-        });
-      }
-    }
+    setState(() {
+      _aiInsightText = insight;
+      _isLoadingInsight = false;
+    });
   }
 
   List<Widget> _buildSelectedDayEvents() {
@@ -1110,55 +1070,18 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
     // Initial State values
     int? selectedYearId = _findCurrentYearCycleId(_years);
     DateTime? appDate = DateTime.now();
-    LeaveBalance? selectedBalance;
+
+    LeaveTemplate? selectedLeaveTemplate = _selectedLeaveTemplate;
+
     DateTime? from = DateTime.now();
     DateTime? to = DateTime.now();
     String fromDuration = 'FULL_DAY';
     String toDuration = 'FULL_DAY';
     final reasonCtrl = TextEditingController();
+    bool isSubmitting = false;
 
-    List<LeaveBalance> dialogBalances = [];
-    bool isLoadingBalances = true;
-
-    Future<void> fetchDialogBalances(StateSetter ss, int? yearId) async {
-      ss(() => isLoadingBalances = true);
-      try {
-        final res = await HRApiService.getLeaveBalances(yearId: yearId);
-        List<dynamic> dataList = [];
-        if (res is Map) {
-          final dataMap = res['data'];
-          if (dataMap is List) {
-            dataList = dataMap;
-          } else if (dataMap is Map) {
-            dataList = dataMap['dataList'] ?? dataMap['content'] ?? [];
-          } else {
-            dataList = res['dataList'] ?? res['content'] ?? [];
-          }
-        } else if (res is List) {
-          dataList = res;
-        }
-        if (!mounted) return;
-        ss(() {
-          dialogBalances = dataList
-              .map((e) => LeaveBalance.fromJson(e))
-              .toList();
-          if (selectedBalance != null &&
-              !dialogBalances.any(
-                (b) => b.leaveNameId == selectedBalance?.leaveNameId,
-              )) {
-            selectedBalance = null;
-          }
-          isLoadingBalances = false;
-        });
-      } catch (e) {
-        if (!mounted) return;
-        ss(() {
-          dialogBalances = [];
-          selectedBalance = null;
-          isLoadingBalances = false;
-        });
-      }
-    }
+    String formatDate(DateTime date) =>
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
     bool _init = false;
     showDialog(
@@ -1168,7 +1091,6 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
         builder: (ctx, ss) {
           if (!_init) {
             _init = true;
-            fetchDialogBalances(ss, selectedYearId);
           }
           final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1267,13 +1189,13 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                             .toList(),
                         onChanged: (v) {
                           ss(() => selectedYearId = v);
-                          fetchDialogBalances(ss, v);
                         },
                       ),
                       const SizedBox(height: 14),
 
                       // 2. Leave Name Dropdown
-                      isLoadingBalances
+                      // 2. Leave Name Dropdown - API Templates
+                      _isLoadingLeaveTemplates
                           ? const Center(
                               child: Padding(
                                 padding: EdgeInsets.all(12),
@@ -1284,12 +1206,10 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                                 ),
                               ),
                             )
-                          : DropdownButtonFormField<LeaveBalance>(
-                              value: selectedBalance,
-                              isExpanded: true,
+                          : DropdownButtonFormField<LeaveTemplate>(
+                              value: selectedLeaveTemplate,
                               hint: Text(
                                 'Select Leave Name',
-                                overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(
                                   fontSize: 13,
                                   color: HRTheme.textSecondary,
@@ -1311,15 +1231,15 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                               dropdownColor: isDark
                                   ? HRTheme.bgCardDark
                                   : Colors.white,
-                              menuMaxHeight: 240,
-                              items: dialogBalances
+                              items: _leaveTemplates
                                   .map(
-                                    (b) => DropdownMenuItem<LeaveBalance>(
-                                      value: b,
+                                    (
+                                      template,
+                                    ) => DropdownMenuItem<LeaveTemplate>(
+                                      value: template,
                                       child: Text(
-                                        b.leaveType,
+                                        '${template.name} (${template.code})',
                                         overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
                                         style: GoogleFonts.poppins(
                                           fontSize: 13,
                                         ),
@@ -1327,7 +1247,11 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                                     ),
                                   )
                                   .toList(),
-                              onChanged: (v) => ss(() => selectedBalance = v),
+                              onChanged: (value) {
+                                ss(() {
+                                  selectedLeaveTemplate = value;
+                                });
+                              },
                             ),
                       const SizedBox(height: 14),
 
@@ -1666,104 +1590,158 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                               child: SizedBox(
                                 height: 48,
                                 child: ElevatedButton(
-                                  onPressed: () async {
-                                    final reason = reasonCtrl.text.trim();
+                                  onPressed: isSubmitting
+                                      ? null
+                                      : () async {
+                                          if (selectedYearId == null) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Please select a year cycle.',
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
 
-                                    if (selectedBalance == null) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Please select a leave type.',
-                                          ),
-                                        ),
-                                      );
-                                      return;
-                                    }
+                                          if (selectedLeaveTemplate == null) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Please select a leave type.',
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
 
-                                    if (from == null || to == null) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Please select from and to dates.',
-                                          ),
-                                        ),
-                                      );
-                                      return;
-                                    }
+                                          if (from == null || to == null) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Please choose leave dates.',
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
 
-                                    if (reason.isEmpty) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Please enter a reason for leave.',
-                                          ),
-                                        ),
-                                      );
-                                      return;
-                                    }
+                                          if (to!.isBefore(from!)) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'To date must be on or after From date.',
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
 
-                                    try {
-                                      final empId =
-                                          await HRApiService.getLoggedEmpId();
-                                      final payload = {
-                                        'employeeId': empId,
-                                        'yearId': selectedYearId,
-                                        'leaveNameId':
-                                            selectedBalance?.leaveNameId,
-                                        'leaveType': selectedBalance?.leaveType,
-                                        'fromDate': from!
-                                            .toIso8601String()
-                                            .split('T')
-                                            .first,
-                                        'toDate': to!
-                                            .toIso8601String()
-                                            .split('T')
-                                            .first,
-                                        'applicationDate': appDate
-                                            ?.toIso8601String()
-                                            .split('T')
-                                            .first,
-                                        'fromDuration': fromDuration,
-                                        'toDuration': toDuration,
-                                        'noOfDays': totalDays,
-                                        'reason': reason,
-                                      };
+                                          final reason = reasonCtrl.text.trim();
+                                          if (reason.isEmpty) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Please enter a leave reason.',
+                                                ),
+                                              ),
+                                            );
+                                            return;
+                                          }
 
-                                      await HRApiService.applyLeave(payload);
+                                          ss(() => isSubmitting = true);
 
-                                      if (context.mounted) {
-                                        Navigator.pop(ctx);
-                                        _fetchData();
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Leave request submitted successfully.',
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Failed to submit leave: $e',
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  },
+                                          try {
+                                            final empId =
+                                                await HRApiService.getLoggedEmpId();
+                                            if (empId.isEmpty) {
+                                              throw Exception(
+                                                'Employee ID not available.',
+                                              );
+                                            }
+
+                                            final currentDate = DateTime.now();
+                                            final monthCycle =
+                                                currentDate.month;
+                                            final monthYear =
+                                                '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}';
+
+                                            final payload = {
+                                              'employeeId': empId,
+                                              'empId': empId,
+                                              'yearId': selectedYearId,
+                                              'yearCycleId': selectedYearId,
+                                              'monthCycle': monthCycle,
+                                              'monthCycleId': monthCycle,
+                                              'month': monthCycle,
+                                              'monthId': monthCycle,
+                                              'monthYear': monthYear,
+                                              'leaveTemplateId':
+                                                  selectedLeaveTemplate!.id,
+                                              'leaveNameId':
+                                                  selectedLeaveTemplate!.id,
+                                              'leaveId':
+                                                  selectedLeaveTemplate!.id,
+                                              'leaveName':
+                                                  selectedLeaveTemplate!.name,
+                                              'leaveType':
+                                                  selectedLeaveTemplate!.name,
+                                              'applicationDate': formatDate(
+                                                appDate ?? currentDate,
+                                              ),
+                                              'fromDate': formatDate(from!),
+                                              'toDate': formatDate(to!),
+                                              'fromDuration': fromDuration,
+                                              'toDuration': toDuration,
+                                              'noOfDays': totalDays,
+                                              'days': totalDays,
+                                              'reason': reason,
+                                              'status': 'PENDING',
+                                            };
+
+                                            await HRApiService.applyLeave(
+                                              payload,
+                                            );
+
+                                            if (!mounted) return;
+                                            Navigator.pop(ctx);
+                                            await _fetchData();
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Leave request submitted successfully',
+                                                ),
+                                              ),
+                                            );
+                                          } catch (e) {
+                                            if (!mounted) return;
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Error submitting leave: $e',
+                                                ),
+                                              ),
+                                            );
+                                          } finally {
+                                            if (mounted) {
+                                              ss(() => isSubmitting = false);
+                                            }
+                                          }
+                                        },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF2E8B36),
                                     foregroundColor: Colors.white,
@@ -1778,16 +1756,25 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                                   ),
                                   child: FittedBox(
                                     fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      'Apply for Leave',
-                                      maxLines: 1,
-                                      softWrap: false,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
-                                      ),
-                                    ),
+                                    child: isSubmitting
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Text(
+                                            'Apply for Leave',
+                                            maxLines: 1,
+                                            softWrap: false,
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
+                                          ),
                                   ),
                                 ),
                               ),
