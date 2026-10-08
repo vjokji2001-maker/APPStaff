@@ -1066,7 +1066,19 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
     }
   }
 
-  void _showApplyLeave() {
+  Future<void> _showApplyLeave() async {
+    if (_years.isEmpty) {
+      final yearsList = await HRApiService.getYearCycles();
+      if (!mounted) return;
+      setState(() => _years = yearsList);
+      if (yearsList.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No leave year cycles are available.')),
+        );
+        return;
+      }
+    }
+
     // Initial State values
     int? selectedYearId = _findCurrentYearCycleId(_years);
     DateTime? appDate = DateTime.now();
@@ -1664,51 +1676,44 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                                           try {
                                             final empId =
                                                 await HRApiService.getLoggedEmpId();
+
+                                            debugPrint(
+                                              '=== APPLY LEAVE EMPLOYEE ID ===',
+                                            );
+                                            debugPrint('Employee ID: $empId');
+
                                             if (empId.isEmpty) {
                                               throw Exception(
-                                                'Employee ID not available.',
+                                                'Employee ID not available. Please refresh My HR and try again.',
                                               );
                                             }
 
                                             final currentDate = DateTime.now();
-                                            final monthCycle =
-                                                currentDate.month;
-                                            final monthYear =
-                                                '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}';
-
                                             final payload = {
-                                              'employeeId': empId,
-                                              'empId': empId,
-                                              'yearId': selectedYearId,
-                                              'yearCycleId': selectedYearId,
-                                              'monthCycle': monthCycle,
-                                              'monthCycleId': monthCycle,
-                                              'month': monthCycle,
-                                              'monthId': monthCycle,
-                                              'monthYear': monthYear,
-                                              'leaveTemplateId':
-                                                  selectedLeaveTemplate!.id,
-                                              'leaveNameId':
-                                                  selectedLeaveTemplate!.id,
-                                              'leaveId':
-                                                  selectedLeaveTemplate!.id,
-                                              'leaveName':
-                                                  selectedLeaveTemplate!.name,
-                                              'leaveType':
-                                                  selectedLeaveTemplate!.name,
                                               'applicationDate': formatDate(
                                                 appDate ?? currentDate,
                                               ),
                                               'fromDate': formatDate(from!),
+                                              'fromDateStr': formatDate(from!),
                                               'toDate': formatDate(to!),
-                                              'fromDuration': fromDuration,
-                                              'toDuration': toDuration,
-                                              'noOfDays': totalDays,
-                                              'days': totalDays,
+                                              'toDateStr': formatDate(to!),
+                                              'fromDateDuration': fromDuration,
+                                              'toDateDuration': toDuration,
+                                              'leaveNameId':
+                                                  selectedLeaveTemplate!.id,
+                                              'leaveName':
+                                                  selectedLeaveTemplate!.name,
                                               'reason': reason,
-                                              'status': 'PENDING',
+                                              'employeeId': empId,
+                                              'yearId': selectedYearId,
+                                              'totalCount': totalDays,
+                                              'approverDTOList':
+                                                  <Map<String, dynamic>>[],
                                             };
-
+                                            debugPrint(
+                                              '=== APPLY LEAVE PAYLOAD ===',
+                                            );
+                                            debugPrint(payload.toString());
                                             await HRApiService.applyLeave(
                                               payload,
                                             );

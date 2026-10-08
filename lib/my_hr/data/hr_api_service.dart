@@ -13,25 +13,49 @@ class HRApiService {
 
   static Future<String> getLoggedEmpId({DateTime? referenceDate}) async {
     final prefs = await SharedPreferences.getInstance();
-    String empId = prefs.getString('empId') ?? '';
 
-    // If the stored empId is empty or not a valid UUID format (i.e. if it doesn't contain a hyphen)
-    // we can attempt to resolve it dynamically from the roster.
-    if (empId.isEmpty || !empId.contains('-')) {
-      final userId = prefs.getString('userId') ?? '';
-      final firstName = prefs.getString('firstName') ?? '';
-      if (userId.isNotEmpty) {
-        final resolved = await resolveAndSaveEmpIdFromRoster(
-          userId,
-          firstName: firstName,
-          referenceDate: referenceDate,
-        );
-        if (resolved != null && resolved.isNotEmpty) {
-          empId = resolved;
-        }
+    String empId = prefs.getString('empId')?.trim() ?? '';
+
+    print('========== GET LOGGED EMP ID ==========');
+    print('Stored empId: $empId');
+
+    final uuidRegex = RegExp(
+      r'^[0-9a-fA-F]{8}-'
+      r'[0-9a-fA-F]{4}-'
+      r'[0-9a-fA-F]{4}-'
+      r'[0-9a-fA-F]{4}-'
+      r'[0-9a-fA-F]{12}$',
+    );
+
+    // Use stored Employee ID if it is a valid UUID.
+    if (uuidRegex.hasMatch(empId)) {
+      print('Using stored Employee ID: $empId');
+      return empId;
+    }
+
+    // Otherwise resolve Employee ID from Shift Roster.
+    final userId = prefs.getString('userId')?.trim() ?? '';
+    final firstName = prefs.getString('firstName')?.trim() ?? '';
+
+    print('Stored Employee ID invalid/missing.');
+    print('userId: $userId');
+    print('firstName: $firstName');
+
+    if (userId.isNotEmpty) {
+      final resolved = await resolveAndSaveEmpIdFromRoster(
+        userId,
+        firstName: firstName,
+        referenceDate: referenceDate,
+      );
+
+      if (resolved != null && resolved.isNotEmpty) {
+        print('Resolved Employee ID: $resolved');
+        return resolved;
       }
     }
-    return empId;
+
+    print('Could not resolve Employee ID.');
+    return '';
   }
 
   /// Resolve and save employee ID by querying the shift roster
@@ -494,9 +518,14 @@ class HRApiService {
       final prefs = await SharedPreferences.getInstance();
 
       // ── Resolve empId: use passed value → stored empId → stored userId ──
-      final resolvedEmpId = (empId != null && empId.isNotEmpty)
-          ? empId
-          : (prefs.getString('empId') ?? prefs.getString('userId') ?? '');
+      final passedEmpId = empId?.trim() ?? '';
+      final storedEmpId = prefs.getString('empId')?.trim() ?? '';
+      final storedUserId = prefs.getString('userId')?.trim() ?? '';
+      final resolvedEmpId = passedEmpId.isNotEmpty
+          ? passedEmpId
+          : storedEmpId.isNotEmpty
+          ? storedEmpId
+          : storedUserId;
 
       // ── Resolve jobTitle from preferences ──
       final resolvedJobTitle =

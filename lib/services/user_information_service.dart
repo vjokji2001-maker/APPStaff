@@ -23,7 +23,7 @@ class UserInformationService {
       'userid': userId,
       'zoneid': zoneid,
       'branchId': branchId.toString(),
-      'Access-Control-Allow-Origin': '*', 
+      'Access-Control-Allow-Origin': '*',
     };
 
     debugPrint('=== User Information API HEADERS ===');
@@ -36,7 +36,7 @@ class UserInformationService {
     debugPrint('Status: ${response.statusCode}');
     debugPrint('=== Response Body ===');
     debugPrint('url Response: $url');
-    
+
     if (response.statusCode != 200) {
       debugPrint('Body: ${response.body}');
       throw Exception(
@@ -57,10 +57,13 @@ class UserInformationService {
         }
       }
 
-      final Map<String, dynamic> data = (json.containsKey('data') && json['data'] is Map)
+      final Map<String, dynamic> data =
+          (json.containsKey('data') && json['data'] is Map)
           ? json['data'] as Map<String, dynamic>
           : json;
-      
+      print('========== FULL USER INFORMATION ==========');
+      print(jsonEncode(data));
+      print('===========================================');
       if (data.isEmpty) {
         throw Exception('No user data received from API');
       }
@@ -83,14 +86,13 @@ class UserInformationService {
 
       // Save COMPLETE user data to SharedPreferences
       await _saveUserDataToPrefs(prefs, data);
-      
+
       // Also save the complete JSON response for easy access
       await prefs.setString('user_data_json', jsonEncode(json));
-      
+
       debugPrint('✅ User information saved to SharedPreferences');
-      
+
       return data;
-      
     } catch (e) {
       debugPrint('❌ Error parsing response: $e');
       debugPrint('Raw response: ${response.body}');
@@ -100,8 +102,9 @@ class UserInformationService {
 
   /// Save all user data fields to SharedPreferences
   Future<void> _saveUserDataToPrefs(
-      SharedPreferences prefs, Map<String, dynamic> data) async {
-    
+    SharedPreferences prefs,
+    Map<String, dynamic> data,
+  ) async {
     // Personal Information
     await prefs.setString('userId', data['userId']?.toString() ?? '');
     await prefs.setString('username', data['userId']?.toString() ?? '');
@@ -111,7 +114,10 @@ class UserInformationService {
     await prefs.setString('mobileNo', data['mobileNo']?.toString() ?? '');
     await prefs.setString('email', data['email']?.toString() ?? '');
     await prefs.setString('jobtitle', data['jobtitle']?.toString() ?? '');
-    await prefs.setString('UserJobtitle', data['jobtitle']?.toString() ?? ''); // React key
+    await prefs.setString(
+      'UserJobtitle',
+      data['jobtitle']?.toString() ?? '',
+    ); // React key
     await prefs.setString('clinicName', data['clinicName']?.toString() ?? '');
     await prefs.setString('userType', data['userType']?.toString() ?? '');
 
@@ -122,80 +128,140 @@ class UserInformationService {
     final String computedFullName = '$init $first $last'.trim();
     await prefs.setString('fullName', computedFullName);
     debugPrint('✅ Saved fullName: $computedFullName');
-    
+
     // Clinic/Branch Information
-    await prefs.setString('clinicUserid', data['clinicUserid']?.toString() ?? '');
-    await prefs.setString('CLINICUSERID', data['clinicUserid']?.toString() ?? ''); // React key
+    await prefs.setString(
+      'clinicUserid',
+      data['clinicUserid']?.toString() ?? '',
+    );
+    await prefs.setString(
+      'CLINICUSERID',
+      data['clinicUserid']?.toString() ?? '',
+    ); // React key
     await prefs.setString('branchId', data['branchId']?.toString() ?? '');
-    await prefs.setString('branch_id', data['branchId']?.toString() ?? ''); // React key
-    await prefs.setString('BUSINESSLOCATION', data['branchId']?.toString() ?? ''); // React key
-    await prefs.setString('branchAbrivation', data['branchAbrivation']?.toString() ?? '');
-    await prefs.setString('CLINICABBRIVATION', data['branchAbrivation']?.toString() ?? ''); // React key
-    
+    await prefs.setString(
+      'branch_id',
+      data['branchId']?.toString() ?? '',
+    ); // React key
+    await prefs.setString(
+      'BUSINESSLOCATION',
+      data['branchId']?.toString() ?? '',
+    ); // React key
+    await prefs.setString(
+      'branchAbrivation',
+      data['branchAbrivation']?.toString() ?? '',
+    );
+    await prefs.setString(
+      'CLINICABBRIVATION',
+      data['branchAbrivation']?.toString() ?? '',
+    ); // React key
+
     // Address Information
     await prefs.setString('country', data['country']?.toString() ?? '');
-    await prefs.setString('CLINICCOUNTRY', data['country']?.toString() ?? ''); // React key
+    await prefs.setString(
+      'CLINICCOUNTRY',
+      data['country']?.toString() ?? '',
+    ); // React key
     await prefs.setString('state', data['state']?.toString() ?? '');
     await prefs.setString('city', data['city']?.toString() ?? '');
     await prefs.setString('address', data['address']?.toString() ?? '');
     await prefs.setString('pinCode', data['pinCode']?.toString() ?? '');
-    
+
     // Additional Information
-    await prefs.setString('globalaccess', data['globalaccess']?.toString() ?? '');
+    await prefs.setString(
+      'globalaccess',
+      data['globalaccess']?.toString() ?? '',
+    );
     await prefs.setString('hasDiary', data['hasDiary']?.toString() ?? '');
-    
+
     final hasDiaryValue = data['hasDiary'];
-    final isPract = hasDiaryValue == 1 || hasDiaryValue == '1' || hasDiaryValue == true;
+    final isPract =
+        hasDiaryValue == 1 || hasDiaryValue == '1' || hasDiaryValue == true;
     await prefs.setBool('PRACTHASDIARY', isPract); // React key
-    
+
     await prefs.setString('landLine', data['landLine']?.toString() ?? '');
-    await prefs.setString('lastpasswordDate', data['lastpasswordDate']?.toString() ?? '');
-    
+    await prefs.setString(
+      'lastpasswordDate',
+      data['lastpasswordDate']?.toString() ?? '',
+    );
+
     // Section/Specialization Information
     await prefs.setString('sectionId', data['sectionId']?.toString() ?? '');
     await prefs.setString('sectionName', data['sectionName']?.toString() ?? '');
-    await prefs.setString('specializationId', data['specializationId']?.toString() ?? '');
-    
+    await prefs.setString(
+      'specializationId',
+      data['specializationId']?.toString() ?? '',
+    );
+
     // Employee & Roster Details
     await prefs.setString('empId', data['empId']?.toString() ?? '');
-    await prefs.setString('USERNUMERICID', data['id']?.toString() ?? ''); // React key
+    await prefs.setString(
+      'USERNUMERICID',
+      data['id']?.toString() ?? '',
+    ); // React key
     await prefs.setString('id', data['id']?.toString() ?? ''); // numeric id
-    await prefs.setString('userGroup', data['userGroup']?.toString() ?? ''); // React key
-    
+    await prefs.setString(
+      'userGroup',
+      data['userGroup']?.toString() ?? '',
+    ); // React key
+
     final deptId = data['department_id'] ?? data['departmentId'];
-    await prefs.setString('department_id', deptId?.toString() ?? '1'); // React key
-    await prefs.setString('Department_id', deptId?.toString() ?? '1'); // React key
-    
+    await prefs.setString(
+      'department_id',
+      deptId?.toString() ?? '1',
+    ); // React key
+    await prefs.setString(
+      'Department_id',
+      deptId?.toString() ?? '1',
+    ); // React key
+
     // Save accessinfo as JSON string
     if (data['accessinfo'] != null) {
       await prefs.setString('accessinfo', jsonEncode(data['accessinfo']));
-      await prefs.setString('MAINACCESS', jsonEncode(data['accessinfo'])); // React key
+      await prefs.setString(
+        'MAINACCESS',
+        jsonEncode(data['accessinfo']),
+      ); // React key
     }
-    
+
     // Save configurationMap as JSON string
     if (data['configurationMap'] != null) {
-      await prefs.setString('configurationMap', jsonEncode(data['configurationMap']));
-      await prefs.setString('CONFIGURATION', jsonEncode(data['configurationMap'])); // React key
+      await prefs.setString(
+        'configurationMap',
+        jsonEncode(data['configurationMap']),
+      );
+      await prefs.setString(
+        'CONFIGURATION',
+        jsonEncode(data['configurationMap']),
+      ); // React key
     }
-    
+
     // Save tallyConfigurationMap as JSON string
     if (data['tallyConfigurationMap'] != null) {
-      await prefs.setString('tallyConfigurationMap', jsonEncode(data['tallyConfigurationMap']));
-      await prefs.setString('tallyDetails', jsonEncode(data['tallyConfigurationMap'])); // React key
+      await prefs.setString(
+        'tallyConfigurationMap',
+        jsonEncode(data['tallyConfigurationMap']),
+      );
+      await prefs.setString(
+        'tallyDetails',
+        jsonEncode(data['tallyConfigurationMap']),
+      ); // React key
     }
 
     // Save hipId
     if (data['hipId'] != null) {
       await prefs.setString('HIPID', jsonEncode(data['hipId'])); // React key
     }
-    
-    debugPrint('📋 Saved ${data.length} user data fields including HRMS keys to SharedPreferences');
+
+    debugPrint(
+      '📋 Saved ${data.length} user data fields including HRMS keys to SharedPreferences',
+    );
   }
 
   /// Get all saved user information from SharedPreferences.
   static Future<Map<String, dynamic>> getSavedUserInformation() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     final Map<String, dynamic> userInfo = {
       // Personal Information
       'userId': prefs.getString('userId') ?? '',
@@ -209,25 +275,25 @@ class UserInformationService {
       'clinicName': prefs.getString('clinicName') ?? '',
       'userType': prefs.getString('userType') ?? '',
       'fullName': prefs.getString('fullName') ?? '',
-      
+
       // Clinic/Branch Information
       'clinicUserid': prefs.getString('clinicUserid') ?? '',
       'branchId': prefs.get('branchId')?.toString() ?? '',
       'branchAbrivation': prefs.getString('branchAbrivation') ?? '',
-      
+
       // Address Information
       'country': prefs.getString('country') ?? '',
       'state': prefs.getString('state') ?? '',
       'city': prefs.getString('city') ?? '',
       'address': prefs.getString('address') ?? '',
       'pinCode': prefs.getString('pinCode') ?? '',
-      
+
       // Additional Information
       'globalaccess': prefs.getString('globalaccess') ?? '',
       'hasDiary': prefs.getString('hasDiary') ?? '',
       'landLine': prefs.getString('landLine') ?? '',
       'lastpasswordDate': prefs.getString('lastpasswordDate') ?? '',
-      
+
       // Section/Specialization Information
       'sectionId': prefs.getString('sectionId') ?? '',
       'sectionName': prefs.getString('sectionName') ?? '',
@@ -241,12 +307,12 @@ class UserInformationService {
       if (accessinfoStr != null && accessinfoStr.isNotEmpty) {
         userInfo['accessinfo'] = jsonDecode(accessinfoStr);
       }
-      
+
       final configMapStr = prefs.getString('configurationMap');
       if (configMapStr != null && configMapStr.isNotEmpty) {
         userInfo['configurationMap'] = jsonDecode(configMapStr);
       }
-      
+
       final tallyConfigStr = prefs.getString('tallyConfigurationMap');
       if (tallyConfigStr != null && tallyConfigStr.isNotEmpty) {
         userInfo['tallyConfigurationMap'] = jsonDecode(tallyConfigStr);
@@ -262,7 +328,7 @@ class UserInformationService {
   static Future<Map<String, dynamic>?> getCompleteUserData() async {
     final prefs = await SharedPreferences.getInstance();
     final userDataJson = prefs.getString('user_data_json');
-    
+
     if (userDataJson != null && userDataJson.isNotEmpty) {
       try {
         return jsonDecode(userDataJson);
@@ -276,19 +342,19 @@ class UserInformationService {
   /// Get user profile info for display purposes
   static Future<Map<String, String>> getUserProfileForDisplay() async {
     final info = await getSavedUserInformation();
-    
+
     // Build full name
     String fullName = '';
     final initial = info['initial'] ?? '';
     final firstName = info['firstName'] ?? '';
     final lastName = info['lastName'] ?? '';
-    
+
     if (initial.isNotEmpty || firstName.isNotEmpty || lastName.isNotEmpty) {
       fullName = '$initial $firstName $lastName'.trim();
     } else {
       fullName = info['username'] ?? info['userId'] ?? 'User';
     }
-    
+
     return {
       'fullName': fullName,
       'username': info['username'] ?? '',
@@ -304,23 +370,45 @@ class UserInformationService {
   /// Clear all user information from SharedPreferences
   static Future<void> clearUserInformation() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     // List of all keys to remove
     final userKeys = [
-      'userId', 'username', 'firstName', 'lastName', 'initial',
-      'mobileNo', 'email', 'jobtitle', 'clinicName', 'userType',
-      'clinicUserid', 'branchId', 'branchAbrivation',
-      'country', 'state', 'city', 'address', 'pinCode',
-      'globalaccess', 'hasDiary', 'landLine', 'lastpasswordDate',
-      'sectionId', 'sectionName', 'specializationId', 'empId',
-      'accessinfo', 'configurationMap', 'tallyConfigurationMap',
+      'userId',
+      'username',
+      'firstName',
+      'lastName',
+      'initial',
+      'mobileNo',
+      'email',
+      'jobtitle',
+      'clinicName',
+      'userType',
+      'clinicUserid',
+      'branchId',
+      'branchAbrivation',
+      'country',
+      'state',
+      'city',
+      'address',
+      'pinCode',
+      'globalaccess',
+      'hasDiary',
+      'landLine',
+      'lastpasswordDate',
+      'sectionId',
+      'sectionName',
+      'specializationId',
+      'empId',
+      'accessinfo',
+      'configurationMap',
+      'tallyConfigurationMap',
       'user_data_json',
     ];
-    
+
     for (final key in userKeys) {
       await prefs.remove(key);
     }
-    
+
     debugPrint('🧹 Cleared all user information from SharedPreferences');
   }
 
@@ -335,4 +423,3 @@ class UserInformationService {
 
   static Future getCachedProfileInfo() async {}
 }
-
