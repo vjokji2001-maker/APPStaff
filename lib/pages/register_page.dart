@@ -39,7 +39,9 @@ class RegisterPageState extends State<RegisterPage> {
     final bool isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) return;
 
-    setState(() { _isLoading = true; });
+    setState(() {
+      _isLoading = true;
+    });
 
     await Future.delayed(const Duration(seconds: 2));
 
@@ -100,26 +102,31 @@ class RegisterPageState extends State<RegisterPage> {
                             ),
                           ],
                         ),
-                      
+
                         child: Padding(
                           padding: const EdgeInsets.all(24.0),
                           child: Form(
                             key: _formKey,
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
+                            autovalidateMode:
+                                AutovalidateMode.onUserInteraction,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: AnimationConfiguration.toStaggeredList(
                                 duration: const Duration(milliseconds: 500),
-                                childAnimationBuilder: (widget) => SlideAnimation(
-                                  verticalOffset: 30.0,
-                                  child: FadeInAnimation(child: widget),
-                                ),
+                                childAnimationBuilder: (widget) =>
+                                    SlideAnimation(
+                                      verticalOffset: 30.0,
+                                      child: FadeInAnimation(child: widget),
+                                    ),
                                 children: [
                                   _buildTextField(
                                     controller: _nameController,
                                     hintText: 'Full Name',
                                     prefixIcon: Icons.person_outline,
-                                    validator: (v) => v == null || v.trim().isEmpty ? 'Please enter your name.' : null,
+                                    validator: (v) =>
+                                        v == null || v.trim().isEmpty
+                                        ? 'Please enter your name.'
+                                        : null,
                                   ),
                                   const SizedBox(height: 20),
                                   _buildTextField(
@@ -128,8 +135,10 @@ class RegisterPageState extends State<RegisterPage> {
                                     prefixIcon: Icons.email_outlined,
                                     keyboardType: TextInputType.emailAddress,
                                     validator: (v) {
-                                      if (v == null || v.trim().isEmpty) return 'Please enter your email.';
-                                      if (!RegExp(r'\S+@\S+\.\S+').hasMatch(v)) return 'Enter a valid email.';
+                                      if (v == null || v.trim().isEmpty)
+                                        return 'Please enter your email.';
+                                      if (!RegExp(r'\S+@\S+\.\S+').hasMatch(v))
+                                        return 'Enter a valid email.';
                                       return null;
                                     },
                                   ),
@@ -140,8 +149,10 @@ class RegisterPageState extends State<RegisterPage> {
                                     prefixIcon: Icons.lock_outline,
                                     isPassword: true,
                                     validator: (v) {
-                                      if (v == null || v.isEmpty) return 'Please enter a password.';
-                                      if (v.length < 6) return 'Password must be at least 6 characters.';
+                                      if (v == null || v.isEmpty)
+                                        return 'Please enter a password.';
+                                      if (v.length < 6)
+                                        return 'Password must be at least 6 characters.';
                                       return null;
                                     },
                                   ),
@@ -152,8 +163,10 @@ class RegisterPageState extends State<RegisterPage> {
                                     prefixIcon: Icons.lock_outline,
                                     isPassword: true,
                                     validator: (v) {
-                                      if (v == null || v.isEmpty) return 'Please confirm your password.';
-                                      if (v != _passwordController.text) return 'Passwords do not match.';
+                                      if (v == null || v.isEmpty)
+                                        return 'Please confirm your password.';
+                                      if (v != _passwordController.text)
+                                        return 'Passwords do not match.';
                                       return null;
                                     },
                                   ),
@@ -162,22 +175,33 @@ class RegisterPageState extends State<RegisterPage> {
                                     onPressed: _isLoading ? null : _tryRegister,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: primaryColor,
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 16,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       elevation: 5,
-                                      shadowColor: primaryColor.withValues(alpha: .4),
+                                      shadowColor: primaryColor.withValues(
+                                        alpha: .4,
+                                      ),
                                     ),
                                     child: _isLoading
                                         ? const SizedBox(
                                             height: 24,
                                             width: 24,
-                                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 3,
+                                            ),
                                           )
                                         : Text(
                                             'Create Account',
-                                            style: GoogleFonts.poppins(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w600),
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 18,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                            ),
                                           ),
                                   ),
                                 ],
@@ -193,7 +217,13 @@ class RegisterPageState extends State<RegisterPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text("Already have an account?", style: GoogleFonts.nunito(color: textLight, fontSize: 16)),
+                          Text(
+                            "Already have an account?",
+                            style: GoogleFonts.nunito(
+                              color: textLight,
+                              fontSize: 16,
+                            ),
+                          ),
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(),
                             child: Text(
@@ -207,7 +237,7 @@ class RegisterPageState extends State<RegisterPage> {
                           ),
                         ],
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -266,7 +296,10 @@ class RegisterPageState extends State<RegisterPage> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: primaryColor, width: 2.0),
         ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 16,
+        ),
       ),
     );
   }

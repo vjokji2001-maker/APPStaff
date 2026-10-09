@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../APIs/api_host.dart';
-import '../APIs/api_endpoints.dart';
+import '../api/api_service.dart';
+import '../services/session_manger.dart';
 
 /// Centralised API client handling base URL, headers, token refresh,
 /// error handling and request/response logging.
@@ -33,36 +33,43 @@ class ApiClient {
     final allHeaders = {...defaultHeaders, ...?headers};
 
     // Logging request
-   
 
     http.Response response;
     try {
       switch (method.toUpperCase()) {
         case 'GET':
-          response = await http.get(uri, headers: allHeaders);
+          response = await http
+              .get(uri, headers: allHeaders)
+              .timeout(const Duration(seconds: 30));
           break;
         case 'POST':
-          response = await http.post(uri, headers: allHeaders, body: jsonEncode(body));
+          response = await http
+              .post(uri, headers: allHeaders, body: jsonEncode(body))
+              .timeout(const Duration(seconds: 30));
           break;
         case 'PUT':
-          response = await http.put(uri, headers: allHeaders, body: jsonEncode(body));
+          response = await http
+              .put(uri, headers: allHeaders, body: jsonEncode(body))
+              .timeout(const Duration(seconds: 30));
           break;
         case 'PATCH':
-          response = await http.patch(uri, headers: allHeaders, body: jsonEncode(body));
+          response = await http
+              .patch(uri, headers: allHeaders, body: jsonEncode(body))
+              .timeout(const Duration(seconds: 30));
           break;
         case 'DELETE':
-          response = await http.delete(uri, headers: allHeaders);
+          response = await http
+              .delete(uri, headers: allHeaders)
+              .timeout(const Duration(seconds: 30));
           break;
         default:
           throw UnsupportedError('Unsupported HTTP method: $method');
       }
     } catch (e) {
-     
       rethrow;
     }
 
     // Logging response
-
 
     // Handle token refresh on 401
     if (response.statusCode == 401) {
@@ -82,28 +89,51 @@ class ApiClient {
   }
 
   Future<String?> _getToken() async {
-    // TODO: Retrieve token from secure storage or auth provider
-    return null; // placeholder
+    final token = await SessionManager.getAccessToken();
+    if (token != null && token.isNotEmpty) {
+      return token;
+    }
+    return ApiService.accessToken;
   }
 
   Future<bool> _refreshToken() async {
-    // TODO: Implement token refresh logic using AuthService
-
-    return false; // placeholder
+    try {
+      return await ApiService.refreshUserToken();
+    } catch (_) {
+      return false;
+    }
   }
 
   // Public helpers
-  Future<http.Response> get(String endpoint, {Map<String, String>? headers, Map<String, dynamic>? queryParameters}) =>
-      _sendRequest(method: 'GET', url: endpoint, headers: headers, queryParameters: queryParameters);
+  Future<http.Response> get(
+    String endpoint, {
+    Map<String, String>? headers,
+    Map<String, dynamic>? queryParameters,
+  }) => _sendRequest(
+    method: 'GET',
+    url: endpoint,
+    headers: headers,
+    queryParameters: queryParameters,
+  );
 
-  Future<http.Response> post(String endpoint, {Map<String, String>? headers, Object? body}) =>
+  Future<http.Response> post(
+    String endpoint, {
+    Map<String, String>? headers,
+    Object? body,
+  }) =>
       _sendRequest(method: 'POST', url: endpoint, headers: headers, body: body);
 
-  Future<http.Response> put(String endpoint, {Map<String, String>? headers, Object? body}) =>
+  Future<http.Response> put(
+    String endpoint, {
+    Map<String, String>? headers,
+    Object? body,
+  }) =>
       _sendRequest(method: 'PUT', url: endpoint, headers: headers, body: body);
 
-  Future<http.Response> delete(String endpoint, {Map<String, String>? headers}) =>
-      _sendRequest(method: 'DELETE', url: endpoint, headers: headers);
+  Future<http.Response> delete(
+    String endpoint, {
+    Map<String, String>? headers,
+  }) => _sendRequest(method: 'DELETE', url: endpoint, headers: headers);
 }
 
 // Provider for the ApiClient – can be accessed throughout the app.

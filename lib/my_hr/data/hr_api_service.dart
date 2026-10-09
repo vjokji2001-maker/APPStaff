@@ -83,7 +83,7 @@ class HRApiService {
         toDate: toDate,
         pageSize:
             1000, // Fetch all employees so we can locate the current user locally
-        empId: "", // Prevents recursive loop
+        resolveAllEmployees: true,
       );
 
       final foundEmpId = _findUserEmpIdInRosterResponse(
@@ -115,9 +115,11 @@ class HRApiService {
       if (dataMap is List) {
         dataList = dataMap;
       } else if (dataMap is Map) {
-        dataList = dataMap['dataList'] ?? dataMap['content'];
+        dataList =
+            dataMap['dataList'] ?? dataMap['content'] ?? dataMap['records'];
       } else {
-        dataList = response['dataList'] ?? response['content'];
+        dataList =
+            response['dataList'] ?? response['content'] ?? response['records'];
       }
 
       if (dataList != null && dataList.isNotEmpty) {
@@ -513,6 +515,7 @@ class HRApiService {
     String sortingOrder = 'ASC',
     String? empId,
     String? jobTitle,
+    bool resolveAllEmployees = false,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -521,7 +524,9 @@ class HRApiService {
       final passedEmpId = empId?.trim() ?? '';
       final storedEmpId = prefs.getString('empId')?.trim() ?? '';
       final storedUserId = prefs.getString('userId')?.trim() ?? '';
-      final resolvedEmpId = passedEmpId.isNotEmpty
+      final resolvedEmpId = resolveAllEmployees
+          ? ''
+          : passedEmpId.isNotEmpty
           ? passedEmpId
           : storedEmpId.isNotEmpty
           ? storedEmpId
@@ -536,7 +541,9 @@ class HRApiService {
           'admin';
 
       // ── Resolve employee name for search filter ──
-      final resolvedName = searchName.trim().isNotEmpty
+      final resolvedName = resolveAllEmployees
+          ? ''
+          : searchName.trim().isNotEmpty
           ? searchName.trim()
           : (prefs.getString('firstName') != null
                 ? '${prefs.getString('firstName') ?? ''} ${prefs.getString('lastName') ?? ''}'

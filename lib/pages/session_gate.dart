@@ -1,9 +1,9 @@
 // lib/pages/session_gate.dart
 
 import 'package:flutter/material.dart';
+import 'package:staff_mate/services/app_auth_service.dart';
 import 'package:staff_mate/services/biometric_auth_service.dart';
 import 'package:staff_mate/services/session_manger.dart';
-import 'package:staff_mate/api/api_service.dart';
 
 /// Sits at app startup. Decides whether to resume the session silently,
 /// show the biometric lock screen, or go to login.
@@ -33,7 +33,10 @@ class _SessionGateState extends State<SessionGate> {
 
     // 2. Session exists — try to refresh the token silently
     try {
-      await ApiService.refreshUserToken();
+      final refreshResult = await const AppAuthService().refreshSession();
+      if (!refreshResult.isSuccess) {
+        debugPrint('Session refresh failed: ${refreshResult.failure}');
+      }
     } catch (_) {
       // Refresh failed but session might still be locally valid — continue
     }

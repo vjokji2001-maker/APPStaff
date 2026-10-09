@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:staff_mate/services/app_auth_service.dart';
 import 'package:staff_mate/services/biometric_auth_service.dart';
 import 'package:staff_mate/services/session_manger.dart';
 import 'package:staff_mate/api/api_service.dart';
-
 class BiometricLockScreen extends StatefulWidget {
   final bool isFromSettings;
   final VoidCallback onContinue;
@@ -132,8 +132,8 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
 
   Future<void> _onAuthSuccess() async {
     try {
-      final refreshed = await ApiService.refreshUserToken();
-      if (!refreshed) {
+      final refreshResult = await const AppAuthService().refreshSession();
+      if (!refreshResult.isSuccess) {
         final isValid = await SessionManager.hasValidSession();
         if (!isValid) {
           _forceFullLogin(

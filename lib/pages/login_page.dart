@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:staff_mate/api/api_service.dart';
 import 'package:staff_mate/pages/biometric_setup_page.dart';
 import 'package:staff_mate/pages/forget_password.dart';
+import 'package:staff_mate/services/app_auth_service.dart';
 import 'package:staff_mate/services/biometric_auth_service.dart';
 import 'package:staff_mate/services/clinic_service.dart';
 import 'package:staff_mate/services/session_manger.dart';
@@ -76,23 +76,18 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await ApiService.loginUser(
-        _usernameController.text.trim(),
-        _passwordController.text.trim(),
-      ).timeout(const Duration(seconds: 30));
+      final result = await const AppAuthService().login(
+        userName: _usernameController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
       if (!mounted) return;
 
-      if (response != null) {
-        final innerData = response['data'];
+      if (result.isSuccess) {
+        final session = result.value;
+        final innerData = session.toJson();
 
-        if (innerData == null) {
-          _showErrorDialog("Invalid response from server");
-          setState(() => _isLoading = false);
-          return;
-        }
-
-        final subscriptionDays = innerData['subscription_remaining_days'] ?? 0;
+        final subscriptionDays = session.subscriptionRemainingDays;
         if (subscriptionDays <= 0) {
           _showErrorDialog(
             "Your subscription has expired. Please contact support.",
@@ -103,23 +98,11 @@ class _LoginPageState extends State<LoginPage> {
 
         _loginResponseData = Map<String, dynamic>.from(innerData);
 
-        if (ApiService.accessToken != null) {
-          _loginResponseData!['token'] = ApiService.accessToken;
-        }
-        if (ApiService.refreshToken != null) {
-          _loginResponseData!['refreshToken'] = ApiService.refreshToken;
-        }
-
-        // Hit /smartcaremain/userinformation immediately after login status is 200
         try {
-          final token =
-              ApiService.accessToken ?? _loginResponseData!['token'] ?? '';
-          final clinicId =
-              _loginResponseData!['clinicid'] ??
-              _loginResponseData!['clinicId'] ??
-              '';
-          final userId = _loginResponseData!['userId'] ?? '';
-          final zoneId = _loginResponseData!['zoneid'] ?? 'Asia/Kolkata';
+          final token = session.accessToken;
+          final clinicId = session.clinicId;
+          final userId = session.userId;
+          final zoneId = session.zoneId;
 
           final userInfoService = UserInformationService();
           await userInfoService.fetchAndSaveUserInformation(
@@ -143,7 +126,8 @@ class _LoginPageState extends State<LoginPage> {
         _showOTPVerificationDialog();
       } else {
         _showErrorDialog(
-          "Login failed. Please check your credentials and try again.",
+          result.failure?.message ??
+              "Login failed. Please check your credentials and try again.",
         );
         setState(() => _isLoading = false);
       }
@@ -197,55 +181,6 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _completeLogin() async {
     try {
       if (_loginResponseData != null) {
-        await SessionManager.saveSession(
-          bearer: SessionManager.authScheme,
-          token:
-              (_loginResponseData!['token'] ??
-                      _loginResponseData!['accessToken'] ??
-                      '')
-                  .toString(),
-          clinicId:
-              (_loginResponseData!['clinicid'] ??
-                      _loginResponseData!['clinicId'] ??
-                      '')
-                  .toString(),
-          subscriptionRemainingDays:
-              int.tryParse(
-                (_loginResponseData!['subscription_remaining_days'] ?? 0)
-                    .toString(),
-              ) ??
-              0,
-          userId:
-              (_loginResponseData!['userId'] ??
-                      _loginResponseData!['UserId'] ??
-                      '')
-                  .toString(),
-          zoneid:
-              (_loginResponseData!['zoneid'] ??
-                      _loginResponseData!['ZONEID'] ??
-                      'Asia/Kolkata')
-                  .toString(),
-          expiryTime:
-              (_loginResponseData!['expirytime'] ??
-                      _loginResponseData!['expiryTime'] ??
-                      '')
-                  .toString(),
-          branchId:
-              int.tryParse(
-                (_loginResponseData!['branch_id'] ?? 1).toString(),
-              ) ??
-              1,
-          email:
-              (_loginResponseData!['email'] ??
-                      _loginResponseData!['emailId'] ??
-                      '')
-                  .toString(),
-          refreshToken:
-              ApiService.refreshToken ??
-              _loginResponseData!['refreshToken']?.toString(),
-          tokenExpiry: ApiService.tokenExpiryTime,
-        );
-
         await SessionManager.saveCredentialsSecurely(
           username: _usernameController.text.trim(),
           password: _passwordController.text.trim(),

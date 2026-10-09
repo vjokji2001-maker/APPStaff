@@ -13,8 +13,10 @@ class IpdService {
   static String get _baseUrl => ApiEndpoints.ipdPatients;
   static String get _practitionerUrl => ApiEndpoints.practitionerList;
   static String get _specializationUrl => ApiEndpoints.specializationList;
-  static String _wardListUrl(String branchId) => ApiEndpoints.wardList(branchId);
-  static String _availableBedsUrl(String wardId) => ApiEndpoints.availableBeds(wardId);
+  static String _wardListUrl(String branchId) =>
+      ApiEndpoints.wardList(branchId);
+  static String _availableBedsUrl(String wardId) =>
+      ApiEndpoints.availableBeds(wardId);
   static String get _vitalsMasterUrl => ApiEndpoints.vitalsMaster;
   static String get _saveVitalsUrl => ApiEndpoints.saveVitals;
   static String _prescriptionNotificationUrl(String admissionId) =>
@@ -28,7 +30,8 @@ class IpdService {
   static String get _addStdChargesUrl => ApiEndpoints.addStdCharges;
 
   // ─── NEW: Prescription Location endpoint ───────────────────────────────────
-  static String get _prescriptionLocationUrl => ApiEndpoints.prescriptionLocation;
+  static String get _prescriptionLocationUrl =>
+      ApiEndpoints.prescriptionLocation;
 
   // ---------------------------------------------------------------------------
   // Prescription Locations
@@ -55,8 +58,8 @@ class IpdService {
       final token = getPrefAsString('auth_token');
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
-      final branchId =
-          getPrefAsString('branchId').isNotEmpty ? getPrefAsString('branchId') : '1';
+      final savedBranchId = getPrefAsString('branchId');
+      final branchId = savedBranchId.isNotEmpty ? savedBranchId : '1';
 
       if (token.isEmpty || clinicId.isEmpty || userId.isEmpty) {
         return {
@@ -93,7 +96,8 @@ class IpdService {
 
         if (decoded is List) {
           debugPrint(
-              'Successfully fetched ${decoded.length} prescription location(s)');
+            'Successfully fetched ${decoded.length} prescription location(s)',
+          );
           return {
             'success': true,
             'message': 'Prescription locations fetched successfully',
@@ -125,8 +129,9 @@ class IpdService {
                 errorBody['message'] ?? errorBody['error'] ?? errorMessage;
           }
         } catch (_) {
-          errorMessage =
-              response.body.isNotEmpty ? response.body : errorMessage;
+          errorMessage = response.body.isNotEmpty
+              ? response.body
+              : errorMessage;
         }
 
         debugPrint('Prescription Locations API Error: $errorMessage');
@@ -141,11 +146,7 @@ class IpdService {
     } catch (e, stackTrace) {
       debugPrint('Exception fetching prescription locations: $e');
       debugPrint('StackTrace: $stackTrace');
-      return {
-        'success': false,
-        'message': 'Exception: $e',
-        'data': [],
-      };
+      return {'success': false, 'message': 'Exception: $e', 'data': []};
     }
   }
 
@@ -153,8 +154,12 @@ class IpdService {
   // Prescription Notifications
   // ---------------------------------------------------------------------------
 
-  Future<Map<String, dynamic>> fetchPrescriptionNotifications(String admissionId) async {
-    debugPrint('Fetching prescription notifications for admission ID: $admissionId');
+  Future<Map<String, dynamic>> fetchPrescriptionNotifications(
+    String admissionId,
+  ) async {
+    debugPrint(
+      'Fetching prescription notifications for admission ID: $admissionId',
+    );
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -167,8 +172,8 @@ class IpdService {
       final token = getPrefAsString('auth_token');
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
-      final branchId = getPrefAsString('branchId') ?? '1';
-
+      final savedBranchId = getPrefAsString('branchId');
+      final branchId = savedBranchId.isNotEmpty ? savedBranchId : '1';
       if (token.isEmpty || clinicId.isEmpty || userId.isEmpty) {
         throw Exception('⚠️ Missing session values. Please login again.');
       }
@@ -210,7 +215,9 @@ class IpdService {
             'error': decoded['error'],
           };
         } else {
-          throw Exception('Unexpected API response format. Expected a map but got: ${decoded.runtimeType}');
+          throw Exception(
+            'Unexpected API response format. Expected a map but got: ${decoded.runtimeType}',
+          );
         }
       } else {
         throw Exception(
@@ -228,8 +235,12 @@ class IpdService {
   // Investigation Notifications
   // ---------------------------------------------------------------------------
 
-  Future<Map<String, dynamic>> fetchInvestigationNotifications(String admissionId) async {
-    debugPrint('Fetching investigation notifications for admission ID: $admissionId');
+  Future<Map<String, dynamic>> fetchInvestigationNotifications(
+    String admissionId,
+  ) async {
+    debugPrint(
+      'Fetching investigation notifications for admission ID: $admissionId',
+    );
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -242,8 +253,8 @@ class IpdService {
       final token = getPrefAsString('auth_token');
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
-      final branchId = getPrefAsString('branchId') ?? '1';
-
+      final savedBranchId = getPrefAsString('branchId');
+      final branchId = savedBranchId.isNotEmpty ? savedBranchId : '1';
       if (token.isEmpty || clinicId.isEmpty || userId.isEmpty) {
         throw Exception('⚠️ Missing session values. Please login again.');
       }
@@ -285,7 +296,9 @@ class IpdService {
             'error': decoded['error'],
           };
         } else {
-          throw Exception('Unexpected API response format. Expected a map but got: ${decoded.runtimeType}');
+          throw Exception(
+            'Unexpected API response format. Expected a map but got: ${decoded.runtimeType}',
+          );
         }
       } else {
         throw Exception(
@@ -317,6 +330,8 @@ class IpdService {
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
 
+      final savedBranchId = getPrefAsString('branchId');
+      final branchId = savedBranchId.isNotEmpty ? savedBranchId : '1';
       if (token.isEmpty || clinicId.isEmpty || userId.isEmpty) {
         throw Exception('⚠️ Missing session values. Please login again.');
       }
@@ -328,7 +343,7 @@ class IpdService {
         'clinicid': clinicId,
         'userid': userId,
         'ZONEID': "Asia/Kolkata",
-        'branchId': '1',
+        'branchId': branchId,
       };
 
       debugPrint('Headerss $headers');
@@ -356,29 +371,47 @@ class IpdService {
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
+        List<dynamic>? patientsJson;
 
         if (decoded is List) {
-          final patientList = decoded
-              .map((json) => Patient.fromJson(json as Map<String, dynamic>))
-              .toList();
+          patientsJson = decoded;
+        } else if (decoded is Map<String, dynamic>) {
+          final data = decoded['data'];
 
-          if (patientList.isNotEmpty) {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('admissionid', patientList.first.admissionId);
-            debugPrint("Admission ID saved: ${patientList.first.admissionId}");
+          if (data is List) {
+            patientsJson = data;
+          } else if (decoded['patients'] is List) {
+            patientsJson = decoded['patients'] as List;
+          } else if (decoded['patientList'] is List) {
+            patientsJson = decoded['patientList'] as List;
           }
+        }
 
-          return IpdDashboardData(
-            patients: patientList,
-          );
-        } else {
+        if (patientsJson == null) {
           throw Exception(
-            'Unexpected API format. Expected a list of patients but got: ${decoded.runtimeType}',
+            'Unexpected IPD API response format: '
+            '${decoded.runtimeType}. Check IPD API Body in the logs.',
           );
         }
+
+        final patientList = patientsJson
+            .map(
+              (item) =>
+                  Patient.fromJson(Map<String, dynamic>.from(item as Map)),
+            )
+            .toList();
+
+        if (patientList.isNotEmpty) {
+          await prefs.setString('admissionid', patientList.first.admissionId);
+
+          debugPrint('Admission ID saved: ${patientList.first.admissionId}');
+        }
+
+        return IpdDashboardData(patients: patientList);
       } else {
         throw Exception(
-          'Failed to load IPD data (Status ${response.statusCode}). Body: ${response.body}',
+          'Failed to load IPD data '
+          '(Status ${response.statusCode}). Body: ${response.body}',
         );
       }
     } catch (e, stackTrace) {
@@ -448,7 +481,9 @@ class IpdService {
           if (decoded.containsKey('practitionerList')) {
             final practitionerList = decoded['practitionerList'];
             if (practitionerList is List) {
-              debugPrint('Successfully fetched ${practitionerList.length} practitioners');
+              debugPrint(
+                'Successfully fetched ${practitionerList.length} practitioners',
+              );
               return practitionerList;
             } else {
               throw Exception(
@@ -461,7 +496,9 @@ class IpdService {
             );
           }
         } else if (decoded is List) {
-          debugPrint('Successfully fetched ${decoded.length} practitioners (direct list format)');
+          debugPrint(
+            'Successfully fetched ${decoded.length} practitioners (direct list format)',
+          );
           return decoded;
         } else {
           throw Exception(
@@ -484,9 +521,7 @@ class IpdService {
   // Specializations
   // ---------------------------------------------------------------------------
 
-  Future<List<dynamic>> fetchSpecializationList({
-    String branchId = "1",
-  }) async {
+  Future<List<dynamic>> fetchSpecializationList({String branchId = "1"}) async {
     debugPrint('Fetching specialization list...');
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -530,7 +565,9 @@ class IpdService {
           if (decoded.containsKey('specializationList')) {
             final specializationList = decoded['specializationList'];
             if (specializationList is List) {
-              debugPrint('Successfully fetched ${specializationList.length} specializations');
+              debugPrint(
+                'Successfully fetched ${specializationList.length} specializations',
+              );
               return specializationList;
             } else {
               throw Exception(
@@ -543,7 +580,9 @@ class IpdService {
             );
           }
         } else if (decoded is List) {
-          debugPrint('Successfully fetched ${decoded.length} specializations (direct list format)');
+          debugPrint(
+            'Successfully fetched ${decoded.length} specializations (direct list format)',
+          );
           return decoded;
         } else {
           throw Exception(
@@ -566,9 +605,7 @@ class IpdService {
   // Wards
   // ---------------------------------------------------------------------------
 
-  Future<List<dynamic>> fetchBranchWardList({
-    String branchId = "1",
-  }) async {
+  Future<List<dynamic>> fetchBranchWardList({String branchId = "1"}) async {
     debugPrint('Fetching branch-wise ward list for branch: $branchId');
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -602,10 +639,7 @@ class IpdService {
 
       debugPrint('--WARD LIST API-- Headers: $headers');
 
-      final response = await ApiDebugHttp.get(
-        Uri.parse(url),
-        headers: headers,
-      );
+      final response = await ApiDebugHttp.get(Uri.parse(url), headers: headers);
 
       debugPrint('Ward List API Status Code: ${response.statusCode}');
       debugPrint('Ward List API Body: ${response.body}');
@@ -617,25 +651,33 @@ class IpdService {
           if (decoded.containsKey('wardList')) {
             final wardList = decoded['wardList'];
             if (wardList is List) {
-              debugPrint('Successfully fetched ${wardList.length} wards (from wardList key)');
+              debugPrint(
+                'Successfully fetched ${wardList.length} wards (from wardList key)',
+              );
               return wardList;
             }
           } else if (decoded.containsKey('wards')) {
             final wardList = decoded['wards'];
             if (wardList is List) {
-              debugPrint('Successfully fetched ${wardList.length} wards (from wards key)');
+              debugPrint(
+                'Successfully fetched ${wardList.length} wards (from wards key)',
+              );
               return wardList;
             }
           } else if (decoded.containsKey('data')) {
             final data = decoded['data'];
             if (data is List) {
-              debugPrint('Successfully fetched ${data.length} wards (from data key)');
+              debugPrint(
+                'Successfully fetched ${data.length} wards (from data key)',
+              );
               return data;
             }
           } else {
             for (final entry in decoded.entries) {
               if (entry.value is List) {
-                debugPrint('Successfully fetched ${(entry.value as List).length} wards (from ${entry.key} key)');
+                debugPrint(
+                  'Successfully fetched ${(entry.value as List).length} wards (from ${entry.key} key)',
+                );
                 return entry.value as List;
               }
             }
@@ -644,7 +686,9 @@ class IpdService {
             );
           }
         } else if (decoded is List) {
-          debugPrint('Successfully fetched ${decoded.length} wards (direct list format)');
+          debugPrint(
+            'Successfully fetched ${decoded.length} wards (direct list format)',
+          );
           return decoded;
         } else {
           throw Exception(
@@ -684,7 +728,8 @@ class IpdService {
       final token = getPrefAsString('auth_token');
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
-      final branchId = getPrefAsString('branchId') ?? '1';
+      final savedBranchId = getPrefAsString('branchId');
+      final branchId = savedBranchId.isNotEmpty ? savedBranchId : '1';
 
       if (token.isEmpty || clinicId.isEmpty || userId.isEmpty) {
         throw Exception('⚠️ Missing session values. Please login again.');
@@ -706,10 +751,7 @@ class IpdService {
 
       debugPrint('--AVAILABLE BEDS API-- Headers: $headers');
 
-      final response = await ApiDebugHttp.get(
-        Uri.parse(url),
-        headers: headers,
-      );
+      final response = await ApiDebugHttp.get(Uri.parse(url), headers: headers);
 
       debugPrint('Available Beds API Status Code: ${response.statusCode}');
       debugPrint('Available Beds API Body: ${response.body}');
@@ -773,7 +815,9 @@ class IpdService {
   }) async {
     debugPrint('Shifting patient bed...');
     debugPrint('Patient ID: $patientId, Admission ID: $admissionId');
-    debugPrint('From: Current Bed, To: Ward: $wardName ($wardId), Bed: $bedName ($bedId)');
+    debugPrint(
+      'From: Current Bed, To: Ward: $wardName ($wardId), Bed: $bedName ($bedId)',
+    );
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -878,12 +922,13 @@ class IpdService {
         try {
           final errorBody = jsonDecode(response.body);
           if (errorBody is Map<String, dynamic>) {
-            errorMessage = errorBody['message'] ??
-                errorBody['error'] ??
-                errorMessage;
+            errorMessage =
+                errorBody['message'] ?? errorBody['error'] ?? errorMessage;
           }
         } catch (e) {
-          errorMessage = response.body.isNotEmpty ? response.body : errorMessage;
+          errorMessage = response.body.isNotEmpty
+              ? response.body
+              : errorMessage;
         }
 
         return {
@@ -896,10 +941,7 @@ class IpdService {
     } catch (e, stackTrace) {
       debugPrint('Exception shifting patient bed: $e');
       debugPrint('StackTrace: $stackTrace');
-      return {
-        'success': false,
-        'message': 'Exception: $e',
-      };
+      return {'success': false, 'message': 'Exception: $e'};
     }
   }
 
@@ -920,7 +962,9 @@ class IpdService {
     String whopay = "Client",
   }) async {
     debugPrint('Adding standard charges...');
-    debugPrint('Patient ID: $patientId, Admission ID: $admissionId, Ward ID: $wardId');
+    debugPrint(
+      'Patient ID: $patientId, Admission ID: $admissionId, Ward ID: $wardId',
+    );
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -980,7 +1024,9 @@ class IpdService {
         "whopay": whopay,
       };
 
-      debugPrint('Add Standard Charges Request Body: ${jsonEncode(requestBody)}');
+      debugPrint(
+        'Add Standard Charges Request Body: ${jsonEncode(requestBody)}',
+      );
 
       final response = await ApiDebugHttp.post(
         Uri.parse(_addStdChargesUrl),
@@ -988,7 +1034,9 @@ class IpdService {
         body: jsonEncode(requestBody),
       );
 
-      debugPrint('Add Standard Charges API Status Code: ${response.statusCode}');
+      debugPrint(
+        'Add Standard Charges API Status Code: ${response.statusCode}',
+      );
       debugPrint('Add Standard Charges API Response: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -997,7 +1045,8 @@ class IpdService {
           return {
             'success': true,
             'data': decoded['data'] ?? decoded,
-            'message': decoded['message'] ?? 'Standard charges added successfully',
+            'message':
+                decoded['message'] ?? 'Standard charges added successfully',
             'response': decoded,
           };
         } else {
@@ -1012,10 +1061,13 @@ class IpdService {
         try {
           final errorBody = jsonDecode(response.body);
           if (errorBody is Map<String, dynamic>) {
-            errorMessage = errorBody['message'] ?? errorBody['error'] ?? errorMessage;
+            errorMessage =
+                errorBody['message'] ?? errorBody['error'] ?? errorMessage;
           }
         } catch (e) {
-          errorMessage = response.body.isNotEmpty ? response.body : errorMessage;
+          errorMessage = response.body.isNotEmpty
+              ? response.body
+              : errorMessage;
         }
 
         return {
@@ -1028,10 +1080,7 @@ class IpdService {
     } catch (e, stackTrace) {
       debugPrint('Exception adding standard charges: $e');
       debugPrint('StackTrace: $stackTrace');
-      return {
-        'success': false,
-        'message': 'Exception: $e',
-      };
+      return {'success': false, 'message': 'Exception: $e'};
     }
   }
 
@@ -1053,6 +1102,8 @@ class IpdService {
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
 
+      final savedBranchId = getPrefAsString('branchId');
+      final branchId = savedBranchId.isNotEmpty ? savedBranchId : '1';
       if (token.isEmpty || clinicId.isEmpty || userId.isEmpty) {
         throw Exception('⚠️ Missing session values. Please login again.');
       }
@@ -1064,7 +1115,7 @@ class IpdService {
         'clinicid': clinicId,
         'userid': userId,
         'ZONEID': 'Asia/Kolkata',
-        'branchId': '1',
+        'branchId': branchId,
         'Access-Control-Allow-Origin': '*',
       };
 
@@ -1088,15 +1139,20 @@ class IpdService {
               'message': 'Vitals master data fetched successfully',
             };
           } else {
-            throw Exception('API response missing "data" key or data is not a list');
+            throw Exception(
+              'API response missing "data" key or data is not a list',
+            );
           }
         } else {
-          throw Exception('Unexpected API format. Expected a map but got: ${decoded.runtimeType}');
+          throw Exception(
+            'Unexpected API format. Expected a map but got: ${decoded.runtimeType}',
+          );
         }
       } else {
         return {
           'success': false,
-          'message': 'Failed to load vitals master data (Status ${response.statusCode})',
+          'message':
+              'Failed to load vitals master data (Status ${response.statusCode})',
           'error': response.body,
         };
       }
@@ -1133,13 +1189,11 @@ class IpdService {
       final token = getPrefAsString('auth_token');
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
-      final branchId = getPrefAsString('branchId') ?? '1';
+      final savedBranchId = getPrefAsString('branchId');
+      final branchId = savedBranchId.isNotEmpty ? savedBranchId : '1';
 
       if (token.isEmpty || clinicId.isEmpty || userId.isEmpty) {
-        return {
-          'success': false,
-          'message': 'Missing session values',
-        };
+        return {'success': false, 'message': 'Missing session values'};
       }
 
       final headers = {
@@ -1149,7 +1203,7 @@ class IpdService {
         'clinicid': clinicId,
         'userid': userId,
         'ZONEID': 'Asia/Kolkata',
-        'branchId': '1',
+        'branchId': branchId,
         'Access-Control-Allow-Origin': '*',
       };
 
@@ -1174,10 +1228,7 @@ class IpdService {
       }
 
       if (requestBody.isEmpty) {
-        return {
-          'success': false,
-          'message': 'No valid vitals to save',
-        };
+        return {'success': false, 'message': 'No valid vitals to save'};
       }
 
       final response = await ApiDebugHttp.post(
@@ -1209,7 +1260,8 @@ class IpdService {
         try {
           final errorBody = jsonDecode(response.body);
           if (errorBody is Map<String, dynamic>) {
-            errorMessage = errorBody['message'] ?? errorBody['error'] ?? 'Unknown error';
+            errorMessage =
+                errorBody['message'] ?? errorBody['error'] ?? 'Unknown error';
           }
         } catch (e) {
           errorMessage = response.body;
@@ -1224,10 +1276,7 @@ class IpdService {
     } catch (e, stackTrace) {
       debugPrint('Exception saving vitals: $e');
       debugPrint('Stack Trace: $stackTrace');
-      return {
-        'success': false,
-        'message': 'Exception: $e',
-      };
+      return {'success': false, 'message': 'Exception: $e'};
     }
   }
 
@@ -1235,8 +1284,12 @@ class IpdService {
   // Patient Information (via InvestigationService)
   // ---------------------------------------------------------------------------
 
-  Future<Map<String, dynamic>?> fetchPatientInformation(String patientId) async {
-    debugPrint('Fetching patient information for ID: $patientId via InvestigationService');
+  Future<Map<String, dynamic>?> fetchPatientInformation(
+    String patientId,
+  ) async {
+    debugPrint(
+      'Fetching patient information for ID: $patientId via InvestigationService',
+    );
     try {
       final response = await InvestigationService.fetchPatientInformation(
         patientId: patientId,
@@ -1265,7 +1318,9 @@ class IpdService {
   }
 
   Future<Map<String, dynamic>?> fetchPatientIpdDetails(String patientId) async {
-    debugPrint('Fetching patient IPD details for ID: $patientId via InvestigationService');
+    debugPrint(
+      'Fetching patient IPD details for ID: $patientId via InvestigationService',
+    );
     try {
       final response = await InvestigationService.fetchPatientIpdDetails(
         patientId: patientId,
@@ -1329,7 +1384,8 @@ class IpdService {
       final token = getPrefAsString('auth_token');
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
-      final branchId = getPrefAsString('branchId') ?? '1';
+      final savedBranchId = getPrefAsString('branchId');
+      final branchId = savedBranchId.isNotEmpty ? savedBranchId : '1';
 
       if (token.isEmpty || clinicId.isEmpty || userId.isEmpty) {
         throw Exception('⚠️ Missing session values. Please login again.');
@@ -1337,7 +1393,8 @@ class IpdService {
 
       String uploadByUser = uploadby;
       if (uploadByUser.isEmpty) {
-        uploadByUser = getPrefAsString('userFullName') ??
+        uploadByUser =
+            getPrefAsString('userFullName') ??
             getPrefAsString('username') ??
             'Staff User';
       }
@@ -1387,8 +1444,8 @@ class IpdService {
             "fileName": fileName,
             "fileType": fileType,
             "fileDataUrl": fileDataUrl,
-          }
-        ]
+          },
+        ],
       };
 
       final response = await ApiDebugHttp.post(
@@ -1406,7 +1463,8 @@ class IpdService {
           return {
             'success': true,
             'data': decoded['data'] ?? [],
-            'message': decoded['File uploaded successfully!'] ??
+            'message':
+                decoded['File uploaded successfully!'] ??
                 decoded['message'] ??
                 'Document uploaded successfully',
             'response': decoded,
@@ -1419,7 +1477,8 @@ class IpdService {
         try {
           final errorBody = jsonDecode(response.body);
           if (errorBody is Map<String, dynamic>) {
-            errorMessage = errorBody['message'] ?? errorBody['error'] ?? errorMessage;
+            errorMessage =
+                errorBody['message'] ?? errorBody['error'] ?? errorMessage;
           }
         } catch (e) {
           errorMessage = response.body;
@@ -1456,7 +1515,8 @@ class IpdService {
           mimeType = 'application/msword';
           break;
         case 'docx':
-          mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          mimeType =
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
           break;
         default:
           mimeType = 'application/octet-stream';
@@ -1487,7 +1547,8 @@ class IpdService {
       final token = getPrefAsString('auth_token');
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
-      final branchId = getPrefAsString('branchId') ?? '1';
+      final savedBranchId = getPrefAsString('branchId');
+      final branchId = savedBranchId.isNotEmpty ? savedBranchId : '1';
 
       if (token.isEmpty || clinicId.isEmpty || userId.isEmpty) {
         throw Exception('⚠️ Missing session values');
@@ -1565,8 +1626,8 @@ class IpdService {
           'data': decoded is Map ? (decoded['data'] ?? []) : [],
           'message': decoded is Map
               ? (decoded['File uploaded successfully!'] ??
-                  decoded['message'] ??
-                  'Success')
+                    decoded['message'] ??
+                    'Success')
               : 'Document uploaded successfully',
         };
       } else {
@@ -1618,39 +1679,74 @@ class IpdService {
 
         switch (vitalId) {
           case '1':
-            _validateVital(vitalName, temperature,
-                vital['min_value_f']?.toString(), vital['max_value_f']?.toString(),
-                errors, fieldName: 'temperature');
+            _validateVital(
+              vitalName,
+              temperature,
+              vital['min_value_f']?.toString(),
+              vital['max_value_f']?.toString(),
+              errors,
+              fieldName: 'temperature',
+            );
             break;
           case '2':
-            _validateVital(vitalName, heartRate,
-                vital['min_value_f']?.toString(), vital['max_value_f']?.toString(),
-                errors, fieldName: 'heartRate');
+            _validateVital(
+              vitalName,
+              heartRate,
+              vital['min_value_f']?.toString(),
+              vital['max_value_f']?.toString(),
+              errors,
+              fieldName: 'heartRate',
+            );
             break;
           case '3':
-            _validateVital(vitalName, respiratoryRate,
-                vital['min_value_f']?.toString(), vital['max_value_f']?.toString(),
-                errors, fieldName: 'respiratoryRate');
+            _validateVital(
+              vitalName,
+              respiratoryRate,
+              vital['min_value_f']?.toString(),
+              vital['max_value_f']?.toString(),
+              errors,
+              fieldName: 'respiratoryRate',
+            );
             break;
           case '4':
-            _validateVital(vitalName, systolicBp,
-                vital['min_value_f']?.toString(), vital['max_value_f']?.toString(),
-                errors, fieldName: 'systolicBp');
+            _validateVital(
+              vitalName,
+              systolicBp,
+              vital['min_value_f']?.toString(),
+              vital['max_value_f']?.toString(),
+              errors,
+              fieldName: 'systolicBp',
+            );
             break;
           case '5':
-            _validateVital(vitalName, diastolicBp,
-                vital['min_value_f']?.toString(), vital['max_value_f']?.toString(),
-                errors, fieldName: 'diastolicBp');
+            _validateVital(
+              vitalName,
+              diastolicBp,
+              vital['min_value_f']?.toString(),
+              vital['max_value_f']?.toString(),
+              errors,
+              fieldName: 'diastolicBp',
+            );
             break;
           case '6':
-            _validateVital(vitalName, rbs,
-                vital['min_value_f']?.toString(), vital['max_value_f']?.toString(),
-                errors, fieldName: 'rbs');
+            _validateVital(
+              vitalName,
+              rbs,
+              vital['min_value_f']?.toString(),
+              vital['max_value_f']?.toString(),
+              errors,
+              fieldName: 'rbs',
+            );
             break;
           case '13':
-            _validateVital(vitalName, spo2,
-                vital['min_value_f']?.toString(), vital['max_value_f']?.toString(),
-                errors, fieldName: 'spo2');
+            _validateVital(
+              vitalName,
+              spo2,
+              vital['min_value_f']?.toString(),
+              vital['max_value_f']?.toString(),
+              errors,
+              fieldName: 'spo2',
+            );
             break;
         }
       }
@@ -1662,10 +1758,7 @@ class IpdService {
       errors['bloodPressure'] = 'Systolic must be greater than diastolic';
     }
 
-    return {
-      'isValid': errors.isEmpty,
-      'errors': errors,
-    };
+    return {'isValid': errors.isEmpty, 'errors': errors};
   }
 
   Map<String, dynamic> _basicVitalsValidation({
@@ -1689,7 +1782,8 @@ class IpdService {
     }
     final rr = int.tryParse(respiratoryRate);
     if (rr == null || rr < 6 || rr > 60) {
-      errors['respiratoryRate'] = 'Respiratory rate must be between 6 and 60 /min';
+      errors['respiratoryRate'] =
+          'Respiratory rate must be between 6 and 60 /min';
     }
     final sys = int.tryParse(systolicBp);
     final dia = int.tryParse(diastolicBp);
@@ -1711,10 +1805,7 @@ class IpdService {
       errors['spo2'] = 'SpO2 must be between 70% and 100%';
     }
 
-    return {
-      'isValid': errors.isEmpty,
-      'errors': errors,
-    };
+    return {'isValid': errors.isEmpty, 'errors': errors};
   }
 
   void _validateVital(
@@ -1755,7 +1846,8 @@ class IpdService {
     return [
       if (temperature.isNotEmpty) {'vitalMasterId': 1, 'finding': temperature},
       if (heartRate.isNotEmpty) {'vitalMasterId': 2, 'finding': heartRate},
-      if (respiratoryRate.isNotEmpty) {'vitalMasterId': 3, 'finding': respiratoryRate},
+      if (respiratoryRate.isNotEmpty)
+        {'vitalMasterId': 3, 'finding': respiratoryRate},
       if (systolicBp.isNotEmpty) {'vitalMasterId': 4, 'finding': systolicBp},
       if (diastolicBp.isNotEmpty) {'vitalMasterId': 5, 'finding': diastolicBp},
       if (rbs.isNotEmpty) {'vitalMasterId': 6, 'finding': rbs},
@@ -1773,7 +1865,9 @@ class IpdService {
     required String ipdid,
     required String admissiondate,
   }) async {
-    debugPrint('Fetching day-to-day notes for ipdid: $ipdid, admissiondate: $admissiondate');
+    debugPrint(
+      'Fetching day-to-day notes for ipdid: $ipdid, admissiondate: $admissiondate',
+    );
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -1786,8 +1880,9 @@ class IpdService {
       final token = getPrefAsString('auth_token');
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
-      final branchId =
-          getPrefAsString('branchId').isNotEmpty ? getPrefAsString('branchId') : '1';
+      final branchId = getPrefAsString('branchId').isNotEmpty
+          ? getPrefAsString('branchId')
+          : '1';
 
       if (token.isEmpty || clinicId.isEmpty || userId.isEmpty) {
         return {
@@ -1858,10 +1953,13 @@ class IpdService {
         try {
           final errorBody = jsonDecode(response.body);
           if (errorBody is Map<String, dynamic>) {
-            errorMessage = errorBody['message'] ?? errorBody['error'] ?? errorMessage;
+            errorMessage =
+                errorBody['message'] ?? errorBody['error'] ?? errorMessage;
           }
         } catch (_) {
-          errorMessage = response.body.isNotEmpty ? response.body : errorMessage;
+          errorMessage = response.body.isNotEmpty
+              ? response.body
+              : errorMessage;
         }
 
         return {
@@ -1892,7 +1990,9 @@ class IpdService {
     required String createdByUserId,
     int status = 1,
   }) async {
-    debugPrint('Saving day-to-day note for ipdid: $ipdid, day: $day, status: $status');
+    debugPrint(
+      'Saving day-to-day note for ipdid: $ipdid, day: $day, status: $status',
+    );
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -1905,8 +2005,9 @@ class IpdService {
       final token = getPrefAsString('auth_token');
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
-      final branchId =
-          getPrefAsString('branchId').isNotEmpty ? getPrefAsString('branchId') : '1';
+      final branchId = getPrefAsString('branchId').isNotEmpty
+          ? getPrefAsString('branchId')
+          : '1';
 
       if (token.isEmpty || clinicId.isEmpty || userId.isEmpty) {
         return {
@@ -1954,7 +2055,9 @@ class IpdService {
         body: jsonEncode(body),
       );
 
-      debugPrint('Save Day-to-Day Notes API Status Code : ${response.statusCode}');
+      debugPrint(
+        'Save Day-to-Day Notes API Status Code : ${response.statusCode}',
+      );
       debugPrint('Save Day-to-Day Notes API Response    : ${response.body}');
 
       if (response.statusCode == 200) {
@@ -1969,10 +2072,13 @@ class IpdService {
         try {
           final errorBody = jsonDecode(response.body);
           if (errorBody is Map<String, dynamic>) {
-            errorMessage = errorBody['message'] ?? errorBody['error'] ?? errorMessage;
+            errorMessage =
+                errorBody['message'] ?? errorBody['error'] ?? errorMessage;
           }
         } catch (_) {
-          errorMessage = response.body.isNotEmpty ? response.body : errorMessage;
+          errorMessage = response.body.isNotEmpty
+              ? response.body
+              : errorMessage;
         }
 
         return {
@@ -1994,4 +2100,3 @@ class IpdService {
     }
   }
 }
-

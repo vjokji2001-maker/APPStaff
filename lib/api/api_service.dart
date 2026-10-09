@@ -277,7 +277,7 @@ class ApiService {
           'Accept': 'application/json',
         },
         body: jsonEncode({
-          'refereshToken': refreshToken,
+          'refreshToken': refreshToken,
           'remoteAddr': ApiHost.remoteAddr,
         }),
       ).timeout(const Duration(minutes: 15));
