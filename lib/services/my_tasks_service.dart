@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:staff_mate/APIs/api_debug_http.dart';
-import 'package:staff_mate/APIs/api_debug_http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:staff_mate/APIs/api_host.dart';
 
@@ -866,24 +865,30 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
         }
 
         if (response.statusCode == 400) {
+          var errorMessage = 'Database error';
           try {
             final errorResponse = jsonDecode(response.body);
-            String errorMessage = 'Database error: ';
             if (errorResponse is Map) {
               if (errorResponse['message'] != null) {
-                errorMessage = errorResponse['message'];
+                errorMessage = errorResponse['message'].toString();
               }
               if (errorResponse['error'] != null) {
                 final error = errorResponse['error'];
                 if (error is Map && error['cause'] != null) {
                   errorMessage = error['cause'].toString();
+                } else if (error is String) {
+                  errorMessage = error;
                 }
               }
             }
-            throw Exception('$errorMessage. Please check backend database schema.');
-          } catch (e) {
-            throw Exception('Failed to save task. Database error occurred.');
+          } on FormatException {
+            errorMessage = response.body.isNotEmpty
+                ? response.body
+                : 'Database error';
           }
+          throw Exception(
+            '$errorMessage. Please check backend database schema.',
+          );
         } else if (response.statusCode == 401) {
           throw Exception('Authentication failed. Please login again.');
         } else if (response.statusCode == 403) {
@@ -1054,11 +1059,11 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
           
           return formattedResponse;
         } else if (response.statusCode == 404) {
-          return {
-            'data': [],
-            'message': 'No history found for this task and date',
-            'status_code': 200
-          };
+          throw Exception(
+            'Task history request returned 404 for task $taskId on $date. '
+            'Verify the history endpoint and confirm the task/date record exists. '
+            'Response: ${response.body}',
+          );
         } else if (response.statusCode == 401) {
           throw Exception('Authentication failed. Please login again.');
         } else if (response.statusCode == 403) {
@@ -1212,21 +1217,26 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
             };
           }
         } else if (response.statusCode == 400) {
+          var errorMessage = 'Failed to add comment';
           try {
             final errorResponse = jsonDecode(response.body);
-            String errorMessage = 'Failed to add comment: ';
             if (errorResponse is Map) {
               if (errorResponse['message'] != null) {
-                errorMessage = errorResponse['message'];
+                errorMessage = errorResponse['message'].toString();
               }
-              if (errorResponse['error'] != null && errorResponse['error']['cause'] != null) {
-                errorMessage = errorResponse['error']['cause'].toString();
+              final error = errorResponse['error'];
+              if (error is Map && error['cause'] != null) {
+                errorMessage = error['cause'].toString();
+              } else if (error is String) {
+                errorMessage = error;
               }
             }
-            throw Exception(errorMessage);
-          } catch (e) {
-            throw Exception('Failed to add comment. Task ID: $taskId may not exist.');
+          } on FormatException {
+            errorMessage = response.body.isNotEmpty
+                ? response.body
+                : 'Task ID: $taskId may not exist.';
           }
+          throw Exception(errorMessage);
         } else if (response.statusCode == 401) {
           throw Exception('Authentication failed. Please login again.');
         } else if (response.statusCode == 403) {
@@ -1682,33 +1692,21 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
         
         if (response.statusCode == 200) {
           final decoded = jsonDecode(response.body);
-          
-          Map<String, dynamic> formattedResponse;
-          List<dynamic> tasksList = [];
-          
-          if (decoded is Map<String, dynamic>) {
-            if (decoded.containsKey('data') && decoded['data'] is Map) {
-              final data = decoded['data'] as Map;
-              if (data.containsKey('list') && data['list'] is List) {
-                tasksList = data['list'] as List;
-              }
-            }
-            
-            formattedResponse = {
-              'data': tasksList,
-              'message': decoded['message'] ?? 'Success',
-              'status_code': 200,
-              'status': status.toUpperCase(),
-              'full_response': decoded,
-            };
-          } else {
-            formattedResponse = {
-              'data': [],
-              'message': 'Unknown response format',
-              'status_code': 200,
-              'status': status.toUpperCase(),
-            };
+          final tasksList = _extractTaskList(decoded);
+          if (tasksList == null) {
+            final keys = decoded is Map ? decoded.keys.join(', ') : '';
+            throw FormatException(
+              'Unexpected task response structure for $status. '
+              'Response keys: $keys',
+            );
           }
+          final formattedResponse = <String, dynamic>{
+            'data': tasksList,
+            'message': decoded is Map ? decoded['message'] ?? 'Success' : 'Success',
+            'status_code': 200,
+            'status': status.toUpperCase(),
+            'full_response': decoded,
+          };
           debugPrint('=== VALIDATING TASK IDs IN RESPONSE ===');
           int tasksWithIds = 0;
           int tasksWithoutIds = 0;
@@ -1720,6 +1718,7 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
                 tasksWithoutIds++;
                 debugPrint('⚠️ Task without ID found: ${task['taskName'] ?? 'Unknown'}');
               }
+
             }
           }
           debugPrint('Tasks with IDs: $tasksWithIds, Tasks without IDs: $tasksWithoutIds');
@@ -1755,6 +1754,44 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
     }
   }
 
+  static List<dynamic>? _extractTaskList(dynamic response) {
+    if (response is List) return response;
+    if (response is! Map) return null;
+
+    for (final key in [
+      'list',
+      'content',
+      'dataList',
+      'records',
+      'tasks',
+      'taskList',
+      'items',
+    ]) {
+      final value = response[key];
+      if (value is List) return value;
+    }
+
+    if (response.containsKey('id') ||
+        response.containsKey('taskId') ||
+        response.containsKey('task_id') ||
+        response.containsKey('taskName') ||
+        response.containsKey('title')) {
+      return [response];
+    }
+
+    for (final key in ['data', 'result']) {
+      final nested = response[key];
+      if (nested is List) return nested;
+      if (nested is Map) {
+        final result = _extractTaskList(nested);
+        if (result != null) {
+          return result;
+        }
+      }
+    }
+    return null;
+  }
+  
   static Future<Map<String, dynamic>> fetchUpcomingTasks() async {
     return fetchTasksByStatus('UPCOMING');
   }
@@ -2183,5 +2220,3 @@ static Future<Map<String, dynamic>> getSubCategoriesByCategoryId({
     return sanitized;
   }
 }
-
-

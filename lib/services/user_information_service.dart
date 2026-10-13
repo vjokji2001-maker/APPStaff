@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:staff_mate/APIs/api_debug_http.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -194,7 +193,21 @@ class UserInformationService {
     );
 
     // Employee & Roster Details
-    await prefs.setString('empId', data['empId']?.toString() ?? '');
+    final employeeId =
+        [
+          data['employeeId'],
+          data['employee_id'],
+          data['emp_id'],
+          data['empId'],
+        ].firstWhere(
+          (value) => value != null && value.toString().trim().isNotEmpty,
+          orElse: () => null,
+        );
+    await prefs.setString('empId', employeeId?.toString() ?? '');
+    final employeeCode = data['employeeCode'] ?? data['empCode'];
+    if (employeeCode != null) {
+      await prefs.setString('empCode', employeeCode.toString());
+    }
     await prefs.setString(
       'USERNUMERICID',
       data['id']?.toString() ?? '',

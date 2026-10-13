@@ -186,6 +186,7 @@ class ApiEndpoints {
 
   // Holidays
   static String get holidays => '${ApiHost.hrBaseUrl}/hr/master/attendance/holiday/get/all';
+  
 
   // Shift Roster
   static String get shiftRosterFetch => '${ApiHost.hrBaseUrl}/hr/attendance/shift/get/dashboard';

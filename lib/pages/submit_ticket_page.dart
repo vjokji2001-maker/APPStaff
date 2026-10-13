@@ -187,12 +187,40 @@ class _SubmitTicketPageState extends State<SubmitTicketPage> {
 
   void _listen() async {
     if (!_isListening) {
-      bool available = await _speech.initialize();
+      final permissionStatus = await Permission.microphone.request();
+      if (!permissionStatus.isGranted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Microphone permission is required for voice input.'),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+        return;
+      }
+
+      final available = await _speech.initialize(
+        onError: (error) => debugPrint('Speech error: ${error.errorMsg}'),
+        onStatus: (status) => debugPrint('Speech status: $status'),
+      );
+
       if (available) {
         setState(() => _isListening = true);
         _speech.listen(
-          onResult: (val) =>
-              setState(() => _descController.text = val.recognizedWords),
+          onResult: (val) => setState(() {
+            _descController.text = val.recognizedWords;
+            if (val.finalResult) {
+              _isListening = false;
+            }
+          }),
+          listenOptions: stt.SpeechListenOptions(
+            listenFor: const Duration(seconds: 90),
+            pauseFor: const Duration(milliseconds: 1500),
+            partialResults: true,
+            listenMode: stt.ListenMode.dictation,
+            cancelOnError: false,
+            onDevice: false,
+          ),
         );
       }
     } else {

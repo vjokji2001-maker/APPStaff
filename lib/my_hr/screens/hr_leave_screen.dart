@@ -1694,15 +1694,11 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                                                 appDate ?? currentDate,
                                               ),
                                               'fromDate': formatDate(from!),
-                                              'fromDateStr': formatDate(from!),
                                               'toDate': formatDate(to!),
-                                              'toDateStr': formatDate(to!),
                                               'fromDateDuration': fromDuration,
                                               'toDateDuration': toDuration,
                                               'leaveNameId':
                                                   selectedLeaveTemplate!.id,
-                                              'leaveName':
-                                                  selectedLeaveTemplate!.name,
                                               'reason': reason,
                                               'employeeId': empId,
                                               'yearId': selectedYearId,
@@ -1732,12 +1728,18 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
                                             );
                                           } catch (e) {
                                             if (!mounted) return;
+                                            final errorMessage = e
+                                                .toString()
+                                                .replaceFirst(
+                                                  RegExp(r'^Exception:\s*'),
+                                                  '',
+                                                );
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(
                                               SnackBar(
                                                 content: Text(
-                                                  'Error submitting leave: $e',
+                                                  'Error submitting leave: $errorMessage',
                                                 ),
                                               ),
                                             );

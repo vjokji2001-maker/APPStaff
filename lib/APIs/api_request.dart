@@ -30,7 +30,12 @@ class ApiRequest {
 
     try {
       final http.Response response;
-
+      log('REQUEST METHOD: $method');
+      log('REQUEST URL: $url');
+      log(
+        'REQUEST CONTENT-TYPE: ${requestHeadersWithDefaults['Content-Type']}',
+      );
+      log('REQUEST BODY: ${requestBody ?? '<null>'}');
       switch (method.toUpperCase()) {
         case 'GET':
           response = await http
@@ -73,14 +78,25 @@ class ApiRequest {
       }
 
       log('API Response Status: ${response.statusCode}');
+      log('API Response Headers: ${response.headers}');
+      log('API Response Status: ${response.statusCode}');
+      log(
+        'API Response Content-Type: '
+        '${response.headers['content-type']}',
+      );
+      log('API Response Body Length: ${response.body.length}');
       log('API Response Body: ${response.body}');
-
       if (response.statusCode >= 200 && response.statusCode < 300) {
         if (responseType == 'blob') {
           return response.bodyBytes;
         }
 
-        if (response.body.isEmpty) {
+        if (response.body.trim().isEmpty) {
+          log(
+            'WARNING: Empty response body for '
+            '$method $url '
+            '(HTTP ${response.statusCode})',
+          );
           return null;
         }
 
@@ -98,10 +114,13 @@ class ApiRequest {
         final errorData = json.decode(response.body);
 
         if (errorData is Map) {
-          errorMessage =
-              errorData['message']?.toString() ??
-              errorData['error']?.toString() ??
-              errorMessage;
+          final error = errorData['error'];
+          final cause = error is Map ? error['cause']?.toString() : null;
+          errorMessage = cause != null && cause.isNotEmpty
+              ? cause
+              : errorData['message']?.toString() ??
+                    error?.toString() ??
+                    errorMessage;
         } else if (response.body.isNotEmpty) {
           errorMessage = response.body;
         }

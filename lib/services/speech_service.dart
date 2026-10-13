@@ -27,6 +27,7 @@
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class SpeechService {
@@ -106,10 +107,15 @@ class SpeechService {
       if (!ok) return;
     }
 
-    // Check / re-request permission
-    if (!await _stt.hasPermission) {
-      final granted = await init(localeId: localeId);
-      if (!granted) return;
+    // Check / request microphone permission explicitly. This matters on devices
+    // where the OS permission prompt was not shown yet; otherwise recognition
+    // will silently fail for soft, loud, slow, or fast speech.
+    if (!await Permission.microphone.isGranted) {
+      final status = await Permission.microphone.request();
+      if (status != PermissionStatus.granted) {
+        debugPrint('SpeechService: microphone permission denied');
+        return;
+      }
     }
 
     // Stop any ongoing session before starting a new one
@@ -117,7 +123,7 @@ class SpeechService {
 
     _listening = true;
 
-    String _lastPartial = '';
+    String lastPartial = '';
 
     try {
       await _stt.listen(
@@ -132,21 +138,22 @@ class SpeechService {
             _listening = false;
           } else {
             // Partial result — only fire onPartial if text actually changed
-            if (words != _lastPartial) {
-              _lastPartial = words;
+            if (words != lastPartial) {
+              lastPartial = words;
               onPartial(words);
             }
           }
         },
-        // ── Performance-tuned parameters ──────────────────────────────────
-        listenFor: const Duration(seconds: 60),
-        pauseFor:  const Duration(milliseconds: 800),   // stop 0.8 s after silence
-        localeId:  localeId,
         listenOptions: stt.SpeechListenOptions(
-          partialResults:  true,                        // word-by-word live update
-          listenMode:      stt.ListenMode.dictation,    // no confirmation delay
-          cancelOnError:   false,
-          onDevice:        true,                        // prefer on-device (faster)
+          partialResults: true,
+          listenMode: stt.ListenMode.dictation,
+          cancelOnError: false,
+          // Cloud recognition is typically more forgiving with real-world voice
+          // variation than on-device-only recognition.
+          onDevice: false,
+          listenFor: const Duration(seconds: 90),
+          pauseFor: const Duration(milliseconds: 1500),
+          localeId: localeId,
         ),
       );
     } catch (e) {

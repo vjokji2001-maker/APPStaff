@@ -35,16 +35,20 @@ class HRApiService {
 
     // Otherwise resolve Employee ID from Shift Roster.
     final userId = prefs.getString('userId')?.trim() ?? '';
-    final firstName = prefs.getString('firstName')?.trim() ?? '';
+    final employeeCode = prefs.getString('empCode')?.trim() ?? '';
+    final employeeName =
+        '${prefs.getString('firstName') ?? ''} ${prefs.getString('lastName') ?? ''}'
+            .trim();
 
     print('Stored Employee ID invalid/missing.');
     print('userId: $userId');
-    print('firstName: $firstName');
+    print('employeeName: $employeeName');
 
     if (userId.isNotEmpty) {
       final resolved = await resolveAndSaveEmpIdFromRoster(
         userId,
-        firstName: firstName,
+        employeeCode: employeeCode,
+        firstName: employeeName,
         referenceDate: referenceDate,
       );
 
@@ -61,6 +65,7 @@ class HRApiService {
   /// Resolve and save employee ID by querying the shift roster
   static Future<String?> resolveAndSaveEmpIdFromRoster(
     String userId, {
+    String? employeeCode,
     String? firstName,
     DateTime? referenceDate,
   }) async {
@@ -89,6 +94,7 @@ class HRApiService {
       final foundEmpId = _findUserEmpIdInRosterResponse(
         response,
         userId: userId,
+        employeeCode: employeeCode,
         firstName: firstName,
       );
       if (foundEmpId != null && foundEmpId.isNotEmpty) {
@@ -107,96 +113,112 @@ class HRApiService {
   static String? _findUserEmpIdInRosterResponse(
     dynamic response, {
     required String userId,
+    String? employeeCode,
     String? firstName,
   }) {
-    if (response is Map) {
-      final dataMap = response['data'];
-      List<dynamic>? dataList;
-      if (dataMap is List) {
-        dataList = dataMap;
-      } else if (dataMap is Map) {
-        dataList =
-            dataMap['dataList'] ?? dataMap['content'] ?? dataMap['records'];
+    if (response is! Map) {
+      return null;
+    }
+
+    final dataMap = response['data'];
+    List<dynamic>? dataList;
+
+    if (dataMap is List) {
+      dataList = dataMap;
+    } else if (dataMap is Map) {
+      dataList =
+          dataMap['dataList'] ?? dataMap['content'] ?? dataMap['records'];
+    } else {
+      dataList =
+          response['dataList'] ?? response['content'] ?? response['records'];
+    }
+
+    if (dataList == null || dataList.isEmpty) {
+      print('Shift Roster returned empty list.');
+      return null;
+    }
+
+    // Flatten dataList in case it contains nested lists (e.g. [[row1, row2]])
+    final List<dynamic> flatList = [];
+    for (final item in dataList) {
+      if (item is List) {
+        flatList.addAll(item);
       } else {
-        dataList =
-            response['dataList'] ?? response['content'] ?? response['records'];
-      }
-
-      if (dataList != null && dataList.isNotEmpty) {
-        // Flatten dataList in case it contains nested lists (e.g. [[row1, row2]])
-        final List<dynamic> flatList = [];
-        for (final item in dataList) {
-          if (item is List) {
-            flatList.addAll(item);
-          } else {
-            flatList.add(item);
-          }
-        }
-
-        print(
-          'Shift Roster fetched ${flatList.length} rows. Looking for match...',
-        );
-
-        final lowerUserId = userId.toLowerCase();
-        final lowerFirstName = firstName?.toLowerCase() ?? '';
-
-        // 1. Try matching employeeCode exactly with userId
-        for (final row in flatList) {
-          if (row is Map) {
-            final empCode = row['employeeCode']?.toString().toLowerCase() ?? '';
-            if (empCode.isNotEmpty &&
-                (empCode == lowerUserId ||
-                    lowerUserId.contains(empCode) ||
-                    empCode.contains(lowerUserId))) {
-              final empId =
-                  row['employeeId']?.toString() ?? row['empId']?.toString();
-              if (empId != null && empId.isNotEmpty) {
-                print('Match Found by Employee Code: $empCode -> $empId');
-                return empId;
-              }
-            }
-          }
-        }
-
-        // 2. Try matching employeeName with firstName
-        if (lowerFirstName.isNotEmpty) {
-          for (final row in flatList) {
-            if (row is Map) {
-              final empName =
-                  row['employeeName']?.toString().toLowerCase() ?? '';
-              if (empName.isNotEmpty &&
-                  (empName.contains(lowerFirstName) ||
-                      lowerFirstName.contains(empName))) {
-                final empId =
-                    row['employeeId']?.toString() ?? row['empId']?.toString();
-                if (empId != null && empId.isNotEmpty) {
-                  print('Match Found by Name: $empName -> $empId');
-                  return empId;
-                }
-              }
-            }
-          }
-        }
-
-        // 3. Fallback: If there's only 1 row in the roster, it belongs to the logged-in user
-        if (flatList.length == 1) {
-          final firstRow = flatList.first;
-          if (firstRow is Map) {
-            final empId =
-                firstRow['employeeId']?.toString() ??
-                firstRow['empId']?.toString();
-            if (empId != null && empId.isNotEmpty) {
-              print(
-                'Fallback Match: Roster has only 1 row. Using empId: $empId',
-              );
-              return empId;
-            }
-          }
-        }
-      } else {
-        print('Shift Roster returned empty list.');
+        flatList.add(item);
       }
     }
+
+    print('Shift Roster fetched ${flatList.length} rows. Looking for match...');
+
+    // TEMP DEBUG: inspect roster field names and matching values
+    if (flatList.isNotEmpty) {
+      // TEMP DEBUG: print every employee returned by the roster.
+      for (final row in flatList) {
+        if (row is Map) {
+          print(
+            'ROSTER EMPLOYEE: '
+            'name=${row['employeeName']}, '
+            'code=${row['employeeCode']}, '
+            'employeeId=${row['employeeId']}',
+          );
+        }
+      }
+      for (final row in flatList) {
+        if (row is Map) {
+          final rowText = row.toString().toLowerCase();
+
+          if (rowText.contains(userId.toLowerCase()) ||
+              rowText.contains((firstName ?? '').toLowerCase())) {
+            print('ROSTER POSSIBLE MATCH: $row');
+          }
+        }
+      }
+    }
+
+    final lowerUserId = userId.toLowerCase();
+    final lowerEmployeeCode = employeeCode?.toLowerCase() ?? '';
+    final lowerEmployeeName = firstName?.trim().toLowerCase() ?? '';
+
+    // 1. Match employee code against the login user ID or employee code.
+    for (final row in flatList) {
+      if (row is! Map) continue;
+
+      final empCode =
+          row['employeeCode']?.toString().trim().toLowerCase() ?? '';
+
+      if (empCode.isNotEmpty &&
+          (empCode == lowerUserId ||
+              (lowerEmployeeCode.isNotEmpty && empCode == lowerEmployeeCode))) {
+        final empId =
+            (row['employeeId'] ?? row['empId'])?.toString().trim() ?? '';
+
+        if (empId.isNotEmpty && empId != 'null') {
+          print('Match Found by Employee Code: $empCode -> $empId');
+          return empId;
+        }
+      }
+    }
+
+    // 2. Match the full employee name.
+    if (lowerEmployeeName.isNotEmpty) {
+      for (final row in flatList) {
+        if (row is! Map) continue;
+
+        final empName =
+            row['employeeName']?.toString().trim().toLowerCase() ?? '';
+
+        if (empName == lowerEmployeeName) {
+          final empId =
+              (row['employeeId'] ?? row['empId'])?.toString().trim() ?? '';
+
+          if (empId.isNotEmpty && empId != 'null') {
+            print('Match Found by Name: $empName -> $empId');
+            return empId;
+          }
+        }
+      }
+    }
+
     return null;
   }
 
@@ -204,8 +226,9 @@ class HRApiService {
     String? empId, {
     DateTime? referenceDate,
   }) async {
-    if (empId != null && empId.isNotEmpty) {
-      return empId;
+    final suppliedEmpId = empId?.trim() ?? '';
+    if (suppliedEmpId.isNotEmpty) {
+      return suppliedEmpId;
     }
     return await getLoggedEmpId(referenceDate: referenceDate);
   }
@@ -228,20 +251,64 @@ class HRApiService {
 
   /// Get Year Cycles from master API
   static Future<List<dynamic>> getYearCycles() async {
+    final url = '${ApiHost.hrBaseUrl}/hr/master/year/cycle/get/all';
+
     try {
-      final response = await ApiRequest.post(
-        '${ApiHost.hrBaseUrl}/hr/master/year/cycle/get/all',
-        {
-          "paginationInfo": {"pageSize": 1000, "currentPage": 1},
-          "name": "",
-          "code": "",
-        },
-        headers: await _hrHeaders(),
+      final response = await ApiRequest.post(url, {
+        'paginationInfo': {'pageSize': 1000, 'currentPage': 1},
+        'name': '',
+        'code': '',
+      }, headers: await _hrHeaders());
+
+      debugPrint('========== YEAR CYCLE DEBUG ==========');
+      debugPrint('URL: $url');
+      debugPrint('Response type: ${response.runtimeType}');
+      debugPrint('Response: $response');
+
+      dynamic data = response;
+
+      // Unwrap common response structures.
+      for (int i = 0; i < 4 && data is Map; i++) {
+        final map = Map<String, dynamic>.from(data);
+
+        // Stop if the response itself looks like a year-cycle record.
+        if (map.containsKey('id') ||
+            map.containsKey('yearId') ||
+            map.containsKey('cycleId')) {
+          break;
+        }
+
+        dynamic next;
+        for (final key in [
+          'data',
+          'dataList',
+          'content',
+          'records',
+          'items',
+          'result',
+        ]) {
+          if (map[key] != null) {
+            next = map[key];
+            break;
+          }
+        }
+
+        if (next == null || identical(next, data)) break;
+        data = next;
+      }
+
+      if (data is List) {
+        debugPrint('Year cycles found: ${data.length}');
+        return data;
+      }
+
+      debugPrint(
+        'No year-cycle list found. Inspect the response printed above.',
       );
-      final data = response is Map ? response['data'] : response;
-      return data is List ? data : [];
-    } catch (e) {
-      print('Error fetching year cycles: $e');
+      return [];
+    } catch (e, stackTrace) {
+      debugPrint('YEAR CYCLE ERROR: $e');
+      debugPrint('$stackTrace');
       return [];
     }
   }
@@ -371,7 +438,11 @@ class HRApiService {
   }) async {
     try {
       final id = await _getEffectiveEmpId(empId);
-      if (id.isEmpty) throw Exception('Employee ID is missing');
+
+      if (id.isEmpty) {
+        throw Exception('Employee ID is missing');
+      }
+
       final body = {
         "paginationInfo": {
           "pageSize": pageSize,
@@ -387,14 +458,22 @@ class HRApiService {
         "status": status,
       };
 
+      print('LEAVE DASHBOARD URL: ${ApiEndpoints.leaveDashboard}');
+      print('LEAVE DASHBOARD PAYLOAD: $body');
+
       final response = await ApiRequest.post(
         ApiEndpoints.leaveDashboard,
         body,
         headers: await _hrHeaders(),
       );
+
+      print('LEAVE DASHBOARD RESPONSE TYPE: ${response.runtimeType}');
+      print('LEAVE DASHBOARD RESPONSE: $response');
+
       return response;
-    } catch (e) {
-      print('Error fetching leave requests: $e');
+    } catch (e, stackTrace) {
+      print('ERROR FETCHING LEAVE REQUESTS: $e');
+      print(stackTrace);
       rethrow;
     }
   }
@@ -465,35 +544,30 @@ class HRApiService {
   }
 
   /// Get Holidays
-  /// NOTE: Backend requires POST - auto-sends logged-in user's stored data
+  /// NOTE: Backend requires POST with name, code, and year filters.
+
   static Future<dynamic> getHolidays({
     String name = '',
     String code = '',
-    String? year,
+    String year = '',
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final currentYear = year ?? DateTime.now().year.toString();
+      final payload = {'name': name, 'code': code, 'year': year};
 
-      // Read logged-in user stored data from SharedPreferences
-      final userId = prefs.getString('userId') ?? '';
-      final empId = prefs.getString('empId') ?? '';
-      final branchId = prefs.get('branchId')?.toString() ?? '';
+      debugPrint('=== HOLIDAY REQUEST ===');
+      debugPrint('URL: ${ApiEndpoints.holidays}');
+      debugPrint('Payload: $payload');
 
-      final response = await ApiRequest.post(ApiEndpoints.holidays, {
-        'name': name,
-        'code': code,
-        'year': currentYear,
-        // logged-in user info (both camelCase & PascalCase for HRMS compatibility)
-        'userId': userId,
-        'Userid': userId,
-        'empId': empId,
-        'Empid': empId,
-        'branchId': branchId,
-      }, headers: await _hrHeaders());
+      final response = await ApiRequest.post(
+        ApiEndpoints.holidays,
+        payload,
+        headers: await _hrHeaders(),
+      );
+
+      debugPrint('Holiday response: $response');
       return response;
     } catch (e) {
-      print('Error fetching holidays: $e');
+      debugPrint('Error fetching holidays: $e');
       rethrow;
     }
   }
@@ -576,13 +650,16 @@ class HRApiService {
         'name': resolvedName,
         'toDate': toDate,
       };
-
-      debugPrint('=== SHIFT ROSTER PAYLOAD ===');
+      debugPrint('=== SHIFT ROSTER REQUEST ===');
       debugPrint('URL: ${ApiEndpoints.shiftRosterFetch}');
-      debugPrint('empId: $resolvedEmpId');
-      debugPrint('fromDate: $fromDate | toDate: $toDate');
-      debugPrint('jobTitle: $resolvedJobTitle');
-
+      debugPrint('Clinic: aureus');
+      debugPrint('Branch: ${body['branchId']}');
+      debugPrint(
+        'Employee filter: ${resolveAllEmployees ? "ALL" : resolvedEmpId}',
+      );
+      debugPrint('Date range: $fromDate to $toDate');
+      debugPrint('Job title: $resolvedJobTitle');
+      debugPrint('Page size: $pageSize');
       final response = await ApiRequest.post(
         ApiEndpoints.shiftRosterFetch,
         body,

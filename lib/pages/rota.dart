@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import '../my_hr/data/hr_api_service.dart';
 
 class AppColors {
   static const Color primary = Color(0xFF0A5C8E);
@@ -32,6 +33,8 @@ class _RotaPageState extends State<RotaPage>
   TabController? _tabController;
   DateTime _selectedDate = DateTime.now();
   String _selectedFilter = 'All';
+  bool _isLoading = true;
+  String? _loadError;
 
   final List<String> _filterOptions = [
     'All',
@@ -41,90 +44,12 @@ class _RotaPageState extends State<RotaPage>
     'Pediatrics',
     'Administration',
   ];
+  List<String> get _availableFilters => [
+    ..._filterOptions,
+    ..._allShifts.map((shift) => shift.department),
+  ].toSet().toList();
 
-  // Sample ROTA data
-  final List<RotaShift> _allShifts = [
-    RotaShift(
-      id: '1',
-      staffName: 'Dr. Sarah Johnson',
-      employeeId: 'DOC001',
-      role: 'Senior Cardiologist',
-      department: 'Cardiology',
-      date: DateTime.now(),
-      shiftType: 'Morning',
-      shiftTiming: '08:00 - 16:00',
-      assignedWard: 'Ward A',
-      status: ShiftStatus.ongoing,
-      emergencyDuty: false,
-      backupDuty: false,
-      onCallStatus: false,
-      avatarColor: 0xFF3498DB,
-    ),
-    RotaShift(
-      id: '2',
-      staffName: 'Emily Brown',
-      employeeId: 'NUR045',
-      role: 'Charge Nurse',
-      department: 'Emergency',
-      date: DateTime.now().add(const Duration(days: 1)),
-      shiftType: 'Evening',
-      shiftTiming: '16:00 - 00:00',
-      assignedWard: 'ER',
-      status: ShiftStatus.upcoming,
-      emergencyDuty: true,
-      backupDuty: true,
-      onCallStatus: true,
-      avatarColor: 0xFF2ECC71,
-    ),
-    RotaShift(
-      id: '3',
-      staffName: 'Mike Wilson',
-      employeeId: 'ADM012',
-      role: 'Operations Manager',
-      department: 'Administration',
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      shiftType: 'Night',
-      shiftTiming: '00:00 - 08:00',
-      assignedWard: 'Admin Block',
-      status: ShiftStatus.completed,
-      emergencyDuty: false,
-      backupDuty: false,
-      onCallStatus: false,
-      avatarColor: 0xFFF39C12,
-    ),
-    RotaShift(
-      id: '4',
-      staffName: 'Dr. James Lee',
-      employeeId: 'DOC023',
-      role: 'Pediatrician',
-      department: 'Pediatrics',
-      date: DateTime.now().add(const Duration(days: 2)),
-      shiftType: 'Morning',
-      shiftTiming: '08:00 - 16:00',
-      assignedWard: 'Ward B',
-      status: ShiftStatus.offDay,
-      emergencyDuty: false,
-      backupDuty: false,
-      onCallStatus: false,
-      avatarColor: 0xFF9B59B6,
-    ),
-    RotaShift(
-      id: '5',
-      staffName: 'Lisa Chen',
-      employeeId: 'NUR078',
-      role: 'ICU Specialist',
-      department: 'ICU',
-      date: DateTime.now().add(const Duration(days: 3)),
-      shiftType: 'Night',
-      shiftTiming: '00:00 - 08:00',
-      assignedWard: 'ICU',
-      status: ShiftStatus.onLeave,
-      emergencyDuty: false,
-      backupDuty: false,
-      onCallStatus: false,
-      avatarColor: 0xFFE74C3C,
-    ),
-  ];
+  List<RotaShift> _allShifts = [];
 
   List<RotaShift> get _filteredShifts {
     if (_selectedFilter == 'All') return _allShifts;
@@ -137,7 +62,156 @@ class _RotaPageState extends State<RotaPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadRota();
   }
+
+  Future<void> _loadRota() async {
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+    try {
+      final firstDay = DateTime(_selectedDate.year, _selectedDate.month);
+      final lastDay = DateTime(_selectedDate.year, _selectedDate.month + 1, 0);
+      final response = await HRApiService.getShiftRoster(
+        fromDate: DateFormat('yyyy-MM-dd').format(firstDay),
+        toDate: DateFormat('yyyy-MM-dd').format(lastDay),
+        pageSize: 1000,
+        resolveAllEmployees: true,
+      );
+      final data = response is Map ? response['data'] ?? response : null;
+      final rawRows = data is Map
+          ? data['dataList'] ?? data['content'] ?? data['records']
+          : data is List
+          ? data
+          : null;
+      if (rawRows is! List) {
+        throw Exception('Shift roster response did not contain an employee list.');
+      }
+
+      final rows = <dynamic>[];
+      for (final row in rawRows) {
+        if (row is List) {
+          rows.addAll(row);
+        } else {
+          rows.add(row);
+        }
+      }
+
+      final loaded = <RotaShift>[];
+      for (final row in rows) {
+        if (row is! Map) continue;
+        final staffName = (row['employeeName'] ??
+                row['formalName'] ??
+                row['name'] ??
+                'Employee')
+            .toString();
+        final employeeId =
+            (row['employeeCode'] ?? row['employeeId'] ?? row['empId'] ?? '')
+                .toString();
+        final role = (row['designationName'] ??
+                row['designation'] ??
+                row['jobTitle'] ??
+                row['role'] ??
+                '')
+            .toString();
+        final department = (row['departmentName'] ??
+                row['department'] ??
+                row['department_name'] ??
+                'Other')
+            .toString();
+        final shifts = row['empShiftList'];
+        if (shifts is! List) continue;
+
+        for (final shift in shifts) {
+          if (shift is! Map) continue;
+          final date = _parseRosterDate(shift['date']?.toString() ?? '');
+          if (date == null) continue;
+          final shiftName = (shift['shiftName'] ??
+                  shift['name'] ??
+                  shift['shiftCode'] ??
+                  '')
+              .toString();
+          final leave = shift['leave'] == true ||
+              shift['status']?.toString().toLowerCase().contains('leave') == true;
+          final off = shiftName.isEmpty ||
+              shiftName.toLowerCase() == 'off' ||
+              shiftName.toLowerCase() == 'weekly off';
+          loaded.add(
+            RotaShift(
+              id: '${employeeId}_${DateFormat('yyyyMMdd').format(date)}',
+              staffName: staffName,
+              employeeId: employeeId,
+              role: role,
+              department: department,
+              date: date,
+              shiftType: shiftName.isEmpty ? (leave ? 'Leave' : 'Off') : shiftName,
+              shiftTiming:
+                  '${shift['inTime'] ?? shift['startTime'] ?? ''} - '
+                  '${shift['outTime'] ?? shift['endTime'] ?? ''}',
+              assignedWard:
+                  (shift['ward'] ?? shift['location'] ?? 'Main Hospital')
+                      .toString(),
+              status: leave
+                  ? ShiftStatus.onLeave
+                  : off
+                  ? ShiftStatus.offDay
+                  : _statusForDate(date),
+              emergencyDuty: _asBool(shift['emergencyDuty']),
+              backupDuty: _asBool(shift['backupDuty']),
+              onCallStatus: _asBool(shift['onCallStatus'] ?? shift['onCall']),
+              avatarColor: _avatarColors[loaded.length % _avatarColors.length],
+            ),
+          );
+        }
+      }
+      loaded.sort((a, b) => a.date.compareTo(b.date));
+      if (!mounted) return;
+      setState(() {
+        _allShifts = loaded;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  static const _avatarColors = [
+    0xFF3498DB,
+    0xFF2ECC71,
+    0xFFF39C12,
+    0xFF9B59B6,
+    0xFFE74C3C,
+  ];
+
+  static DateTime? _parseRosterDate(String value) {
+    final iso = DateTime.tryParse(value);
+    if (iso != null) return iso;
+    for (final pattern in ['dd-MM-yyyy', 'dd/MM/yyyy']) {
+      try {
+        return DateFormat(pattern).parseStrict(value);
+      } on FormatException {
+        continue;
+      }
+    }
+    return null;
+  }
+
+  static ShiftStatus _statusForDate(DateTime date) {
+    final today = DateTime.now();
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    if (dateOnly.isBefore(todayOnly)) return ShiftStatus.completed;
+    if (dateOnly.isAtSameMomentAs(todayOnly)) return ShiftStatus.ongoing;
+    return ShiftStatus.upcoming;
+  }
+
+  static bool _asBool(dynamic value) =>
+      value == true || value?.toString().toLowerCase() == 'true' || value == 1;
 
   @override
   void dispose() {
@@ -329,7 +403,7 @@ class _RotaPageState extends State<RotaPage>
                   ),
                   isExpanded: true,
                   dropdownColor: AppColors.surface,
-                  items: _filterOptions.map((filter) {
+                  items: _availableFilters.map((filter) {
                     return DropdownMenuItem(
                       value: filter,
                       child: Text(
@@ -405,6 +479,31 @@ class _RotaPageState extends State<RotaPage>
   }
 
   Widget _buildShiftsList() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_loadError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Unable to load the live shift roster.\n$_loadError',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(onPressed: _loadRota, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
+    }
     final shifts = _filteredShifts;
 
     if (shifts.isEmpty) {
@@ -1043,8 +1142,12 @@ class _RotaPageState extends State<RotaPage>
     );
   }
 
-  void _navigateDate(int days) =>
-      setState(() => _selectedDate = _selectedDate.add(Duration(days: days)));
+  void _navigateDate(int days) {
+    final previousMonth = _selectedDate.month;
+    final nextDate = _selectedDate.add(Duration(days: days));
+    setState(() => _selectedDate = nextDate);
+    if (nextDate.month != previousMonth) _loadRota();
+  }
 
   void _showDatePicker() async {
     DateTime? picked = await showDatePicker(
@@ -1059,8 +1162,12 @@ class _RotaPageState extends State<RotaPage>
         child: child!,
       ),
     );
-    if (picked != null && picked != _selectedDate)
+    if (picked != null && picked != _selectedDate) {
+      final monthChanged =
+          picked.month != _selectedDate.month || picked.year != _selectedDate.year;
       setState(() => _selectedDate = picked);
+      if (monthChanged) _loadRota();
+    }
   }
 
   void _showShiftDetails(RotaShift shift) {

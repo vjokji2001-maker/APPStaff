@@ -124,7 +124,9 @@ class SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
           if (data is List) {
             eventList = data;
           } else if (data is Map) {
-            eventList = (data['list'] ?? data['content'] ?? data['records'] ?? []) as List;
+            eventList =
+                (data['list'] ?? data['content'] ?? data['records'] ?? [])
+                    as List;
           }
         }
         if (mounted) {
@@ -344,10 +346,16 @@ class SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
       );
 
       final data = response is Map ? response['data'] ?? response : null;
-      if (data == null) return;
-
-      final dataList = data['dataList'] ?? data['content'] ?? data['records'];
-      if (dataList is! List || dataList.isEmpty) return;
+      final dataList = data is Map
+          ? data['dataList'] ?? data['content'] ?? data['records']
+          : data is List
+          ? data
+          : null;
+      if (dataList is! List) {
+        throw Exception(
+          'Shift roster response did not contain an employee list.',
+        );
+      }
 
       final List<dynamic> flatList = [];
       for (final item in dataList) {
@@ -357,23 +365,56 @@ class SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
           flatList.add(item);
         }
       }
+      if (flatList.isEmpty) {
+        if (mounted) {
+          setState(() {
+            rotaShifts = [];
+            _loadingShifts = false;
+          });
+        }
+        return;
+      }
 
       String? userCode;
+      String? employeeId;
       try {
         final userData = GlobalUserData().userData;
         if (userData != null) {
           userCode =
-              userData['userId']?.toString() ?? userData['empId']?.toString();
+              userData['employeeCode']?.toString() ??
+              userData['empCode']?.toString() ??
+              userData['userId']?.toString();
+          employeeId =
+              userData['employeeId']?.toString() ??
+              userData['emp_id']?.toString() ??
+              userData['empId']?.toString();
         }
       } catch (_) {}
+      final prefs = await SharedPreferences.getInstance();
+      if (userCode?.isEmpty ?? true) {
+        userCode = prefs.getString('empCode') ?? prefs.getString('userId');
+      }
+      if (employeeId?.isEmpty ?? true) {
+        employeeId = prefs.getString('empId');
+      }
 
       final dynamic foundRow = flatList.firstWhere((r) {
         if (r is! Map) return false;
-        final code = r['employeeCode']?.toString().toLowerCase() ?? '';
-        return code.isNotEmpty && code == userCode?.toLowerCase();
-      }, orElse: () => flatList.first);
+        final rowEmployeeId =
+            (r['employeeId'] ?? r['empId'])?.toString().toLowerCase() ?? '';
+        final rowCode = r['employeeCode']?.toString().toLowerCase() ?? '';
+        return (employeeId != null &&
+                rowEmployeeId == employeeId.toLowerCase()) ||
+            (userCode != null &&
+                rowCode.isNotEmpty &&
+                rowCode == userCode.toLowerCase());
+      }, orElse: () => null);
 
-      if (foundRow is! Map) return;
+      if (foundRow is! Map) {
+        throw Exception(
+          'Could not match the roster to the logged-in employee.',
+        );
+      }
       final List<dynamic> empShiftList = foundRow['empShiftList'] is List
           ? foundRow['empShiftList']
           : [];
@@ -1293,7 +1334,9 @@ class SmartCareHomeScreenState extends State<SmartCareHomeScreen> {
                                             builder: (context) =>
                                                 const EventManagementPortalScreen(),
                                           ),
-                                        ).then((_) => _loadEventsCount()); // Refresh on return
+                                        ).then(
+                                          (_) => _loadEventsCount(),
+                                        ); // Refresh on return
                                       },
                                     ),
                                     const SizedBox(width: 10),
