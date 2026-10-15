@@ -11,7 +11,7 @@ class EmailVerificationService {
   // Change this to your actual server IP
   static String get _baseUrl => ApiEndpoints.verifyEmailBase;
   
-  static String get _sendOtpUrl => '$_baseUrl/sendEmailOTP';
+  static String get _sendOtpUrl => '$_baseUrl';
   static String get _verifyOtpUrl => '$_baseUrl/verifyOTP';
 
   Future<Map<String, String>> _getHeaders() async {
@@ -26,7 +26,8 @@ class EmailVerificationService {
       final token = getPrefAsString('auth_token');
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
-      final branchId = getPrefAsString('branchId') ?? '1';
+      final savedBranchId = getPrefAsString('branchId');
+      final branchId = savedBranchId.isEmpty ? '1' : savedBranchId;
 
       debugPrint('📋 Token being sent: ${token.substring(0, token.length > 50 ? 50 : token.length)}...');
       debugPrint('📋 ClinicId: $clinicId');
@@ -64,7 +65,8 @@ class EmailVerificationService {
 
       final clinicId = getPrefAsString('clinicId');
       final userId = getPrefAsString('userId');
-      final branchId = getPrefAsString('branchId') ?? '1';
+      final savedBranchId = getPrefAsString('branchId');
+      final branchId = savedBranchId.isEmpty ? '1' : savedBranchId;
 
       return {
         'Content-Type': 'application/json',
@@ -97,7 +99,7 @@ class EmailVerificationService {
       var headers = await _getHeaders();
       
       final body = {
-        "email": email.trim(),
+        "emailId": email.trim(),
         "userId": userId.trim(),
       };
       
@@ -195,6 +197,7 @@ class EmailVerificationService {
 
   /// Verify OTP for email verification
   Future<Map<String, dynamic>> verifyOTP({
+    required String email,
     required String userOtp,
     required String userId,
   }) async {
@@ -205,6 +208,7 @@ class EmailVerificationService {
       var headers = await _getHeaders();
       
       final body = {
+        "email": email.trim(),
         "userOtp": userOtp.trim(),
         "userId": userId.trim(),
       };

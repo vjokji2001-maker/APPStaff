@@ -62,5 +62,7 @@
 <string>We need your location to capture task locations</string>
 <key>NSMicrophoneUsageDescription</key>
 <string>We need microphone access for voice comments</string>
+<key>NSSpeechRecognitionUsageDescription</key>
+<string>Use speech recognition to enter vital signs, intake values, and voice comments.</string>
 </dict>
 </plist>

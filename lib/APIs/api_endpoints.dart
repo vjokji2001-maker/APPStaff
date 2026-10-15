@@ -114,7 +114,7 @@ class ApiEndpoints {
   static String get updateTaskStatus => '${ApiHost.appBaseUrl}/master/task/master/update';
 
   //=========== FROM Email/Password Services ============
-  static String get verifyEmailBase => '${ApiHost.smartcareMainBaseUrl}/verifyemail';
+  static String get verifyEmailBase => '${ApiHost.masterBaseUrl}/ipd/notes/sendEmailOTP';
   static String get passwordUpdateBase => '${ApiHost.smartcareMainBaseUrl}/passwordupdate';
 
 // class ApiEndpoints {

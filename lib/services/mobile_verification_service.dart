@@ -72,7 +72,7 @@ class MobileVerificationService {
     try {
       var headers = await _getHeaders();
       final body = jsonEncode({
-        'mobileNo': mobileNumber.trim(),
+        'mobile': mobileNumber.trim(),
         'userId': userId.trim(),
       });
 
@@ -108,11 +108,12 @@ class MobileVerificationService {
 
   // ─── Verify Mobile OTP ──────────────────────────────────────────────────────
 
-  /// Verifies [userOtp] for [userId].
+  /// Verifies [userOtp] for [userId] and [mobileNumber].
   /// Uses [ApiEndpoints.userVerifyMobOtp].
   Future<Map<String, dynamic>> verifyMobileOTP({
     required String userOtp,
     required String userId,
+    required String mobileNumber,
   }) async {
     debugPrint('MobileVerificationService: verifying OTP for userId: $userId');
 
@@ -121,6 +122,7 @@ class MobileVerificationService {
       final body = jsonEncode({
         'userOtp': userOtp.trim(),
         'userId': userId.trim(),
+        'mobile': mobileNumber.trim(),
       });
 
       final url = Uri.parse(ApiEndpoints.userVerifyMobOtp);
@@ -164,10 +166,13 @@ class MobileVerificationService {
         if (decoded is Map<String, dynamic>) {
           final statusCode = decoded['status_code'] ?? decoded['status'] ?? 200;
           final message = (decoded['message'] ?? '').toString();
+          final success = statusCode == 200 || statusCode == 201;
           return {
-            'success': statusCode == 200 || statusCode == 201,
+            'success': success,
             'statusCode': statusCode,
-            'message': message.isNotEmpty ? message : successMessage,
+            'message': success
+                ? (message.isNotEmpty ? message : successMessage)
+                : _errorMessage(decoded, 'Request failed ($statusCode)'),
             'data': decoded['data'] ?? {},
             'error': decoded['error'],
           };
@@ -179,7 +184,7 @@ class MobileVerificationService {
       try {
         final err = jsonDecode(response.body);
         if (err is Map<String, dynamic>) {
-          errorMessage = err['message'] ?? err['error'] ?? errorMessage;
+          errorMessage = _errorMessage(err, errorMessage);
         }
       } catch (_) {
         if (response.body.isNotEmpty) errorMessage = response.body;
@@ -190,6 +195,22 @@ class MobileVerificationService {
         'statusCode': response.statusCode,
       };
     }
+  }
+
+  String _errorMessage(Map<String, dynamic> response, String fallback) {
+    final error = response['error'];
+    // Prefer the specific cause so the OTP popup explains the failure.
+    final candidates = [
+      if (error is Map) error['cause'],
+      response['message'],
+      if (error is String) error,
+    ];
+    for (final candidate in candidates) {
+      if (candidate is String && candidate.trim().isNotEmpty) {
+        return candidate.trim();
+      }
+    }
+    return fallback;
   }
 
   String _friendlyError(Object e) {

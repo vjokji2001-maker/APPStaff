@@ -215,6 +215,7 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
 
     try {
       final result = await _emailService.verifyOTP(
+        email: _currentEmail,
         userOtp: otp,
         userId: widget.userId,
       );
@@ -329,6 +330,7 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
       final result = await _mobileService.verifyMobileOTP(
         userOtp: otp,
         userId: widget.userId,
+        mobileNumber: _currentMobile,
       );
       if (!mounted) return;
 
