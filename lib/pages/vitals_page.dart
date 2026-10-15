@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:staff_mate/api/ipd_service.dart';
 import 'package:staff_mate/models/patient.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:staff_mate/services/vitals_voice_session.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // AI VITALS SERVICE – Local rule-based + statistical AI (no external API needed)
@@ -360,6 +360,8 @@ class SmartVoiceParser {
   static String? extractNumber(String text) {
     try {
       text = text.toLowerCase().trim();
+      text = text.replaceAll(RegExp(r'\b(?:spo2|o2)\b'), 'oxygen');
+      text = text.replaceAll(RegExp(r'(?<=\d)\s*(?:point|dot)\s*(?=\d)'), '.');
       final digitMatch = RegExp(r'\d+(\.\d+)?').firstMatch(text);
       if (digitMatch != null) return digitMatch.group(0);
 
@@ -396,6 +398,16 @@ class SmartVoiceParser {
         'hundred': 100,
       };
       final parts = text.split(RegExp(r'\s+'));
+      final numberWords = parts
+          .where((w) => words.containsKey(w) || w == '.')
+          .toList();
+      if (numberWords.isNotEmpty &&
+          numberWords.every((w) => w == '.' || words[w]! < 10)) {
+        final digits = numberWords
+            .map((w) => w == '.' ? '.' : words[w].toString())
+            .join();
+        if (double.tryParse(digits) != null) return digits;
+      }
       double current = 0;
       bool isDecimal = false;
       String decimalPart = '';
@@ -603,9 +615,10 @@ class _VitalsTabState extends State<VitalsTab> {
   final List<FocusNode> _focusNodes = List.generate(7, (_) => FocusNode());
   int _currentFieldIndex = 0;
 
-  final stt.SpeechToText _speech = stt.SpeechToText();
+  final _voiceSession = VitalsVoiceSession();
+  Timer? _voiceRetry;
+  int _voiceRun = 0;
   bool _isListening = false;
-  bool _speechAvailable = false;
   String _recognizedText = '';
 
   String _selectedHH = '00';
@@ -743,7 +756,6 @@ class _VitalsTabState extends State<VitalsTab> {
     _voiceSteps = _vitalPatterns.map((v) => v['label'] as String).toList();
 
     _loadVitalsMasterData();
-    _initSpeech();
 
     for (int i = 0; i < _focusNodes.length; i++) {
       _focusNodes[i].addListener(() {
@@ -766,6 +778,9 @@ class _VitalsTabState extends State<VitalsTab> {
 
   @override
   void dispose() {
+    _voiceRun++;
+    _voiceRetry?.cancel();
+    _voiceSession.dispose();
     for (var n in _focusNodes) n.dispose();
     _aiChatController.dispose();
     super.dispose();
@@ -813,90 +828,32 @@ class _VitalsTabState extends State<VitalsTab> {
     }
   }
 
-  Future<void> _initSpeech() async {
-    try {
-      _speechAvailable = await _speech.initialize(
-        onStatus: (status) {
-          debugPrint('Speech status: $status');
-          if (status == 'done' || status == 'notListening') {
-            if (mounted) setState(() => _isListening = false);
-            if (_showVoiceOverlay &&
-                !_isProcessingVoice &&
-                !_isVoiceInputComplete &&
-                mounted) {
-              Future.delayed(const Duration(milliseconds: 500), () {
-                if (_showVoiceOverlay &&
-                    !_isVoiceInputComplete &&
-                    mounted &&
-                    !_isListening) {
-                  _startVoiceListening();
-                }
-              });
-            }
-          }
-        },
-        onError: (error) {
-          debugPrint('Speech error: $error');
-          if (mounted) setState(() => _isListening = false);
-          _retrySpeechListening();
-        },
-      );
-    } catch (e) {
-      debugPrint('Speech init error: $e');
-      _speechAvailable = false;
-    }
+  void _scheduleVoice(Duration delay, VoidCallback action) {
+    final run = _voiceRun;
+    final step = _currentVoiceStep;
+    Future<void>.delayed(delay, () {
+      if (mounted &&
+          run == _voiceRun &&
+          step == _currentVoiceStep &&
+          _showVoiceOverlay)
+        action();
+    });
   }
 
   void _retrySpeechListening() {
-    if (_showVoiceOverlay && !_isVoiceInputComplete && mounted) {
-      Future.delayed(const Duration(seconds: 1), () {
-        if (_showVoiceOverlay && !_isVoiceInputComplete && mounted) {
-          _startVoiceListening();
-        }
-      });
-    }
+    _voiceRetry?.cancel();
+    _voiceRetry = Timer(const Duration(milliseconds: 900), () {
+      if (mounted &&
+          _showVoiceOverlay &&
+          !_isProcessingVoice &&
+          !_isVoiceInputComplete)
+        _startVoiceListening();
+    });
   }
 
-  void _startVoiceInput() async {
-    // Re-initialize if not yet available
-    if (!_speechAvailable) {
-      await _initSpeech();
-    }
-    if (!_speechAvailable) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Speech recognition is not available on this device'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-      return;
-    }
-
-    try {
-      bool hasPerm = await _speech.hasPermission;
-      if (!hasPerm) {
-        bool initialized = await _speech.initialize();
-        if (!initialized) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Please enable microphone permission from settings',
-                ),
-                backgroundColor: Colors.orange,
-                duration: Duration(seconds: 3),
-              ),
-            );
-          }
-          return;
-        }
-      }
-    } catch (e) {
-      debugPrint('Permission check error in vitals: $e');
-    }
+  void _startVoiceInput() {
+    if (!mounted || _showVoiceOverlay) return;
+    _voiceRun++;
     _startVoiceSequence();
   }
 
@@ -917,19 +874,21 @@ class _VitalsTabState extends State<VitalsTab> {
           : 'Please speak ${steps[0]} or say "Skip"';
       _recognizedText = '';
     });
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted && _showVoiceOverlay) _startVoiceListening();
+    _scheduleVoice(const Duration(milliseconds: 800), () {
+      _startVoiceListening();
     });
   }
 
   void _hideVoiceOverlay() {
+    _voiceRun++;
+    _voiceRetry?.cancel();
     setState(() {
       _showVoiceOverlay = false;
       _isListening = false;
       _isProcessingVoice = false;
       _isVoiceInputComplete = false;
     });
-    _speech.stop();
+    _voiceSession.stop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_voiceCollectedValues.isNotEmpty && mounted) {
         final firstKey = _voiceCollectedValues.keys.first;
@@ -942,41 +901,55 @@ class _VitalsTabState extends State<VitalsTab> {
   }
 
   Future<void> _startVoiceListening() async {
-    if (_isListening || _isProcessingVoice || _isVoiceInputComplete) return;
-    if (_speech.isListening) {
-      await _speech.stop();
-      await Future.delayed(const Duration(milliseconds: 300));
-    }
-    final steps = _safeVoiceSteps;
-    final label = (_currentVoiceStep < steps.length)
-        ? steps[_currentVoiceStep]
-        : 'value';
+    if (!mounted ||
+        !_showVoiceOverlay ||
+        _isProcessingVoice ||
+        _isVoiceInputComplete)
+      return;
+    final run = _voiceRun;
+    final step = _currentVoiceStep;
+    bool current() =>
+        mounted &&
+        run == _voiceRun &&
+        step == _currentVoiceStep &&
+        _showVoiceOverlay &&
+        !_isVoiceInputComplete;
     setState(() {
       _isListening = true;
       _recognizedText = '';
-      _voiceInstruction = 'Listening... Speak $label or say "Skip"';
+      _voiceInstruction =
+          'Listening... Speak ' + _voiceSteps[step] + ' or say Skip';
     });
-    try {
-      await _speech.listen(
-        onResult: (result) {
-          setState(() => _recognizedText = result.recognizedWords);
-          if (result.finalResult) {
-            _processVoiceInputForCurrentStep(result.recognizedWords);
-          }
-        },
-        listenFor: const Duration(seconds: 15),
-        pauseFor: const Duration(seconds: 3),
-        localeId: 'en_IN',
-      );
-    } catch (e) {
-      debugPrint('Listen error: $e');
-      if (mounted) setState(() => _isListening = false);
-      _retrySpeechListening();
-    }
+    await _voiceSession.start(
+      onPartial: (text) {
+        if (current()) setState(() => _recognizedText = text);
+      },
+      onFinal: (text) {
+        if (!current() || _isProcessingVoice) return;
+        setState(() => _isListening = false);
+        _processVoiceInputForCurrentStep(text);
+      },
+      onEmpty: () {
+        if (!current()) return;
+        setState(() => _isListening = false);
+        _retrySpeechListening();
+      },
+      onError: (message) {
+        if (!current()) return;
+        setState(() {
+          _isListening = false;
+          _voiceInstruction =
+              'Voice stopped: ' +
+              message +
+              '. Check permissions or tap Retry microphone.';
+        });
+      },
+    );
   }
 
   void _processVoiceInputForCurrentStep(String text) {
-    if (text.isEmpty || _isProcessingVoice) return;
+    if (!mounted || !_showVoiceOverlay || text.isEmpty || _isProcessingVoice)
+      return;
     setState(() {
       _isProcessingVoice = true;
       _isListening = false;
@@ -1003,13 +976,22 @@ class _VitalsTabState extends State<VitalsTab> {
       // If current step was filled, move on
       if (_voiceCollectedValues.containsKey(_currentVoiceStep)) {
         _showVoiceStepSuccess(_voiceCollectedValues[_currentVoiceStep]!);
-        Future.delayed(const Duration(milliseconds: 1200), () {
-          if (mounted && _showVoiceOverlay) _moveToNextVoiceStep();
+        _scheduleVoice(const Duration(milliseconds: 1200), () {
+          _moveToNextVoiceStep();
         });
         return;
       }
     }
 
+    if (multi.isNotEmpty) {
+      setState(() {
+        _isProcessingVoice = false;
+        _voiceInstruction =
+            'Named values recorded. Please say ${_safeVoiceSteps[_currentVoiceStep]}';
+      });
+      _retrySpeechListening();
+      return;
+    }
     final value = SmartVoiceParser.extractNumber(text);
     if (value != null) {
       final validation = _validateVoiceInput(_currentVoiceStep, value);
@@ -1017,8 +999,8 @@ class _VitalsTabState extends State<VitalsTab> {
         _voiceCollectedValues[_currentVoiceStep] = value;
         _updateFieldWithValue(_currentVoiceStep, value);
         _showVoiceStepSuccess(value);
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          if (mounted && _showVoiceOverlay) _moveToNextVoiceStep();
+        _scheduleVoice(const Duration(milliseconds: 1500), () {
+          _moveToNextVoiceStep();
         });
       } else {
         final err = validation['message'] as String? ?? 'Out of range';
@@ -1028,8 +1010,8 @@ class _VitalsTabState extends State<VitalsTab> {
           _recognizedText = '';
           _isProcessingVoice = false;
         });
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted && _showVoiceOverlay) _startVoiceListening();
+        _scheduleVoice(const Duration(seconds: 2), () {
+          _startVoiceListening();
         });
       }
     } else {
@@ -1043,8 +1025,8 @@ class _VitalsTabState extends State<VitalsTab> {
         _recognizedText = '';
         _isProcessingVoice = false;
       });
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted && _showVoiceOverlay) _startVoiceListening();
+      _scheduleVoice(const Duration(seconds: 2), () {
+        _startVoiceListening();
       });
     }
   }
@@ -1081,9 +1063,11 @@ class _VitalsTabState extends State<VitalsTab> {
   }
 
   void _skipCurrentField() {
+    _isProcessingVoice = true;
+    _voiceSession.stop();
     _showSkipSuccess();
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted && _showVoiceOverlay) _moveToNextVoiceStep();
+    _scheduleVoice(const Duration(milliseconds: 1500), () {
+      _moveToNextVoiceStep();
     });
   }
 
@@ -1125,6 +1109,8 @@ class _VitalsTabState extends State<VitalsTab> {
   }
 
   void _moveToNextVoiceStep() {
+    _voiceSession.stop();
+    _isListening = false;
     final steps = _safeVoiceSteps;
     if (_currentVoiceStep < steps.length - 1) {
       setState(() {
@@ -1134,8 +1120,8 @@ class _VitalsTabState extends State<VitalsTab> {
         _voiceInstruction =
             'Please speak ${steps[_currentVoiceStep]} or say "Skip"';
       });
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted && _showVoiceOverlay) _startVoiceListening();
+      _scheduleVoice(const Duration(milliseconds: 800), () {
+        _startVoiceListening();
       });
     } else {
       _completeVoiceInput();
@@ -1143,6 +1129,8 @@ class _VitalsTabState extends State<VitalsTab> {
   }
 
   void _moveToPreviousVoiceStep() {
+    _voiceSession.stop();
+    _isListening = false;
     final steps = _safeVoiceSteps;
     if (_currentVoiceStep > 0) {
       final clearIndex = _currentVoiceStep;
@@ -1158,19 +1146,20 @@ class _VitalsTabState extends State<VitalsTab> {
         final controller = _ctrlFor(clearIndex);
         if (mounted) setState(() => controller.text = '');
       }
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted && _showVoiceOverlay) _startVoiceListening();
+      _scheduleVoice(const Duration(milliseconds: 800), () {
+        _startVoiceListening();
       });
     }
   }
 
   void _completeVoiceInput() {
+    _voiceRetry?.cancel();
     setState(() {
       _isVoiceInputComplete = true;
       _voiceInstruction = 'Voice input complete!';
       _isListening = false;
     });
-    _speech.stop();
+    _voiceSession.stop();
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) _showVoiceInputComplete();
     });
@@ -2432,6 +2421,14 @@ class _VitalsTabState extends State<VitalsTab> {
                       ),
                     ),
                   ),
+                  if (!_isListening &&
+                      !_isProcessingVoice &&
+                      _voiceInstruction.startsWith('Voice stopped:'))
+                    TextButton.icon(
+                      onPressed: _startVoiceListening,
+                      icon: const Icon(Icons.mic),
+                      label: const Text('Retry microphone'),
+                    ),
                   Container(
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     child: AnimatedContainer(
@@ -2768,9 +2765,10 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   int _currentFieldIndex = 0;
 
-  final stt.SpeechToText _speech = stt.SpeechToText();
+  final _voiceSession = VitalsVoiceSession();
+  Timer? _voiceRetry;
+  int _voiceRun = 0;
   bool _isListening = false;
-  bool _speechAvailable = false;
   String _recognizedText = '';
 
   bool _showVoiceOverlay = false;
@@ -2868,7 +2866,6 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
 
     // Controllers via _intakeCtrlFor only — do not store in maps (hot-reload safe)
     _voiceSteps = _intakePatterns.map((v) => v['label'] as String).toList();
-    _initSpeech();
 
     for (int i = 0; i < _focusNodes.length; i++) {
       _focusNodes[i].addListener(() {
@@ -2879,81 +2876,39 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
 
   @override
   void dispose() {
+    _voiceRun++;
+    _voiceRetry?.cancel();
+    _voiceSession.dispose();
     for (var n in _focusNodes) n.dispose();
     super.dispose();
   }
 
-  Future<void> _initSpeech() async {
-    try {
-      _speechAvailable = await _speech.initialize(
-        onStatus: (status) {
-          if (status == 'done' || status == 'notListening') {
-            if (mounted) setState(() => _isListening = false);
-            if (_showVoiceOverlay &&
-                !_isProcessingVoice &&
-                !_isVoiceInputComplete &&
-                mounted) {
-              Future.delayed(const Duration(milliseconds: 500), () {
-                if (_showVoiceOverlay &&
-                    !_isVoiceInputComplete &&
-                    mounted &&
-                    !_isListening) {
-                  _startVoiceListening();
-                }
-              });
-            }
-          }
-        },
-        onError: (error) {
-          if (mounted) setState(() => _isListening = false);
-          _retrySpeechListening();
-        },
-      );
-    } catch (_) {
-      _speechAvailable = false;
-    }
+  void _scheduleVoice(Duration delay, VoidCallback action) {
+    final run = _voiceRun;
+    final step = _currentVoiceStep;
+    Future<void>.delayed(delay, () {
+      if (mounted &&
+          run == _voiceRun &&
+          step == _currentVoiceStep &&
+          _showVoiceOverlay)
+        action();
+    });
   }
 
   void _retrySpeechListening() {
-    if (_showVoiceOverlay && !_isVoiceInputComplete && mounted) {
-      Future.delayed(const Duration(seconds: 1), () {
-        if (_showVoiceOverlay && !_isVoiceInputComplete && mounted)
-          _startVoiceListening();
-      });
-    }
+    _voiceRetry?.cancel();
+    _voiceRetry = Timer(const Duration(milliseconds: 900), () {
+      if (mounted &&
+          _showVoiceOverlay &&
+          !_isProcessingVoice &&
+          !_isVoiceInputComplete)
+        _startVoiceListening();
+    });
   }
 
-  void _startVoiceInput() async {
-    if (!_speechAvailable) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Speech recognition is not available on this device'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-      return;
-    }
-    bool hasPerm = await _speech.hasPermission;
-    if (!hasPerm) {
-      bool initialized = await _speech.initialize();
-      if (!initialized) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Please enable microphone permission from settings',
-              ),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-        return;
-      }
-    }
+  void _startVoiceInput() {
+    if (!mounted || _showVoiceOverlay) return;
+    _voiceRun++;
     _startVoiceSequence();
   }
 
@@ -2968,52 +2923,73 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
           'Please speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
       _recognizedText = '';
     });
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted && _showVoiceOverlay) _startVoiceListening();
+    _scheduleVoice(const Duration(milliseconds: 800), () {
+      _startVoiceListening();
     });
   }
 
   void _hideVoiceOverlay() {
+    _voiceRun++;
+    _voiceRetry?.cancel();
     setState(() {
       _showVoiceOverlay = false;
       _isListening = false;
       _isProcessingVoice = false;
       _isVoiceInputComplete = false;
     });
-    _speech.stop();
+    _voiceSession.stop();
   }
 
   Future<void> _startVoiceListening() async {
-    if (_isListening || _isProcessingVoice || _isVoiceInputComplete) return;
-    if (_speech.isListening) {
-      await _speech.stop();
-      await Future.delayed(const Duration(milliseconds: 300));
-    }
+    if (!mounted ||
+        !_showVoiceOverlay ||
+        _isProcessingVoice ||
+        _isVoiceInputComplete)
+      return;
+    final run = _voiceRun;
+    final step = _currentVoiceStep;
+    bool current() =>
+        mounted &&
+        run == _voiceRun &&
+        step == _currentVoiceStep &&
+        _showVoiceOverlay &&
+        !_isVoiceInputComplete;
     setState(() {
       _isListening = true;
       _recognizedText = '';
       _voiceInstruction =
-          'Listening... Speak ${_voiceSteps[_currentVoiceStep]} or say "Skip"';
+          'Listening... Speak ' + _voiceSteps[step] + ' or say Skip';
     });
-    try {
-      await _speech.listen(
-        onResult: (result) {
-          setState(() => _recognizedText = result.recognizedWords);
-          if (result.finalResult)
-            _processVoiceInputForCurrentStep(result.recognizedWords);
-        },
-        listenFor: const Duration(seconds: 15),
-        pauseFor: const Duration(seconds: 3),
-        localeId: 'en_US',
-      );
-    } catch (e) {
-      if (mounted) setState(() => _isListening = false);
-      _retrySpeechListening();
-    }
+    await _voiceSession.start(
+      onPartial: (text) {
+        if (current()) setState(() => _recognizedText = text);
+      },
+      onFinal: (text) {
+        if (!current() || _isProcessingVoice) return;
+        setState(() => _isListening = false);
+        _processVoiceInputForCurrentStep(text);
+      },
+      onEmpty: () {
+        if (!current()) return;
+        setState(() => _isListening = false);
+        _retrySpeechListening();
+      },
+      onError: (message) {
+        if (!current()) return;
+        setState(() {
+          _isListening = false;
+          _voiceInstruction =
+              'Voice stopped: ' +
+              message +
+              '. Check permissions or tap Retry microphone.';
+        });
+      },
+    );
   }
 
   void _processVoiceInputForCurrentStep(String text) {
-    if (text.isEmpty || _isProcessingVoice) return;
+    if (!mounted || !_showVoiceOverlay || text.isEmpty || _isProcessingVoice)
+      return;
     setState(() {
       _isProcessingVoice = true;
       _isListening = false;
@@ -3027,8 +3003,8 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
       _voiceCollectedValues[_currentVoiceStep] = value;
       _updateFieldWithValue(_currentVoiceStep, value);
       _showVoiceStepSuccess(value);
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted && _showVoiceOverlay) _moveToNextVoiceStep();
+      _scheduleVoice(const Duration(milliseconds: 1500), () {
+        _moveToNextVoiceStep();
       });
     } else {
       setState(() {
@@ -3037,16 +3013,18 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
         _recognizedText = '';
         _isProcessingVoice = false;
       });
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted && _showVoiceOverlay) _startVoiceListening();
+      _scheduleVoice(const Duration(seconds: 2), () {
+        _startVoiceListening();
       });
     }
   }
 
   void _skipCurrentField() {
+    _isProcessingVoice = true;
+    _voiceSession.stop();
     _showSkipSuccess();
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted && _showVoiceOverlay) _moveToNextVoiceStep();
+    _scheduleVoice(const Duration(milliseconds: 1500), () {
+      _moveToNextVoiceStep();
     });
   }
 
@@ -3087,6 +3065,8 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
   }
 
   void _moveToNextVoiceStep() {
+    _voiceSession.stop();
+    _isListening = false;
     final steps = _safeIntakeVoiceSteps;
     if (_currentVoiceStep < steps.length - 1) {
       setState(() {
@@ -3096,8 +3076,8 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
         _voiceInstruction =
             'Please speak ${steps[_currentVoiceStep]} or say "Skip"';
       });
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted && _showVoiceOverlay) _startVoiceListening();
+      _scheduleVoice(const Duration(milliseconds: 800), () {
+        _startVoiceListening();
       });
     } else {
       _completeVoiceInput();
@@ -3105,6 +3085,8 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
   }
 
   void _moveToPreviousVoiceStep() {
+    _voiceSession.stop();
+    _isListening = false;
     final steps = _safeIntakeVoiceSteps;
     if (_currentVoiceStep > 0) {
       final clearIndex = _currentVoiceStep;
@@ -3120,19 +3102,20 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
         final controller = _intakeCtrlFor(clearIndex);
         if (mounted) setState(() => controller.text = '');
       }
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted && _showVoiceOverlay) _startVoiceListening();
+      _scheduleVoice(const Duration(milliseconds: 800), () {
+        _startVoiceListening();
       });
     }
   }
 
   void _completeVoiceInput() {
+    _voiceRetry?.cancel();
     setState(() {
       _isVoiceInputComplete = true;
       _voiceInstruction = 'Voice input complete!';
       _isListening = false;
     });
-    _speech.stop();
+    _voiceSession.stop();
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) _showVoiceInputComplete();
     });
@@ -3798,6 +3781,14 @@ class _IntakeAssessmentTabState extends State<IntakeAssessmentTab> {
                       ),
                     ),
                   ),
+                  if (!_isListening &&
+                      !_isProcessingVoice &&
+                      _voiceInstruction.startsWith('Voice stopped:'))
+                    TextButton.icon(
+                      onPressed: _startVoiceListening,
+                      icon: const Icon(Icons.mic),
+                      label: const Text('Retry microphone'),
+                    ),
                   Container(
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     child: AnimatedContainer(
