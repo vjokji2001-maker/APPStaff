@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,34 +15,50 @@ import 'package:staff_mate/services/biometric_auth_service.dart';
 import 'package:staff_mate/pages/biometric_setup_page.dart';
 import 'package:staff_mate/pages/session_gate.dart';
 import 'package:staff_mate/pages/settings.dart';
-import 'package:staff_mate/presentation/language/language_selector_page.dart';
 import 'package:staff_mate/di/providers.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 Future<void> _loadSavedSettings() async {
   final prefs = await SharedPreferences.getInstance();
 
-  final savedFontSize = prefs.getDouble('fontSize') ?? 16.0;
-  final savedDarkMode = prefs.getBool('darkMode') ?? false;
+  final storedFontSize = prefs.get('fontSize');
+  final savedFontSize = storedFontSize is num && storedFontSize.isFinite
+      ? storedFontSize.toDouble().clamp(12.0, 24.0)
+      : 16.0;
+  final savedDarkMode = prefs.get('darkMode') == true;
 
   fontSizeNotifier.value = savedFontSize;
   darkModeNotifier.value = savedDarkMode;
 }
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+void main() {
+  GoogleFonts.config.allowRuntimeFetching = false;
+  // Existing service logging contains patient data and authentication details.
+  // Disable developer console output in production without intercepting errors.
+  if (kReleaseMode) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
+  runZoned(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
 
-  // Load saved app settings BEFORE the app starts.
-  await _loadSavedSettings();
+      // Load saved app settings BEFORE the app starts.
+      await _loadSavedSettings();
 
-  setupProviders();
+      setupProviders();
 
-  runApp(const MyApp());
+      runApp(const MyApp());
+    },
+    zoneSpecification: ZoneSpecification(
+      print: (self, parent, zone, line) {
+        if (!kReleaseMode) parent.print(zone, line);
+      },
+    ),
+  );
 }
 
 Future<String> determineStartRoute() async {
@@ -47,7 +66,8 @@ Future<String> determineStartRoute() async {
     final hasValidSession = await SessionManager.hasValidSession();
     if (hasValidSession) {
       final biometricEnabled = await BiometricAuthService.isBiometricEnabled();
-      final biometricAvailable = await BiometricAuthService.isBiometricAvailable();
+      final biometricAvailable =
+          await BiometricAuthService.isBiometricAvailable();
 
       if (biometricEnabled && biometricAvailable) {
         return '/biometric-lock';
@@ -58,7 +78,7 @@ Future<String> determineStartRoute() async {
       } catch (e) {
         debugPrint('Silent token refresh failed: $e');
       }
-      SessionManager.updateUserActivity(); 
+      SessionManager.updateUserActivity();
       SessionManager.startSessionMonitoring();
       return '/dashboard';
     }
@@ -74,33 +94,34 @@ Future<String> determineStartRoute() async {
     return '/login';
   }
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   ThemeData _buildTheme(bool isDark, double fontSize) {
     const primaryColor = Color(0xFF1A237E);
 
-   final textTheme = const TextTheme(
-  displayLarge: TextStyle(fontSize: 34),
-  displayMedium: TextStyle(fontSize: 30),
-  displaySmall: TextStyle(fontSize: 26),
+    final textTheme = const TextTheme(
+      displayLarge: TextStyle(fontSize: 34),
+      displayMedium: TextStyle(fontSize: 30),
+      displaySmall: TextStyle(fontSize: 26),
 
-  headlineLarge: TextStyle(fontSize: 24),
-  headlineMedium: TextStyle(fontSize: 22),
-  headlineSmall: TextStyle(fontSize: 20),
+      headlineLarge: TextStyle(fontSize: 24),
+      headlineMedium: TextStyle(fontSize: 22),
+      headlineSmall: TextStyle(fontSize: 20),
 
-  titleLarge: TextStyle(fontSize: 18),
-  titleMedium: TextStyle(fontSize: 16),
-  titleSmall: TextStyle(fontSize: 15),
+      titleLarge: TextStyle(fontSize: 18),
+      titleMedium: TextStyle(fontSize: 16),
+      titleSmall: TextStyle(fontSize: 15),
 
-  bodyLarge: TextStyle(fontSize: 18),
-  bodyMedium: TextStyle(fontSize: 16),
-  bodySmall: TextStyle(fontSize: 14),
+      bodyLarge: TextStyle(fontSize: 18),
+      bodyMedium: TextStyle(fontSize: 16),
+      bodySmall: TextStyle(fontSize: 14),
 
-  labelLarge: TextStyle(fontSize: 16),
-  labelMedium: TextStyle(fontSize: 14),
-  labelSmall: TextStyle(fontSize: 13),
-);
+      labelLarge: TextStyle(fontSize: 16),
+      labelMedium: TextStyle(fontSize: 14),
+      labelSmall: TextStyle(fontSize: 13),
+    );
 
     const appBarOverlay = AppBarTheme(
       systemOverlayStyle: SystemUiOverlayStyle(
@@ -111,49 +132,52 @@ class MyApp extends StatelessWidget {
     );
 
     if (isDark) {
-return ThemeData(
-  brightness: Brightness.dark,
-  primaryColor: primaryColor,
-  colorScheme: ColorScheme.dark(
-    primary: primaryColor,
-    secondary: const Color(0xFF00C897),
-  ),
-  scaffoldBackgroundColor: const Color(0xFF121212),
-  cardColor: const Color(0xFF1E1E1E),
+      return ThemeData(
+        brightness: Brightness.dark,
+        primaryColor: primaryColor,
+        colorScheme: ColorScheme.dark(
+          primary: primaryColor,
+          secondary: const Color(0xFF00C897),
+        ),
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        cardColor: const Color(0xFF1E1E1E),
 
-  inputDecorationTheme: InputDecorationTheme(
-    labelStyle: TextStyle(color: Colors.grey[400]),
-    hintStyle: TextStyle(color: Colors.grey[400]),
-    enabledBorder: OutlineInputBorder(
-      borderSide: BorderSide(color: Colors.grey[600]!),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    focusedBorder: const OutlineInputBorder(
-      borderSide: BorderSide(color: Color(0xFF90CAF9), width: 2),
-      borderRadius: BorderRadius.all(Radius.circular(8)),
-    ),
-  ),
-  textSelectionTheme: const TextSelectionThemeData(
-    cursorColor: Color(0xFF90CAF9),
-    selectionColor: Color(0x4490CAF9),
-    selectionHandleColor: Color(0xFF90CAF9),
-  ),
+        inputDecorationTheme: InputDecorationTheme(
+          labelStyle: TextStyle(color: Colors.grey[400]),
+          hintStyle: TextStyle(color: Colors.grey[400]),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.grey[600]!),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          focusedBorder: const OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFF90CAF9), width: 2),
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+          ),
+        ),
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: Color(0xFF90CAF9),
+          selectionColor: Color(0x4490CAF9),
+          selectionHandleColor: Color(0xFF90CAF9),
+        ),
 
-  appBarTheme: appBarOverlay.copyWith(
-    backgroundColor: primaryColor,
-    foregroundColor: Colors.white,  // ← fixed: was Colors.black (wrong for dark)
-  ),
-  textTheme: textTheme,
-  switchTheme: SwitchThemeData(
-    thumbColor: WidgetStateProperty.resolveWith(
-      (s) => s.contains(WidgetState.selected) ? primaryColor : Colors.grey,
-    ),
-  ),
-  elevatedButtonTheme: ElevatedButtonThemeData(
-    style: ElevatedButton.styleFrom(
-textStyle: const TextStyle(fontSize: 16),    ),
-  ),
-);
+        appBarTheme: appBarOverlay.copyWith(
+          backgroundColor: primaryColor,
+          foregroundColor:
+              Colors.white, // ← fixed: was Colors.black (wrong for dark)
+        ),
+        textTheme: textTheme,
+        switchTheme: SwitchThemeData(
+          thumbColor: WidgetStateProperty.resolveWith(
+            (s) =>
+                s.contains(WidgetState.selected) ? primaryColor : Colors.grey,
+          ),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            textStyle: const TextStyle(fontSize: 16),
+          ),
+        ),
+      );
     }
 
     return ThemeData(
@@ -177,7 +201,8 @@ textStyle: const TextStyle(fontSize: 16),    ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-textStyle: const TextStyle(fontSize: 16),        ),
+          textStyle: const TextStyle(fontSize: 16),
+        ),
       ),
     );
   }
@@ -190,43 +215,47 @@ textStyle: const TextStyle(fontSize: 16),        ),
         return ValueListenableBuilder<double>(
           valueListenable: fontSizeNotifier,
           builder: (context, fontSize, _) {
-          return MaterialApp(
+            return MaterialApp(
               title: 'SmartBuddy APP',
-  debugShowCheckedModeBanner: false,
-  themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-  theme: _buildTheme(false, fontSize),
-  darkTheme: _buildTheme(true, fontSize),
+              debugShowCheckedModeBanner: false,
+              themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+              theme: _buildTheme(false, fontSize),
+              darkTheme: _buildTheme(true, fontSize),
 
-  // ADD THIS
-  builder: (context, child) {
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-textScaler: TextScaler.linear(fontSize / 16.0),      ),
-      child: child ?? const SizedBox.shrink(),
-    );
-  },
+              // ADD THIS
+              builder: (context, child) {
+                return MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.linear(fontSize / 16.0)),
+                  child: child ?? const SizedBox.shrink(),
+                );
+              },
 
-  home: const AppStartRouter(),
+              home: const AppStartRouter(),
               routes: {
-                 '/session-gate': (context) => const SessionGate(),
+                '/session-gate': (context) => const SessionGate(),
                 '/login': (context) => const LoginPage(),
                 '/dashboard': (context) =>
                     ActivityTracker(child: const DashboardPage()),
                 '/nurse': (context) => const NursePage(),
-                  '/face_attendance': (context) => const FaceAttendancePage(punchDirection: 'IN'),
-                  '/biometric-setup': (context) => BiometricSetupPage(
-                      onContinue: () {
-                        Navigator.of(context).pushNamedAndRemoveUntil(
-                            '/dashboard', (r) => false);
-                      },
-                      isFromSettings: false,
-                    ),
-                    '/biometric-lock': (context) => BiometricLockScreen(
-                      onContinue: () {
-                        Navigator.of(context).pushNamedAndRemoveUntil(
-                            '/dashboard', (r) => false);
-                      },
-                    ),
+                '/face_attendance': (context) =>
+                    const FaceAttendancePage(punchDirection: 'IN'),
+                '/biometric-setup': (context) => BiometricSetupPage(
+                  onContinue: () {
+                    Navigator.of(
+                      context,
+                    ).pushNamedAndRemoveUntil('/dashboard', (r) => false);
+                  },
+                  isFromSettings: false,
+                ),
+                '/biometric-lock': (context) => BiometricLockScreen(
+                  onContinue: () {
+                    Navigator.of(
+                      context,
+                    ).pushNamedAndRemoveUntil('/dashboard', (r) => false);
+                  },
+                ),
               },
             );
           },
@@ -261,10 +290,7 @@ class _AppStartRouterState extends State<AppStartRouter> {
     return const Scaffold(
       backgroundColor: Color(0xFF0A0F2C),
       body: Center(
-        child: CircularProgressIndicator(
-          color: Colors.white,
-          strokeWidth: 2.5,
-        ),
+        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
       ),
     );
   }

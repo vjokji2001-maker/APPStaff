@@ -1,6 +1,4 @@
 // lib/di/providers.dart
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';

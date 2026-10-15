@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:staff_mate/api/event_api_service.dart';
-import 'package:staff_mate/pages/smartcarehomescreen.dart'; // For AppColors if needed, though they hardcoded colors
+// For AppColors if needed, though they hardcoded colors
 import 'package:flutter/services.dart';
 
 class EventManagementPortalScreen extends StatefulWidget {

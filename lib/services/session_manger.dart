@@ -9,7 +9,7 @@ import 'dart:async'; // Add this for Timer
 class SessionManager {
   static const String authScheme = 'SmartCare';
   static final Map<String, dynamic> _dynamicData = {};
-  
+
   // Timer for session monitoring
   static Timer? _sessionMonitorTimer;
   static DateTime? _lastActivityTime;
@@ -56,16 +56,17 @@ class SessionManager {
   }
 
   // ─── Token storage methods (new) ───────────────────────────────────────────
-  
+
   static Future<void> saveTokens({
     required String? accessToken,
     required String? refreshToken,
     required DateTime? expiryTime,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     if (accessToken != null) {
       await prefs.setString('access_token', accessToken);
+      await prefs.setString('auth_token', accessToken);
     }
     if (refreshToken != null) {
       await prefs.setString('refresh_token', refreshToken);
@@ -73,25 +74,26 @@ class SessionManager {
     if (expiryTime != null) {
       await prefs.setString('token_expiry', expiryTime.toIso8601String());
     }
-    
+
     // Update dynamic data
     _dynamicData['access_token'] = accessToken;
+    if (accessToken != null) _dynamicData['auth_token'] = accessToken;
     _dynamicData['refresh_token'] = refreshToken;
     _dynamicData['token_expiry'] = expiryTime;
-    
+
     debugPrint('Tokens saved - Expires at: $expiryTime');
   }
-  
+
   static Future<String?> getAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('access_token');
   }
-  
+
   static Future<String?> getRefreshToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('refresh_token');
   }
-  
+
   static Future<DateTime?> getTokenExpiry() async {
     final prefs = await SharedPreferences.getInstance();
     final expiryStr = prefs.getString('token_expiry');
@@ -105,13 +107,13 @@ class SessionManager {
     }
     return null;
   }
-  
+
   static Future<bool> isTokenValid() async {
     final expiry = await getTokenExpiry();
     if (expiry == null) return false;
     return DateTime.now().isBefore(expiry);
   }
-  
+
   static Future<bool> isTokenExpiringSoon() async {
     final expiry = await getTokenExpiry();
     if (expiry == null) return false;
@@ -140,13 +142,16 @@ class SessionManager {
     await prefs.setString('bearer', normalizedBearer);
     await prefs.setString('auth_token', token);
     await prefs.setString('clinicId', clinicId);
-    await prefs.setInt('subscription_remaining_days', subscriptionRemainingDays);
+    await prefs.setInt(
+      'subscription_remaining_days',
+      subscriptionRemainingDays,
+    );
     await prefs.setString('userId', userId);
     await prefs.setString('zoneid', zoneid);
     await prefs.setString('expiryTime', expiryTime);
     await prefs.setString('branchId', branchId.toString());
     await prefs.setString('email', email);
-    
+
     // Save tokens for session management
     if (refreshToken != null) {
       await prefs.setString('refresh_token', refreshToken);
@@ -154,7 +159,10 @@ class SessionManager {
     if (tokenExpiry != null) {
       await prefs.setString('token_expiry', tokenExpiry.toIso8601String());
     }
-    await prefs.setString('access_token', token); // Access token is the same as auth_token
+    await prefs.setString(
+      'access_token',
+      token,
+    ); // Access token is the same as auth_token
 
     _dynamicData.addAll({
       'bearer': normalizedBearer,
@@ -169,25 +177,31 @@ class SessionManager {
       'refresh_token': refreshToken,
       'token_expiry': tokenExpiry,
     });
-    
+
     // Start session monitoring after login
     startSessionMonitoring();
   }
 
   static Future<void> saveFromApi(Map<String, dynamic> data) async {
     if (data.isEmpty) return;
-    
+
     // Extract refresh token if present
     String? refreshToken = data['refreshToken'];
     DateTime? tokenExpiry;
 
-    if (data['expirytime'] != null && data['expirytime'].toString().isNotEmpty) {
+    if (data['expirytime'] != null &&
+        data['expirytime'].toString().isNotEmpty) {
       try {
-        tokenExpiry = DateTime.parse(data['expirytime'].toString().replaceFirst(' ', 'T'));
+        tokenExpiry = DateTime.parse(
+          data['expirytime'].toString().replaceFirst(' ', 'T'),
+        );
       } catch (_) {}
-    } else if (data['expiryTime'] != null && data['expiryTime'].toString().isNotEmpty) {
+    } else if (data['expiryTime'] != null &&
+        data['expiryTime'].toString().isNotEmpty) {
       try {
-        tokenExpiry = DateTime.parse(data['expiryTime'].toString().replaceFirst(' ', 'T'));
+        tokenExpiry = DateTime.parse(
+          data['expiryTime'].toString().replaceFirst(' ', 'T'),
+        );
       } catch (_) {}
     } else if (data['expiresIn'] != null) {
       tokenExpiry = DateTime.now().add(Duration(seconds: data['expiresIn']));
@@ -195,18 +209,20 @@ class SessionManager {
       // No expiry provided — set far future so persistent-login check always passes.
       tokenExpiry = DateTime.now().add(const Duration(days: 3650));
     }
-    
+
     await saveSession(
       bearer: authScheme,
       token: (data['token'] ?? data['accessToken'] ?? '').toString(),
       clinicId: (data['clinicid'] ?? data['clinicId'] ?? '').toString(),
-      subscriptionRemainingDays: int.tryParse(
-              (data['subscription_remaining_days'] ?? 0).toString()) ?? 0,
+      subscriptionRemainingDays:
+          int.tryParse((data['subscription_remaining_days'] ?? 0).toString()) ??
+          0,
       userId: (data['userId'] ?? data['UserId'] ?? '').toString(),
       zoneid: (data['zoneid'] ?? data['ZONEID'] ?? '').toString(),
       expiryTime: (data['expirytime'] ?? data['expiryTime'] ?? '').toString(),
       branchId: int.tryParse((data['branch_id'] ?? 0).toString()) ?? 0,
-      email: (data['email'] ?? data['emailId'] ?? data['userEmail'] ?? '').toString(),
+      email: (data['email'] ?? data['emailId'] ?? data['userEmail'] ?? '')
+          .toString(),
       refreshToken: refreshToken,
       tokenExpiry: tokenExpiry,
     );
@@ -284,10 +300,14 @@ class SessionManager {
   /// to the login screen automatically.
   static Future<bool> hasValidSession() async {
     final prefs = await SharedPreferences.getInstance();
-    final authToken    = prefs.getString('auth_token')    ?? '';
-    final accessToken  = prefs.getString('access_token')  ?? '';
+    if (prefs.getBool('two_factor_verified') != true) return false;
+    final authToken = prefs.getString('auth_token') ?? '';
+    final accessToken = prefs.getString('access_token') ?? '';
     final refreshToken = prefs.getString('refresh_token') ?? '';
-    final hasToken = authToken.isNotEmpty || accessToken.isNotEmpty || refreshToken.isNotEmpty;
+    final hasToken =
+        authToken.isNotEmpty ||
+        accessToken.isNotEmpty ||
+        refreshToken.isNotEmpty;
     debugPrint('hasValidSession → $hasToken');
     return hasToken;
   }
@@ -307,12 +327,13 @@ class SessionManager {
     await prefs.clear();
 
     if (biometricEnabled) await prefs.setBool('biometric_enabled', true);
-    if (lastUsername.isNotEmpty) await prefs.setString('last_username', lastUsername);
+    if (lastUsername.isNotEmpty)
+      await prefs.setString('last_username', lastUsername);
     if (savedEmail.isNotEmpty) await prefs.setString('email', savedEmail);
 
     // Keep biometric session active so lock screen shows on next open
     await setBiometricSessionActive(true);
-    
+
     // Stop session monitoring
     stopSessionMonitoring();
 
@@ -326,10 +347,10 @@ class SessionManager {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     await _secureStorage.deleteAll();
-    
+
     // Stop session monitoring
     stopSessionMonitoring();
-    
+
     _dynamicData.clear();
     debugPrint('Full logout complete.');
   }
@@ -337,6 +358,7 @@ class SessionManager {
   /// Clear only auth data (keep username for biometric re-login)
   static Future<void> clearAuthData() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('two_factor_verified');
     await prefs.remove('bearer');
     await prefs.remove('auth_token');
     await prefs.remove('clinicId');
@@ -348,10 +370,10 @@ class SessionManager {
     await prefs.remove('access_token');
     await prefs.remove('refresh_token');
     await prefs.remove('token_expiry');
-    
+
     // Stop session monitoring
     stopSessionMonitoring();
-    
+
     _dynamicData.clear();
   }
 
@@ -393,7 +415,10 @@ class SessionManager {
   static String formatTime(DateTime dateTime) =>
       DateFormat('hh:mm a').format(dateTime);
 
-  static Future<void> set2FAVerified({required bool verified}) async {}
+  static Future<void> set2FAVerified({required bool verified}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('two_factor_verified', verified);
+  }
 
   static Future<void> debugPrintSession() async {
     final prefs = await SharedPreferences.getInstance();
@@ -407,13 +432,18 @@ class SessionManager {
     debugPrint('------ SESSION DEBUG END ------');
   }
 }
+
 // Add this method to SessionManager to verify token storage
 Future<void> debugTokenStorage() async {
   final prefs = await SharedPreferences.getInstance();
   debugPrint("======= TOKEN STORAGE DEBUG =======");
-  debugPrint("Access Token: ${prefs.getString('access_token')?.substring(0, min(20, prefs.getString('access_token')?.length ?? 0)) ?? 'null'}...");
+  debugPrint(
+    "Access Token: ${prefs.getString('access_token')?.substring(0, min(20, prefs.getString('access_token')?.length ?? 0)) ?? 'null'}...",
+  );
   debugPrint("Refresh Token: ${prefs.getString('refresh_token') ?? 'null'}");
   debugPrint("Token Expiry: ${prefs.getString('token_expiry') ?? 'null'}");
-  debugPrint("Auth Token: ${prefs.getString('auth_token')?.substring(0, min(20, prefs.getString('auth_token')?.length ?? 0)) ?? 'null'}...");
+  debugPrint(
+    "Auth Token: ${prefs.getString('auth_token')?.substring(0, min(20, prefs.getString('auth_token')?.length ?? 0)) ?? 'null'}...",
+  );
   debugPrint("==================================");
 }

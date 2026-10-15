@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:safe_device/safe_device.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:staff_mate/domain/entities/attendance.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../domain/usecases/face_enrollment_usecase.dart';

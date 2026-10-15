@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:staff_mate/core/privacy_policy.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -235,6 +236,12 @@ class _SettingsPageState extends State<SettingsPage> {
           padding: const EdgeInsets.all(16.0),
           children: [
             // _buildSectionHeader("4.1 Appearance"),
+            ListTile(
+              leading: const Icon(Icons.privacy_tip_outlined),
+              title: const Text('Privacy Policy'),
+              trailing: const Icon(Icons.open_in_new),
+              onTap: () => PrivacyPolicy.open(context),
+            ),
             _buildSettingCard(
               icon: Icons.format_size_rounded,
               title: 'Font Size',

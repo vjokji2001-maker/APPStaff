@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,7 +11,6 @@ import 'package:staff_mate/services/frequency_service.dart';
 import 'package:staff_mate/services/add_service.dart';
 import 'package:staff_mate/api/ipd_service.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:permission_handler/permission_handler.dart';
 
 import 'barcode_scanner_screen.dart';
 import 'ocr_scanner_screen.dart';

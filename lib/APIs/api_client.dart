@@ -17,9 +17,18 @@ class ApiClient {
     Map<String, String>? headers,
     Object? body,
     Map<String, dynamic>? queryParameters,
+    bool retryOnUnauthorized = true,
   }) async {
     // Build full URL with query parameters
-    final uri = Uri.parse(url).replace(queryParameters: queryParameters);
+    final originalUri = Uri.parse(url);
+    final uri = queryParameters == null
+        ? originalUri
+        : originalUri.replace(
+            queryParameters: {
+              ...originalUri.queryParameters,
+              ...queryParameters,
+            },
+          );
 
     // Default headers – include Authorization if token exists
     final defaultHeaders = <String, String>{
@@ -72,16 +81,23 @@ class ApiClient {
     // Logging response
 
     // Handle token refresh on 401
-    if (response.statusCode == 401) {
+    if (response.statusCode == 401 && retryOnUnauthorized) {
       final refreshed = await _refreshToken();
       if (refreshed) {
         // Retry original request once with new token
         return _sendRequest(
           method: method,
           url: url,
-          headers: headers,
+          headers: headers == null
+              ? null
+              : {
+                  for (final entry in headers.entries)
+                    if (entry.key.toLowerCase() != 'authorization')
+                      entry.key: entry.value,
+                },
           body: body,
           queryParameters: queryParameters,
+          retryOnUnauthorized: false,
         );
       }
     }

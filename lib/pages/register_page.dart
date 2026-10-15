@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:staff_mate/pages/dashboard_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -43,15 +42,15 @@ class RegisterPageState extends State<RegisterPage> {
       _isLoading = true;
     });
 
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const DashboardPage()),
-        (route) => false,
-      );
-    }
+    // No account-creation endpoint is configured. Never fake authentication.
+    setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Please contact your administrator to create a staff account.',
+        ),
+      ),
+    );
   }
 
   @override

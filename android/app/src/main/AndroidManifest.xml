@@ -8,6 +8,8 @@
 <!-- For older APIs (pre-Android 9): -->
 <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
     <application
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false"
         android:label="SmartBuddy APP"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

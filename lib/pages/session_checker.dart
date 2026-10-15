@@ -5,7 +5,6 @@ import 'package:staff_mate/pages/dashboard_page.dart';
 import 'package:staff_mate/services/session_manger.dart';
 import 'package:staff_mate/services/biometric_auth_service.dart';
 import 'package:staff_mate/services/session_bootstrap.dart';
-import 'package:staff_mate/pages/dashboard_page.dart';
 class SessionChecker extends StatefulWidget {
   const SessionChecker({super.key});
 

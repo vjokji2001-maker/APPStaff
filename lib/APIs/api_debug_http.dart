@@ -12,7 +12,9 @@ class ApiDebugHttp {
   }) async {
     _logRequest('GET', url, headers: headers);
     try {
-      final response = await http.get(url, headers: headers);
+      final response = await http
+          .get(url, headers: headers)
+          .timeout(const Duration(seconds: 30));
       _logResponse('GET', url, response);
       return response;
     } catch (e, st) {
@@ -29,12 +31,9 @@ class ApiDebugHttp {
   }) async {
     _logRequest('POST', url, headers: headers, body: body);
     try {
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: body,
-        encoding: encoding,
-      );
+      final response = await http
+          .post(url, headers: headers, body: body, encoding: encoding)
+          .timeout(const Duration(seconds: 30));
       _logResponse('POST', url, response);
       return response;
     } catch (e, st) {
@@ -51,12 +50,9 @@ class ApiDebugHttp {
   }) async {
     _logRequest('PUT', url, headers: headers, body: body);
     try {
-      final response = await http.put(
-        url,
-        headers: headers,
-        body: body,
-        encoding: encoding,
-      );
+      final response = await http
+          .put(url, headers: headers, body: body, encoding: encoding)
+          .timeout(const Duration(seconds: 30));
       _logResponse('PUT', url, response);
       return response;
     } catch (e, st) {
@@ -73,12 +69,9 @@ class ApiDebugHttp {
   }) async {
     _logRequest('DELETE', url, headers: headers, body: body);
     try {
-      final response = await http.delete(
-        url,
-        headers: headers,
-        body: body,
-        encoding: encoding,
-      );
+      final response = await http
+          .delete(url, headers: headers, body: body, encoding: encoding)
+          .timeout(const Duration(seconds: 30));
       _logResponse('DELETE', url, response);
       return response;
     } catch (e, st) {
@@ -93,16 +86,15 @@ class ApiDebugHttp {
     Map<String, String>? headers,
     Object? body,
   }) {
+    if (!kDebugMode) return;
     debugPrint('API REQUEST [$method] ${url.toString()}');
     if (headers != null && headers.isNotEmpty) {
       debugPrint('API REQUEST HEADERS [$method] ${_sanitizeHeaders(headers)}');
     }
-    if (body != null) {
-      debugPrint('API REQUEST BODY [$method] $body');
-    }
   }
 
   static void _logResponse(String method, Uri url, http.Response response) {
+    if (!kDebugMode) return;
     debugPrint(
       'API RESPONSE [$method] ${url.toString()} STATUS=${response.statusCode}',
     );
@@ -117,6 +109,7 @@ class ApiDebugHttp {
     Object error,
     StackTrace stackTrace,
   ) {
+    if (!kDebugMode) return;
     debugPrint('API EXCEPTION [$method] ${url.toString()} ERROR=$error');
     debugPrint('API EXCEPTION TRACE [$method] $stackTrace');
   }
@@ -137,25 +130,33 @@ class _LoggingClient extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    debugPrint('API REQUEST [${request.method}] ${request.url}');
-    if (request.headers.isNotEmpty) {
+    if (kDebugMode) {
+      debugPrint('API REQUEST [${request.method}] ${request.url}');
+    }
+    if (kDebugMode && request.headers.isNotEmpty) {
       debugPrint(
         'API REQUEST HEADERS [${request.method}] ${ApiDebugHttp._sanitizeHeaders(request.headers)}',
       );
     }
 
     try {
-      final response = await _inner.send(request);
+      final response = await _inner
+          .send(request)
+          .timeout(const Duration(seconds: 30));
       debugPrint(
         'API RESPONSE [${request.method}] ${request.url} STATUS=${response.statusCode}',
       );
       return response;
     } catch (e, st) {
-      debugPrint(
-        'API EXCEPTION [${request.method}] ${request.url} ERROR=$e',
-      );
+      debugPrint('API EXCEPTION [${request.method}] ${request.url} ERROR=$e');
       debugPrint('API EXCEPTION TRACE [${request.method}] $st');
       rethrow;
     }
+  }
+
+  @override
+  void close() {
+    _inner.close();
+    super.close();
   }
 }

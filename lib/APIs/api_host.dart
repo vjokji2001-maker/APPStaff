@@ -21,6 +21,13 @@
 // =============================================================
 
 class ApiHost {
+  static const String _mainBaseOverride = String.fromEnvironment(
+    'SMARTCARE_BASE_URL',
+  );
+  static const String _hrBaseOverride = String.fromEnvironment('HR_BASE_URL');
+  static const String _samBaseOverride = String.fromEnvironment('SAM_BASE_URL');
+  static String _base(String override, String fallback) =>
+      (override.isEmpty ? fallback : override).replaceFirst(RegExp(r'/+$'), '');
   // ─────────────────────────────────────────────────────────
   //  SERVER REGISTRY
   //  Add your server IP here with a unique key name.
@@ -94,7 +101,8 @@ class ApiHost {
   // ─────────────────────────────────────────────────────────
   //  Base URLs (do not edit — derived from activeHost above)
   // ─────────────────────────────────────────────────────────
-  static String get appBaseUrl => '$PROTOCOL://$activeHost:$SMART_CARE_PORT';
+  static String get appBaseUrl =>
+      _base(_mainBaseOverride, '$PROTOCOL://$activeHost:$SMART_CARE_PORT');
   static String get loginBaseUrl => '$PROTOCOL://$activeHost:$LOGIN_PORT';
   static String get smartcareMainBaseUrl => '$appBaseUrl/smartcaremain';
   static String get ipdBaseUrl => '$appBaseUrl/ipd';
@@ -102,10 +110,12 @@ class ApiHost {
   static String get billingBaseUrl => '$appBaseUrl/billing';
   static String get masterBaseUrl => '$appBaseUrl/master';
   static String get sclyteBaseUrl => '$appBaseUrl/sclyte';
-  static String get samBaseUrl => '$PROTOCOL://$activeHost:$SAM_PORT';
+  static String get samBaseUrl =>
+      _base(_samBaseOverride, '$PROTOCOL://$activeHost:$SAM_PORT');
   static String get smartcarePortalUrl =>
-      '$PROTOCOL://$activeHost:$SMART_CARE_PORT/SMARTCARE';
-  static String get hrBaseUrl => '$PROTOCOL://$activeHostHr:9099';
+      '$appBaseUrl/SMARTCARE';
+  static String get hrBaseUrl =>
+      _base(_hrBaseOverride, '$PROTOCOL://$activeHostHr:9099');
 
   // Backward-compatible aliases
   static String get baseUrl => '$smartcareMainBaseUrl/';

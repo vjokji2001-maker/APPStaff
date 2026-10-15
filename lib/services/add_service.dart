@@ -1,7 +1,6 @@
 // lib/services/add_service.dart
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:staff_mate/APIs/api_debug_http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:staff_mate/APIs/api_endpoints.dart';

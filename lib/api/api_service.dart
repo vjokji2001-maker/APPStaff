@@ -19,6 +19,8 @@ class ApiService {
   static DateTime? tokenExpiryTime;
   static String? _tokenPrefix;
   static Timer? _autoRefreshTimer;
+  static Future<bool>? _refreshInFlight;
+  static int _sessionGeneration = 0;
 
   static String _encryptCryptoJS(String plainText) {
     try {
@@ -49,11 +51,10 @@ class ApiService {
       out.setRange(16, out.length, cipherBytes);
 
       final encoded = base64.encode(out);
-      debugPrint('Encrypted "$plainText" -> $encoded');
       return encoded;
     } catch (e, st) {
       debugPrint('Encryption failed: $e\n$st');
-      return plainText;
+      throw StateError('Unable to encrypt login credentials.');
     }
   }
 
@@ -88,7 +89,7 @@ class ApiService {
   ) async {
     try {
       final encryptedUsername = _encryptCryptoJS(userName.trim());
-      final encryptedPassword = _encryptCryptoJS(password.trim());
+      final encryptedPassword = _encryptCryptoJS(password);
 
       final response = await _performLoginRequest(
         encryptedUsername: encryptedUsername,
@@ -97,7 +98,6 @@ class ApiService {
       );
 
       debugPrint('Login status: ${response.statusCode}');
-      debugPrint('Login body: ${response.body}');
 
       if (response.statusCode == 409 &&
           _isActiveSessionConflict(response.body)) {
@@ -110,7 +110,6 @@ class ApiService {
         );
 
         debugPrint('Forced login status: ${forcedResponse.statusCode}');
-        debugPrint('Forced login body: ${forcedResponse.body}');
 
         return await _handleLoginResponse(forcedResponse);
       }
@@ -174,23 +173,7 @@ class ApiService {
 
     await _extractAndStoreTokens(response.headers, responseData);
 
-    final data = responseData['data'];
-    if (data != null) {
-      await SessionManager.saveSession(
-        bearer: _defaultTokenPrefix.trim(),
-        token: data['token'] ?? '',
-        clinicId: data['clinicid'] ?? '',
-        subscriptionRemainingDays: data['subscription_remaining_days'] ?? 0,
-        userId: data['userId'] ?? '',
-        zoneid: data['zoneid'] ?? '',
-        expiryTime: data['expirytime'] ?? '',
-        branchId: 1,
-        refreshToken: refreshToken,
-        tokenExpiry: tokenExpiryTime,
-      );
-    }
-
-    _startAutoRefreshTimer();
+    // Keep tokens in memory only until the OTP flow commits the session.
     return responseData;
   }
 
@@ -257,13 +240,30 @@ class ApiService {
     return false;
   }
 
-  static Future<bool> refreshUserToken() async {
+  static Future<bool> refreshUserToken() {
+    final pending = _refreshInFlight;
+    if (pending != null) return pending;
+    final generation = _sessionGeneration;
+    final request = _performTokenRefresh(generation);
+    _refreshInFlight = request;
+    return request.whenComplete(() {
+      if (identical(_refreshInFlight, request)) _refreshInFlight = null;
+    });
+  }
+
+  static Future<bool> _performTokenRefresh(int generation) async {
     try {
       debugPrint('======= REFRESH TOKEN =======');
 
-      refreshToken ??= await SessionManager.getRefreshToken();
-      accessToken ??= await SessionManager.getAccessToken();
-      tokenExpiryTime ??= await SessionManager.getTokenExpiry();
+      final storedRefresh =
+          refreshToken ?? await SessionManager.getRefreshToken();
+      final storedAccess = accessToken ?? await SessionManager.getAccessToken();
+      final storedExpiry =
+          tokenExpiryTime ?? await SessionManager.getTokenExpiry();
+      if (generation != _sessionGeneration) return false;
+      refreshToken = storedRefresh;
+      accessToken = storedAccess;
+      tokenExpiryTime = storedExpiry;
 
       if (refreshToken?.isEmpty ?? true) {
         debugPrint('No refresh token');
@@ -280,16 +280,20 @@ class ApiService {
           'refreshToken': refreshToken,
           'remoteAddr': ApiHost.remoteAddr,
         }),
-      ).timeout(const Duration(minutes: 15));
+      ).timeout(const Duration(seconds: 30));
 
       debugPrint('Refresh status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final newData =
             (jsonDecode(response.body) as Map<String, dynamic>)['data'];
-        if (newData != null) {
+        if (newData is Map) {
+          if (generation != _sessionGeneration) return false;
+          final newToken = (newData['token'] ?? newData['accessToken'])
+              ?.toString();
+          if (newToken == null || newToken.isEmpty) return false;
           _tokenPrefix = _defaultTokenPrefix;
-          if (newData['token'] != null) accessToken = newData['token'];
+          accessToken = newToken;
           if (newData['refreshToken'] != null) {
             refreshToken = newData['refreshToken'];
           }
@@ -339,6 +343,8 @@ class ApiService {
   static void updateUserActivity() => SessionManager.updateUserActivity();
 
   static void clearSession() {
+    _sessionGeneration++;
+    _refreshInFlight = null;
     accessToken = null;
     refreshToken = null;
     tokenExpiryTime = null;

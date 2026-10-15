@@ -26,19 +26,30 @@ class AppAuthService {
       }
 
       final session = AuthSession.fromJson(payload);
+      // Password authentication is provisional until the OTP succeeds.
+      if (session.accessToken.isEmpty ||
+          session.userId.isEmpty ||
+          session.clinicId.isEmpty) {
+        return ApiResult.failure(
+          const ApiFailure(
+            message: 'Incomplete login response. Please contact support.',
+          ),
+        );
+      }
+      // OTP services need these headers, but startup must not trust this session.
+      await SessionManager.set2FAVerified(verified: false);
       await SessionManager.saveSession(
-        bearer: 'SmartCare',
+        bearer: SessionManager.authScheme,
         token: session.accessToken,
         clinicId: session.clinicId,
         subscriptionRemainingDays: session.subscriptionRemainingDays,
         userId: session.userId,
         zoneid: session.zoneId,
         expiryTime: session.expiryTime.toIso8601String(),
-        branchId: int.tryParse(session.branchId) ?? 0,
+        branchId: int.tryParse(session.branchId) ?? 1,
         refreshToken: session.refreshToken,
         tokenExpiry: session.expiryTime,
       );
-
       return ApiResult.success(session);
     } catch (error) {
       return ApiResult.failure(
@@ -72,10 +83,12 @@ class AppAuthService {
   Future<void> logout({bool full = false}) async {
     if (full) {
       await SessionManager.fullLogout();
+      ApiService.clearSession();
       return;
     }
 
     await SessionManager.clearSession();
+    ApiService.clearSession();
   }
 
   Future<AuthSession?> _readStoredSession() async {

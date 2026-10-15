@@ -16,7 +16,7 @@ import 'package:staff_mate/services/session_manger.dart';
 //   • Email  — uses EmailVerificationService  (sendEmailOTP  / verifyOTP)
 //   • Mobile — uses MobileVerificationService (sendMobileOTP / verifyMobileOTP)
 //
-// Skip and Cancel buttons remain unchanged from the original design.
+// OTP verification is required before completing login.
 // ────────────────────────────────────────────────────────────────────────────
 
 class OTPVerificationDialog extends StatefulWidget {
@@ -141,25 +141,7 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
     });
   }
 
-  // ── Skip / Cancel ─────────────────────────────────────────────────────────────
-
-  Future<void> _skipVerification() async {
-    try {
-      final email = _emailController.text.trim().isNotEmpty
-          ? _emailController.text.trim()
-          : _currentEmail;
-      if (email.isNotEmpty) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('otp_email', email);
-      }
-    } catch (e) {
-      debugPrint('Skip OTP fallback error: $e');
-    }
-    if (!mounted) return;
-    Navigator.of(context, rootNavigator: true).pop();
-    await Future.delayed(const Duration(milliseconds: 100));
-    widget.onVerificationSuccess();
-  }
+  // ── Cancel ─────────────────────────────────────────────────────────────
 
   void _cancel() {
     Navigator.of(context).pop();
@@ -495,22 +477,10 @@ class _OTPVerificationDialogState extends State<OTPVerificationDialog>
 
                 const SizedBox(height: 8),
 
-                // ── Skip & Cancel ─────────────────────────────────────────────
+                // ── Cancel ─────────────────────────────────────────────
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    TextButton(
-                      onPressed: _isLoading ? null : _skipVerification,
-                      child: Text(
-                        'Skip',
-                        style: GoogleFonts.poppins(
-                          color: AppColors.primaryDarkBlue,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     TextButton(
                       onPressed: _isLoading ? null : _cancel,
                       child: Text(

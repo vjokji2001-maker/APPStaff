@@ -10,7 +10,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:staff_mate/ai/ticket_model.dart';
-import 'package:staff_mate/ai/ticket_screen.dart';
 import 'package:staff_mate/services/support_service.dart';
 
 import 'chat_provider.dart';

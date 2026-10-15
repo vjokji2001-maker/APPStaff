@@ -9,11 +9,13 @@ import java.io.FileInputStream
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
-val releaseKeystoreFile = rootProject.file("app/upload-keystore.jks")
 
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+val releaseKeystoreFile = rootProject.file(
+    keystoreProperties.getProperty("storeFile", "app/upload-keystore.jks")
+)
 
 val hasReleaseSigning =
     keystorePropertiesFile.exists() &&
@@ -39,9 +41,9 @@ android {
     defaultConfig {
         applicationId = "com.pranam.smartmate"
         minSdk = flutter.minSdkVersion // Required for google_mlkit_text_recognition and mobile_scanner
-        targetSdk = 35
-        versionCode = 4
-        versionName = "1.2.1"
+        targetSdk = 36
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
         
         // Enable multi-DEX for apps with many dependencies
         multiDexEnabled = true
@@ -98,4 +100,15 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     // Multi-DEX support
     implementation("androidx.multidex:multidex:2.0.1")
+}
+
+val verifyReleaseSigning by tasks.registering {
+    doLast {
+        check(hasReleaseSigning) {
+            "Release signing is missing. Configure android/key.properties and the upload keystore first."
+        }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    dependsOn(verifyReleaseSigning)
 }

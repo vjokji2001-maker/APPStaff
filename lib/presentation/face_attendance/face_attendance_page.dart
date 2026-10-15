@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../di/providers.dart';
@@ -15,6 +16,23 @@ class FaceAttendancePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The current recognition implementation has no matching model.
+    // Keep its development UI available, but don't request permissions for
+    // a feature that cannot complete attendance in a production build.
+    if (kReleaseMode) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Attendance')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Face attendance is currently unavailable. Please contact HR to record your attendance.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
     return BlocProvider(
       create: (_) => getIt<FaceAttendanceCubit>()..initialize(punchDirection),
       child: BlocBuilder<FaceAttendanceCubit, FaceAttendanceState>(

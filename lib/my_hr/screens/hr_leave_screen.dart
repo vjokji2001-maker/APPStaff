@@ -3,10 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/hr_theme.dart';
-import '../data/hr_mock_data.dart';
 import '../data/hr_api_service.dart';
 import '../models/hr_models.dart';
 import '../widgets/hr_widgets.dart';
+import '../utils/leave_form_rules.dart';
 
 class HRLeaveScreen extends StatefulWidget {
   const HRLeaveScreen({super.key});
@@ -70,10 +70,12 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
   }
 
   Future<void> _fetchData() async {
-    _fetchBalances();
-    _fetchApplications();
-    _fetchYears();
-    _fetchPublicHolidays(DateTime.now().year);
+    await Future.wait([
+      _fetchBalances(),
+      _fetchApplications(),
+      _fetchYears(),
+      _fetchPublicHolidays(DateTime.now().year),
+    ]);
   }
 
   Future<void> _fetchPublicHolidays(int year) async {
@@ -106,6 +108,7 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
   Future<void> _fetchYears() async {
     try {
       final yearsList = await HRApiService.getYearCycles();
+      if (!mounted) return;
       setState(() {
         _years = yearsList;
       });
@@ -115,13 +118,7 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
   }
 
   int? _findCurrentYearCycleId(List<dynamic> cycles) {
-    if (cycles.isEmpty) return null;
-    for (final cycle in cycles) {
-      if (cycle['status']?.toString().toUpperCase() == 'ACTIVE') {
-        return int.tryParse(cycle['id']?.toString() ?? '');
-      }
-    }
-    return int.tryParse(cycles.first['id']?.toString() ?? '');
+    return LeaveFormRules.currentCycleId(cycles, DateTime.now());
   }
 
   Future<void> _fetchBalances() async {
@@ -140,12 +137,14 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
       } else if (res is List) {
         dataList = res;
       }
+      if (!mounted) return;
       setState(() {
         _balances = dataList.map((e) => LeaveBalance.fromJson(e)).toList();
         _isLoadingBalances = false;
       });
     } catch (e) {
       print('Error fetching leave balances: $e');
+      if (!mounted) return;
       setState(() {
         _balances = [];
         _isLoadingBalances = false;
@@ -169,6 +168,7 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
       } else if (res is List) {
         dataList = res;
       }
+      if (!mounted) return;
       setState(() {
         _applications = dataList
             .map((e) => LeaveApplication.fromJson(e))
@@ -179,6 +179,7 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
       _fetchAiInsight();
     } catch (e) {
       print('Error fetching applications: $e');
+      if (!mounted) return;
       setState(() {
         _applications = [];
         _isLoadingApplications = false;
@@ -1079,725 +1080,797 @@ class _HRLeaveScreenState extends State<HRLeaveScreen> {
       }
     }
 
+    if (_isLoadingLeaveTemplates || _leaveTemplates.isEmpty) {
+      await _fetchLeaveTemplates();
+    }
+    if (!mounted) return;
+    if (_leaveTemplates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No leave types are available. Please try again.'),
+        ),
+      );
+      return;
+    }
+    final today = DateUtils.dateOnly(DateTime.now());
+
     // Initial State values
     int? selectedYearId = _findCurrentYearCycleId(_years);
-    DateTime? appDate = DateTime.now();
+    DateTime? appDate = today;
 
     LeaveTemplate? selectedLeaveTemplate = _selectedLeaveTemplate;
 
-    DateTime? from = DateTime.now();
-    DateTime? to = DateTime.now();
+    DateTime? from = today;
+    DateTime? to = today;
     String fromDuration = 'FULL_DAY';
     String toDuration = 'FULL_DAY';
     final reasonCtrl = TextEditingController();
     bool isSubmitting = false;
+    bool dialogOpen = true;
 
     String formatDate(DateTime date) =>
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-    bool _init = false;
-    showDialog(
+    await showDialog(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, ss) {
-          if (!_init) {
-            _init = true;
-          }
           final isDark = Theme.of(context).brightness == Brightness.dark;
 
-          // Auto calculate total days
-          double totalDays = 0.0;
-          if (from != null && to != null) {
-            if (!to!.isBefore(from!)) {
-              int calendarDays = to!.difference(from!).inDays + 1;
-              totalDays = calendarDays.toDouble();
+          final totalDays = from != null && to != null
+              ? LeaveFormRules.totalDays(from!, to!, fromDuration, toDuration)
+              : 0.0;
 
-              if (fromDuration != 'FULL_DAY') {
-                totalDays -= 0.5;
-              }
-              if (toDuration != 'FULL_DAY') {
-                if (calendarDays > 1) {
-                  totalDays -= 0.5;
-                } else {
-                  totalDays = 0.5;
-                }
-              }
-            }
-          }
-
-          return Dialog(
-            backgroundColor: isDark ? HRTheme.bgCardDark : Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(HRTheme.radiusLG),
-            ),
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 450),
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          return PopScope(
+            canPop: !isSubmitting,
+            child: Dialog(
+              backgroundColor: isDark ? HRTheme.bgCardDark : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(HRTheme.radiusLG),
+              ),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 450),
+                child: SingleChildScrollView(
+                  child: AbsorbPointer(
+                    absorbing: isSubmitting,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Add Leave Request',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: isDark
-                                  ? Colors.white
-                                  : HRTheme.textPrimary,
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            icon: const Icon(Icons.close),
-                          ),
-                        ],
-                      ),
-                      const Divider(),
-                      const SizedBox(height: 12),
-
-                      // 1. Year Dropdown
-                      DropdownButtonFormField<int>(
-                        value: selectedYearId,
-                        hint: Text(
-                          'Select Year',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            color: HRTheme.textSecondary,
-                          ),
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'Year *',
-                          labelStyle: GoogleFonts.poppins(fontSize: 13),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              HRTheme.radiusSM,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                        ),
-                        dropdownColor: isDark
-                            ? HRTheme.bgCardDark
-                            : Colors.white,
-                        items: _years
-                            .map(
-                              (y) => DropdownMenuItem<int>(
-                                value: int.tryParse(y['id']?.toString() ?? ''),
-                                child: Text(
-                                  y['name']?.toString() ?? 'Financial Yr',
-                                  style: GoogleFonts.poppins(fontSize: 13),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          ss(() => selectedYearId = v);
-                        },
-                      ),
-                      const SizedBox(height: 14),
-
-                      // 2. Leave Name Dropdown
-                      // 2. Leave Name Dropdown - API Templates
-                      _isLoadingLeaveTemplates
-                          ? const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(12),
-                                child: SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(),
-                                ),
-                              ),
-                            )
-                          : DropdownButtonFormField<LeaveTemplate>(
-                              value: selectedLeaveTemplate,
-                              hint: Text(
-                                'Select Leave Name',
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Add Leave Request',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  color: HRTheme.textSecondary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? Colors.white
+                                      : HRTheme.textPrimary,
                                 ),
                               ),
-                              decoration: InputDecoration(
-                                labelText: 'Leave Name *',
-                                labelStyle: GoogleFonts.poppins(fontSize: 13),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                    HRTheme.radiusSM,
+                              IconButton(
+                                onPressed: isSubmitting
+                                    ? null
+                                    : () => Navigator.pop(ctx),
+                                icon: const Icon(Icons.close),
+                              ),
+                            ],
+                          ),
+                          const Divider(),
+                          const SizedBox(height: 12),
+
+                          // 1. Year Dropdown
+                          DropdownButtonFormField<int>(
+                            value: selectedYearId,
+                            hint: Text(
+                              'Select Year',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                color: HRTheme.textSecondary,
+                              ),
+                            ),
+                            decoration: InputDecoration(
+                              labelText: 'Year *',
+                              labelStyle: GoogleFonts.poppins(fontSize: 13),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  HRTheme.radiusSM,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            dropdownColor: isDark
+                                ? HRTheme.bgCardDark
+                                : Colors.white,
+                            items: _years
+                                .whereType<Map>()
+                                .where((y) => LeaveFormRules.cycleId(y) != null)
+                                .map(
+                                  (y) => DropdownMenuItem<int>(
+                                    value: LeaveFormRules.cycleId(y),
+                                    child: Text(
+                                      y['name']?.toString() ?? 'Financial Yr',
+                                      style: GoogleFonts.poppins(fontSize: 13),
+                                    ),
                                   ),
+                                )
+                                .toList(),
+                            onChanged: (v) {
+                              ss(() => selectedYearId = v);
+                            },
+                          ),
+                          const SizedBox(height: 14),
+
+                          // 2. Leave Name Dropdown
+                          // 2. Leave Name Dropdown - API Templates
+                          _isLoadingLeaveTemplates
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  ),
+                                )
+                              : DropdownButtonFormField<LeaveTemplate>(
+                                  value: selectedLeaveTemplate,
+                                  hint: Text(
+                                    'Select Leave Name',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      color: HRTheme.textSecondary,
+                                    ),
+                                  ),
+                                  decoration: InputDecoration(
+                                    labelText: 'Leave Name *',
+                                    labelStyle: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        HRTheme.radiusSM,
+                                      ),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                  dropdownColor: isDark
+                                      ? HRTheme.bgCardDark
+                                      : Colors.white,
+                                  items: _leaveTemplates
+                                      .map(
+                                        (
+                                          template,
+                                        ) => DropdownMenuItem<LeaveTemplate>(
+                                          value: template,
+                                          child: Text(
+                                            '${template.name} (${template.code})',
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) {
+                                    ss(() {
+                                      selectedLeaveTemplate = value;
+                                    });
+                                  },
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 12,
+                          const SizedBox(height: 14),
+
+                          // 3. Application Date
+                          GestureDetector(
+                            onTap: () async {
+                              final d = await showDatePicker(
+                                context: context,
+                                initialDate: appDate ?? DateTime.now(),
+                                firstDate: DateTime.now().subtract(
+                                  const Duration(days: 365),
+                                ),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 365),
+                                ),
+                              );
+                              if (d != null && ctx.mounted)
+                                ss(() => appDate = d);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(
+                                  HRTheme.radiusSM,
                                 ),
                               ),
-                              dropdownColor: isDark
-                                  ? HRTheme.bgCardDark
-                                  : Colors.white,
-                              items: _leaveTemplates
-                                  .map(
-                                    (
-                                      template,
-                                    ) => DropdownMenuItem<LeaveTemplate>(
-                                      value: template,
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    size: 14,
+                                    color: HRTheme.leave,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      appDate == null
+                                          ? 'Application Date *'
+                                          : 'Application Date: ${appDate!.day}-${appDate!.month.toString().padLeft(2, '0')}-${appDate!.year}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        color: appDate == null
+                                            ? HRTheme.textHint
+                                            : (isDark
+                                                  ? Colors.white
+                                                  : HRTheme.textPrimary),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // 4. From Date
+                          GestureDetector(
+                            onTap: () async {
+                              final d = await showDatePicker(
+                                context: context,
+                                initialDate: from ?? DateTime.now(),
+                                firstDate: DateTime.now().subtract(
+                                  const Duration(days: 30),
+                                ),
+                                lastDate: DateTime(today.year + 5, 12, 31),
+                              );
+                              if (d != null && ctx.mounted) {
+                                ss(() {
+                                  from = d;
+                                  if (to == null || to!.isBefore(d)) {
+                                    to = d;
+                                  }
+                                });
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(
+                                  HRTheme.radiusSM,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    size: 14,
+                                    color: HRTheme.leave,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      from == null
+                                          ? 'From Date *'
+                                          : 'From Date: ${from!.day}/${from!.month}/${from!.year}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        color: from == null
+                                            ? HRTheme.textHint
+                                            : (isDark
+                                                  ? Colors.white
+                                                  : HRTheme.textPrimary),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // 5. Duration (From Date)
+                          DropdownButtonFormField<String>(
+                            value: fromDuration,
+                            decoration: InputDecoration(
+                              labelText: 'Duration (From Date)',
+                              labelStyle: GoogleFonts.poppins(fontSize: 13),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  HRTheme.radiusSM,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            dropdownColor: isDark
+                                ? HRTheme.bgCardDark
+                                : Colors.white,
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'FULL_DAY',
+                                child: Text(
+                                  'Full Day',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'FIRST_HALF',
+                                child: Text(
+                                  'First Half',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'SECOND_HALF',
+                                child: Text(
+                                  'Second Half',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            ],
+                            onChanged: (v) =>
+                                ss(() => fromDuration = v ?? 'FULL_DAY'),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // 6. To Date
+                          GestureDetector(
+                            onTap: () async {
+                              final d = await showDatePicker(
+                                context: context,
+                                initialDate: to ?? from ?? DateTime.now(),
+                                firstDate: from ?? DateTime.now(),
+                                lastDate: DateTime(today.year + 5, 12, 31),
+                              );
+                              if (d != null && ctx.mounted) ss(() => to = d);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(
+                                  HRTheme.radiusSM,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    size: 14,
+                                    color: HRTheme.leave,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      to == null
+                                          ? 'To Date *'
+                                          : 'To Date: ${to!.day}/${to!.month}/${to!.year}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        color: to == null
+                                            ? HRTheme.textHint
+                                            : (isDark
+                                                  ? Colors.white
+                                                  : HRTheme.textPrimary),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // 7. Duration (To Date)
+                          DropdownButtonFormField<String>(
+                            value: toDuration,
+                            decoration: InputDecoration(
+                              labelText: 'Duration (To Date)',
+                              labelStyle: GoogleFonts.poppins(fontSize: 13),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  HRTheme.radiusSM,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
+                              ),
+                            ),
+                            dropdownColor: isDark
+                                ? HRTheme.bgCardDark
+                                : Colors.white,
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'FULL_DAY',
+                                child: Text(
+                                  'Full Day',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'FIRST_HALF',
+                                child: Text(
+                                  'First Half',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'SECOND_HALF',
+                                child: Text(
+                                  'Second Half',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            ],
+                            onChanged: (v) =>
+                                ss(() => toDuration = v ?? 'FULL_DAY'),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // 5. Total Days (Read Only Text Field)
+                          TextFormField(
+                            initialValue: totalDays.toString(),
+                            key: ValueKey(
+                              'totalDays_$totalDays',
+                            ), // Forces rebuild when value changes
+                            enabled: false,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
+                            decoration: InputDecoration(
+                              labelText: 'Total Days',
+                              labelStyle: GoogleFonts.poppins(fontSize: 13),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  HRTheme.radiusSM,
+                                ),
+                              ),
+                              fillColor: isDark
+                                  ? Colors.black12
+                                  : Colors.grey.shade100,
+                              filled: true,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // 6. Reason *
+                          TextFormField(
+                            controller: reasonCtrl,
+                            maxLines: 3,
+                            style: GoogleFonts.poppins(fontSize: 13),
+                            decoration: InputDecoration(
+                              labelText: 'Reason *',
+                              labelStyle: GoogleFonts.poppins(fontSize: 13),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  HRTheme.radiusSM,
+                                ),
+                              ),
+                              hintText: 'Enter reason for leave...',
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Cancel & Apply for Leave Buttons
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2, bottom: 2),
+                            child: Row(
+                              children: [
+                                // CANCEL BUTTON
+                                Expanded(
+                                  flex: 1,
+                                  child: SizedBox(
+                                    height: 48,
+                                    child: TextButton(
+                                      onPressed: isSubmitting
+                                          ? null
+                                          : () {
+                                              Navigator.pop(ctx);
+                                            },
+                                      style: TextButton.styleFrom(
+                                        minimumSize: const Size(0, 48),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                        ),
+                                      ),
                                       child: Text(
-                                        '${template.name} (${template.code})',
-                                        overflow: TextOverflow.ellipsis,
+                                        'Cancel',
                                         style: GoogleFonts.poppins(
-                                          fontSize: 13,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey.shade600,
                                         ),
                                       ),
                                     ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                ss(() {
-                                  selectedLeaveTemplate = value;
-                                });
-                              },
-                            ),
-                      const SizedBox(height: 14),
-
-                      // 3. Application Date
-                      GestureDetector(
-                        onTap: () async {
-                          final d = await showDatePicker(
-                            context: context,
-                            initialDate: appDate ?? DateTime.now(),
-                            firstDate: DateTime.now().subtract(
-                              const Duration(days: 365),
-                            ),
-                            lastDate: DateTime.now().add(
-                              const Duration(days: 365),
-                            ),
-                          );
-                          if (d != null) ss(() => appDate = d);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade400),
-                            borderRadius: BorderRadius.circular(
-                              HRTheme.radiusSM,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today,
-                                size: 14,
-                                color: HRTheme.leave,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  appDate == null
-                                      ? 'Application Date *'
-                                      : 'Application Date: ${appDate!.day}-${appDate!.month.toString().padLeft(2, '0')}-${appDate!.year}',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 13,
-                                    color: appDate == null
-                                        ? HRTheme.textHint
-                                        : (isDark
-                                              ? Colors.white
-                                              : HRTheme.textPrimary),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
+                                const SizedBox(width: 10),
 
-                      // 4. From Date
-                      GestureDetector(
-                        onTap: () async {
-                          final d = await showDatePicker(
-                            context: context,
-                            initialDate: from ?? DateTime.now(),
-                            firstDate: DateTime.now().subtract(
-                              const Duration(days: 30),
-                            ),
-                            lastDate: DateTime(2027),
-                          );
-                          if (d != null) {
-                            ss(() {
-                              from = d;
-                              if (to == null || to!.isBefore(d)) {
-                                to = d;
-                              }
-                            });
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade400),
-                            borderRadius: BorderRadius.circular(
-                              HRTheme.radiusSM,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today,
-                                size: 14,
-                                color: HRTheme.leave,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  from == null
-                                      ? 'From Date *'
-                                      : 'From Date: ${from!.day}/${from!.month}/${from!.year}',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 13,
-                                    color: from == null
-                                        ? HRTheme.textHint
-                                        : (isDark
-                                              ? Colors.white
-                                              : HRTheme.textPrimary),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // 5. Duration (From Date)
-                      DropdownButtonFormField<String>(
-                        value: fromDuration,
-                        decoration: InputDecoration(
-                          labelText: 'Duration (From Date)',
-                          labelStyle: GoogleFonts.poppins(fontSize: 13),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              HRTheme.radiusSM,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                        ),
-                        dropdownColor: isDark
-                            ? HRTheme.bgCardDark
-                            : Colors.white,
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'FULL_DAY',
-                            child: Text(
-                              'Full Day',
-                              style: TextStyle(fontSize: 13),
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'FIRST_HALF',
-                            child: Text(
-                              'First Half',
-                              style: TextStyle(fontSize: 13),
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'SECOND_HALF',
-                            child: Text(
-                              'Second Half',
-                              style: TextStyle(fontSize: 13),
-                            ),
-                          ),
-                        ],
-                        onChanged: (v) =>
-                            ss(() => fromDuration = v ?? 'FULL_DAY'),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // 6. To Date
-                      GestureDetector(
-                        onTap: () async {
-                          final d = await showDatePicker(
-                            context: context,
-                            initialDate: to ?? from ?? DateTime.now(),
-                            firstDate: from ?? DateTime.now(),
-                            lastDate: DateTime(2027),
-                          );
-                          if (d != null) ss(() => to = d);
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade400),
-                            borderRadius: BorderRadius.circular(
-                              HRTheme.radiusSM,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today,
-                                size: 14,
-                                color: HRTheme.leave,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  to == null
-                                      ? 'To Date *'
-                                      : 'To Date: ${to!.day}/${to!.month}/${to!.year}',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 13,
-                                    color: to == null
-                                        ? HRTheme.textHint
-                                        : (isDark
-                                              ? Colors.white
-                                              : HRTheme.textPrimary),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // 7. Duration (To Date)
-                      DropdownButtonFormField<String>(
-                        value: toDuration,
-                        decoration: InputDecoration(
-                          labelText: 'Duration (To Date)',
-                          labelStyle: GoogleFonts.poppins(fontSize: 13),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              HRTheme.radiusSM,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                        ),
-                        dropdownColor: isDark
-                            ? HRTheme.bgCardDark
-                            : Colors.white,
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'FULL_DAY',
-                            child: Text(
-                              'Full Day',
-                              style: TextStyle(fontSize: 13),
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'FIRST_HALF',
-                            child: Text(
-                              'First Half',
-                              style: TextStyle(fontSize: 13),
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'SECOND_HALF',
-                            child: Text(
-                              'Second Half',
-                              style: TextStyle(fontSize: 13),
-                            ),
-                          ),
-                        ],
-                        onChanged: (v) =>
-                            ss(() => toDuration = v ?? 'FULL_DAY'),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // 5. Total Days (Read Only Text Field)
-                      TextFormField(
-                        initialValue: totalDays.toString(),
-                        key: ValueKey(
-                          'totalDays_$totalDays',
-                        ), // Forces rebuild when value changes
-                        enabled: false,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          color: isDark ? Colors.white70 : Colors.black87,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'Total Days',
-                          labelStyle: GoogleFonts.poppins(fontSize: 13),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              HRTheme.radiusSM,
-                            ),
-                          ),
-                          fillColor: isDark
-                              ? Colors.black12
-                              : Colors.grey.shade100,
-                          filled: true,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // 6. Reason *
-                      TextFormField(
-                        controller: reasonCtrl,
-                        maxLines: 3,
-                        style: GoogleFonts.poppins(fontSize: 13),
-                        decoration: InputDecoration(
-                          labelText: 'Reason *',
-                          labelStyle: GoogleFonts.poppins(fontSize: 13),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                              HRTheme.radiusSM,
-                            ),
-                          ),
-                          hintText: 'Enter reason for leave...',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Cancel & Apply for Leave Buttons
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2, bottom: 2),
-                        child: Row(
-                          children: [
-                            // CANCEL BUTTON
-                            Expanded(
-                              flex: 1,
-                              child: SizedBox(
-                                height: 48,
-                                child: TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(ctx);
-                                  },
-                                  style: TextButton.styleFrom(
-                                    minimumSize: const Size(0, 48),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'Cancel',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-
-                            // APPLY FOR LEAVE BUTTON
-                            Expanded(
-                              flex: 1,
-                              child: SizedBox(
-                                height: 48,
-                                child: ElevatedButton(
-                                  onPressed: isSubmitting
-                                      ? null
-                                      : () async {
-                                          if (selectedYearId == null) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Please select a year cycle.',
-                                                ),
-                                              ),
-                                            );
-                                            return;
-                                          }
-
-                                          if (selectedLeaveTemplate == null) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Please select a leave type.',
-                                                ),
-                                              ),
-                                            );
-                                            return;
-                                          }
-
-                                          if (from == null || to == null) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Please choose leave dates.',
-                                                ),
-                                              ),
-                                            );
-                                            return;
-                                          }
-
-                                          if (to!.isBefore(from!)) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'To date must be on or after From date.',
-                                                ),
-                                              ),
-                                            );
-                                            return;
-                                          }
-
-                                          final reason = reasonCtrl.text.trim();
-                                          if (reason.isEmpty) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Please enter a leave reason.',
-                                                ),
-                                              ),
-                                            );
-                                            return;
-                                          }
-
-                                          ss(() => isSubmitting = true);
-
-                                          try {
-                                            final empId =
-                                                await HRApiService.getLoggedEmpId();
-
-                                            debugPrint(
-                                              '=== APPLY LEAVE EMPLOYEE ID ===',
-                                            );
-                                            debugPrint('Employee ID: $empId');
-
-                                            if (empId.isEmpty) {
-                                              throw Exception(
-                                                'Employee ID not available. Please refresh My HR and try again.',
-                                              );
-                                            }
-
-                                            final currentDate = DateTime.now();
-                                            final payload = {
-                                              'applicationDate': formatDate(
-                                                appDate ?? currentDate,
-                                              ),
-                                              'fromDate': formatDate(from!),
-                                              'toDate': formatDate(to!),
-                                              'fromDateDuration': fromDuration,
-                                              'toDateDuration': toDuration,
-                                              'leaveNameId':
-                                                  selectedLeaveTemplate!.id,
-                                              'reason': reason,
-                                              'employeeId': empId,
-                                              'yearId': selectedYearId,
-                                              'totalCount': totalDays,
-                                              'approverDTOList':
-                                                  <Map<String, dynamic>>[],
-                                            };
-                                            debugPrint(
-                                              '=== APPLY LEAVE PAYLOAD ===',
-                                            );
-                                            debugPrint(payload.toString());
-                                            await HRApiService.applyLeave(
-                                              payload,
-                                            );
-
-                                            if (!mounted) return;
-                                            Navigator.pop(ctx);
-                                            await _fetchData();
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Leave request submitted successfully',
-                                                ),
-                                              ),
-                                            );
-                                          } catch (e) {
-                                            if (!mounted) return;
-                                            final errorMessage = e
-                                                .toString()
-                                                .replaceFirst(
-                                                  RegExp(r'^Exception:\s*'),
-                                                  '',
+                                // APPLY FOR LEAVE BUTTON
+                                Expanded(
+                                  flex: 1,
+                                  child: SizedBox(
+                                    height: 48,
+                                    child: ElevatedButton(
+                                      onPressed: isSubmitting
+                                          ? null
+                                          : () async {
+                                              if (selectedYearId == null) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Please select a year cycle.',
+                                                    ),
+                                                  ),
                                                 );
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Error submitting leave: $errorMessage',
+                                                return;
+                                              }
+
+                                              if (selectedLeaveTemplate ==
+                                                  null) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Please select a leave type.',
+                                                    ),
+                                                  ),
+                                                );
+                                                return;
+                                              }
+
+                                              if (from == null || to == null) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Please choose leave dates.',
+                                                    ),
+                                                  ),
+                                                );
+                                                return;
+                                              }
+
+                                              if (to!.isBefore(from!)) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'To date must be on or after From date.',
+                                                    ),
+                                                  ),
+                                                );
+                                                return;
+                                              }
+
+                                              final cycle = _years
+                                                  .whereType<Map>()
+                                                  .firstWhere(
+                                                    (y) =>
+                                                        LeaveFormRules.cycleId(
+                                                          y,
+                                                        ) ==
+                                                        selectedYearId,
+                                                    orElse: () =>
+                                                        <String, dynamic>{},
+                                                  );
+                                              String? validationError;
+                                              if (LeaveFormRules.cycleBounds(
+                                                        cycle,
+                                                      ) !=
+                                                      null &&
+                                                  !LeaveFormRules.covers(
+                                                    cycle,
+                                                    from!,
+                                                    to!,
+                                                  )) {
+                                                validationError =
+                                                    'Leave dates must fall within the selected year cycle.';
+                                              } else if (totalDays <= 0) {
+                                                validationError =
+                                                    'For a single day, select the same duration for From and To dates.';
+                                              } else if (selectedLeaveTemplate!
+                                                      .id <=
+                                                  0) {
+                                                validationError =
+                                                    'The selected leave type has no valid ID. Please reload leave types.';
+                                              }
+                                              if (validationError != null) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      validationError,
+                                                    ),
+                                                  ),
+                                                );
+                                                return;
+                                              }
+
+                                              final reason = reasonCtrl.text
+                                                  .trim();
+                                              if (reason.isEmpty) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Please enter a leave reason.',
+                                                    ),
+                                                  ),
+                                                );
+                                                return;
+                                              }
+
+                                              ss(() => isSubmitting = true);
+
+                                              try {
+                                                final empId =
+                                                    await HRApiService.getLoggedEmpId();
+
+                                                debugPrint(
+                                                  '=== APPLY LEAVE EMPLOYEE ID ===',
+                                                );
+                                                debugPrint(
+                                                  'Employee ID: $empId',
+                                                );
+
+                                                if (empId.isEmpty) {
+                                                  throw Exception(
+                                                    'Employee ID not available. Please refresh My HR and try again.',
+                                                  );
+                                                }
+
+                                                final currentDate =
+                                                    DateTime.now();
+                                                final payload = {
+                                                  'applicationDate': formatDate(
+                                                    appDate ?? currentDate,
+                                                  ),
+                                                  'fromDate': formatDate(from!),
+                                                  'toDate': formatDate(to!),
+                                                  'fromDateDuration':
+                                                      fromDuration,
+                                                  'toDateDuration': toDuration,
+                                                  'leaveNameId':
+                                                      selectedLeaveTemplate!.id,
+                                                  'reason': reason,
+                                                  'employeeId': empId,
+                                                  'yearId': selectedYearId,
+                                                  'totalCount': totalDays,
+                                                  'approverDTOList':
+                                                      <Map<String, dynamic>>[],
+                                                };
+                                                debugPrint(
+                                                  '=== APPLY LEAVE PAYLOAD ===',
+                                                );
+                                                debugPrint(payload.toString());
+                                                await HRApiService.applyLeave(
+                                                  payload,
+                                                );
+
+                                                if (!mounted || !ctx.mounted)
+                                                  return;
+                                                dialogOpen = false;
+                                                Navigator.pop(ctx);
+                                                await _fetchData();
+                                                if (!mounted) return;
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Leave request submitted successfully',
+                                                    ),
+                                                  ),
+                                                );
+                                              } catch (e) {
+                                                if (!mounted) return;
+                                                final errorMessage = e
+                                                    .toString()
+                                                    .replaceFirst(
+                                                      RegExp(r'^Exception:\s*'),
+                                                      '',
+                                                    );
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'Error submitting leave: $errorMessage',
+                                                    ),
+                                                  ),
+                                                );
+                                              } finally {
+                                                if (dialogOpen && ctx.mounted) {
+                                                  ss(
+                                                    () => isSubmitting = false,
+                                                  );
+                                                }
+                                              }
+                                            },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF2E8B36,
+                                        ),
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                      ),
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: isSubmitting
+                                            ? const SizedBox(
+                                                width: 18,
+                                                height: 18,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: Colors.white,
+                                                    ),
+                                              )
+                                            : Text(
+                                                'Apply for Leave',
+                                                maxLines: 1,
+                                                softWrap: false,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Colors.white,
                                                 ),
                                               ),
-                                            );
-                                          } finally {
-                                            if (mounted) {
-                                              ss(() => isSubmitting = false);
-                                            }
-                                          }
-                                        },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF2E8B36),
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
+                                      ),
                                     ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: isSubmitting
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Text(
-                                            'Apply for Leave',
-                                            maxLines: 1,
-                                            softWrap: false,
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white,
-                                            ),
-                                          ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                    ], // close Column children
-                  ), // close Column
-                ), // close Padding (dialog content)
-              ), // close SingleChildScrollView
-            ), // close Container
-          ); // close Dialog (return statement)
+                          ),
+                        ], // close Column children
+                      ), // close Column
+                    ), // close Padding (dialog content)
+                  ), // close AbsorbPointer
+                ), // close SingleChildScrollView
+              ), // close Container
+            ), // close Dialog
+          ); // close PopScope
         }, // close StatefulBuilder builder callback
       ), // close StatefulBuilder
     ); // close showDialog
+    reasonCtrl.dispose();
   } // close _showApplyLeave()
 } // close _HRLeaveScreenState
 

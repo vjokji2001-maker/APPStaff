@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:staff_mate/api/ipd_service.dart';
 import 'package:staff_mate/models/dashboard_data.dart';
 import 'package:staff_mate/models/patient.dart';
 import 'package:staff_mate/pages/req_pres.dart';
 import 'package:staff_mate/pages/req_inve.dart';
-import 'package:staff_mate/pages/shift_patient.dart';
 import 'package:staff_mate/services/clinic_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
@@ -14,14 +12,9 @@ import 'package:staff_mate/pages/treatment_record.dart';
 import 'package:staff_mate/pages/notification_details.dart';
 import 'package:staff_mate/services/user_information_service.dart';
 import 'package:staff_mate/pages/vitals_page.dart';
-import 'package:staff_mate/pages/day_to_day_notes.dart';
 import 'package:staff_mate/pages/upload_doc.dart';
-import 'package:staff_mate/APIs/api_endpoints.dart';
 import 'package:staff_mate/widgets/ipd/shift_bed_dialog.dart';
-import 'package:staff_mate/widgets/ipd/apply_package_dialog.dart';
 import 'package:staff_mate/widgets/ipd/day_to_day_notes_dialog.dart';
-import 'package:staff_mate/widgets/ipd/day_to_day_notes_sheet.dart';
-import 'package:staff_mate/widgets/ipd/vitals_entry_sheet.dart';
 
 class IpdDashboardPage extends StatefulWidget {
   const IpdDashboardPage({super.key});

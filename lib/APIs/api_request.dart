@@ -1,10 +1,14 @@
 import 'dart:convert';
-import 'dart:developer';
+import 'package:flutter/foundation.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:staff_mate/APIs/api_headers.dart';
 
 class ApiRequest {
+  static void log(String message) {
+    if (kDebugMode) debugPrint(message);
+  }
+
   static Future<dynamic> request({
     required String url,
     required String method,

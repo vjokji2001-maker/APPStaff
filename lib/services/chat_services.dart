@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../ai/message_model.dart';

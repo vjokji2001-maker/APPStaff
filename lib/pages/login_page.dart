@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:staff_mate/pages/biometric_setup_page.dart';
+import 'package:staff_mate/api/api_service.dart';
+import 'package:staff_mate/core/auth_session.dart';
 import 'package:staff_mate/pages/forget_password.dart';
 import 'package:staff_mate/services/app_auth_service.dart';
-import 'package:staff_mate/services/biometric_auth_service.dart';
 import 'package:staff_mate/services/clinic_service.dart';
 import 'package:staff_mate/services/session_manger.dart';
 import 'package:staff_mate/services/user_information_service.dart';
@@ -53,6 +53,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _loadLastUsername() async {
     final prefs = await SharedPreferences.getInstance();
     final lastUsername = prefs.getString('last_username');
+    if (!mounted) return;
     if (lastUsername != null && lastUsername.isNotEmpty) {
       setState(() {
         _usernameController.text = lastUsername;
@@ -78,7 +79,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final result = await const AppAuthService().login(
         userName: _usernameController.text.trim(),
-        password: _passwordController.text.trim(),
+        password: _passwordController.text,
       );
 
       if (!mounted) return;
@@ -121,7 +122,7 @@ class _LoginPageState extends State<LoginPage> {
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('last_username', _usernameController.text.trim());
-
+        if (!mounted) return;
         setState(() => _isLoading = false);
         _showOTPVerificationDialog();
       } else {
@@ -161,6 +162,8 @@ class _LoginPageState extends State<LoginPage> {
             _completeLogin();
           },
           onVerificationFailed: () {
+            ApiService.clearSession();
+            if (!mounted) return;
             setState(() {
               _isLoading = false;
             });
@@ -179,26 +182,45 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _completeLogin() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
     try {
       if (_loginResponseData != null) {
+        final session = AuthSession.fromJson(_loginResponseData!);
+        await SessionManager.saveSession(
+          bearer: SessionManager.authScheme,
+          token: session.accessToken,
+          clinicId: session.clinicId,
+          subscriptionRemainingDays: session.subscriptionRemainingDays,
+          userId: session.userId,
+          zoneid: session.zoneId,
+          expiryTime: session.expiryTime.toIso8601String(),
+          branchId: int.tryParse(session.branchId) ?? 1,
+          refreshToken: session.refreshToken,
+          tokenExpiry: session.expiryTime,
+        );
         await SessionManager.saveCredentialsSecurely(
           username: _usernameController.text.trim(),
-          password: _passwordController.text.trim(),
+          password: _passwordController.text,
         );
         await SessionManager.setBiometricSessionActive(true);
+        await SessionManager.set2FAVerified(verified: true);
 
         SessionManager.updateUserActivity();
         SessionManager.startSessionMonitoring();
 
-        _fetchPostLoginData();
+        await _fetchPostLoginData();
+        _goToDashboard();
       }
     } catch (e) {
-      debugPrint('Complete login fallback error: $e');
+      await SessionManager.clearAuthData();
+      ApiService.clearSession();
+      if (mounted)
+        _showErrorDialog('Unable to save your session. Please sign in again.');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
-      _goToDashboard();
     }
   }
 

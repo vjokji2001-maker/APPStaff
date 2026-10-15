@@ -1,12 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:staff_mate/core/privacy_policy.dart';
 import 'package:staff_mate/models/global_user_data.dart';
 import 'package:staff_mate/my_hr/screens/hr_shift_screen.dart';
-import 'package:staff_mate/my_hr/screens/hr_approvals_screen.dart';
 import 'package:staff_mate/my_hr/screens/hr_attendance_screen.dart';
 import 'package:staff_mate/my_hr/data/hr_api_service.dart';
 import 'package:staff_mate/services/my_tasks_service.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:staff_mate/pages/welcome_page.dart';
@@ -14,7 +12,6 @@ import 'package:staff_mate/pages/profile_page.dart';
 import 'package:staff_mate/pages/settings.dart';
 import 'package:staff_mate/services/user_information_service.dart';
 import 'package:intl/intl.dart';
-import 'package:staff_mate/pages/my_hr_screen.dart';
 import 'package:staff_mate/pages/forget_password.dart';
 import 'package:staff_mate/services/home_service.dart';
 import 'package:staff_mate/services/session_manger.dart';
@@ -3247,26 +3244,7 @@ class _UserProfileDrawerState extends State<UserProfileDrawer> {
   }
 
   void _showPrivacyPolicy(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          "Privacy Policy",
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        content: const SingleChildScrollView(
-          child: Text(
-            "Your privacy is important to us. This privacy policy explains what personal data we collect from you and how we use it.",
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
-          ),
-        ],
-      ),
-    );
+    PrivacyPolicy.open(context);
   }
 
   void _showTerms(BuildContext context) {

@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 // import 'package:screen_protector/screen_protector.dart'; // Temporarily disabled due to Kotlin migration issues
-import 'package:staff_mate/my_hr/theme/hr_theme.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 enum LivenessChallengeType { blink, smile }

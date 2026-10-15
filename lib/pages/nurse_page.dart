@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:staff_mate/widgets/capture_vitals_sheet.dart';
-import 'package:staff_mate/pages/view_vitals_page.dart'; // ✅ Import the page
+// ✅ Import the page
 
 class NursePage extends StatelessWidget {
   const NursePage({super.key});

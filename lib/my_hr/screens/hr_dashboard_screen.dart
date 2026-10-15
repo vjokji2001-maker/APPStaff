@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/hr_theme.dart';
 import '../data/hr_mock_data.dart';
 import '../data/hr_api_service.dart';
+import '../utils/holiday_date_label.dart';
 import '../../services/user_information_service.dart';
 import '../../models/global_user_data.dart';
 import '../../models/staff_dob.dart';
@@ -13,21 +14,12 @@ import '../widgets/hr_widgets.dart';
 import 'hr_attendance_screen.dart';
 import 'hr_leave_screen.dart';
 import 'dart:async';
-import 'package:intl/intl.dart';
 import 'hr_payroll_screen.dart';
 import 'hr_shift_screen.dart';
 import 'hr_profile_screen.dart';
 import 'hr_documents_screen.dart';
-import 'hr_performance_screen.dart';
 import 'hr_training_screen.dart';
-import 'hr_assets_screen.dart';
-import 'hr_loan_screen.dart';
-import 'hr_expenses_screen.dart';
-import 'hr_notifications_screen.dart';
-import 'hr_requests_screen.dart';
 import 'hr_calendar_screen.dart';
-import 'hr_approvals_screen.dart';
-import 'hr_policies_screen.dart';
 import 'hr_settings_screen.dart';
 
 class HRDashboardScreen extends StatefulWidget {
@@ -1144,7 +1136,7 @@ class _HRDashboardScreenState extends State<HRDashboardScreen>
               onAction: () => _navigate(const HRCalendarScreen()),
             ),
             ...upcoming.map((h) {
-              final parts = h.date.split(' ');
+              final dateLabel = HolidayDateLabel.fromDate(h.date);
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
@@ -1160,16 +1152,16 @@ class _HRDashboardScreenState extends State<HRDashboardScreen>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            parts.isNotEmpty ? parts[0] : '--',
+                            dateLabel.day,
                             style: GoogleFonts.poppins(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
                               color: HRTheme.primaryDark,
                             ),
                           ),
-                          if (parts.length > 1)
+                          if (dateLabel.month.isNotEmpty)
                             Text(
-                              parts[1].substring(0, 3),
+                              dateLabel.month,
                               style: GoogleFonts.poppins(
                                 fontSize: 10,
                                 color: HRTheme.textSecondary,

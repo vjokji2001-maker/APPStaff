@@ -5,6 +5,7 @@ import 'package:staff_mate/APIs/api_headers.dart';
 import 'package:staff_mate/APIs/api_request.dart';
 import 'package:staff_mate/APIs/api_host.dart';
 import '../models/hr_models.dart';
+import '../utils/leave_form_rules.dart';
 
 class HRApiService {
   static Future<Map<String, String>> _hrHeaders() {
@@ -325,7 +326,15 @@ class HRApiService {
         headers: await _hrHeaders(),
       );
 
-      final dynamic data = response is Map ? response['data'] : response;
+      dynamic data = response;
+      for (var i = 0; i < 4 && data is Map; i++) {
+        data =
+            data['data'] ??
+            data['dataList'] ??
+            data['content'] ??
+            data['records'] ??
+            data['items'];
+      }
 
       if (data is List) {
         return data
@@ -346,19 +355,7 @@ class HRApiService {
   /// Helper to determine the current year cycle ID
   static Future<int?> getCurrentYearCycleId() async {
     final cycles = await getYearCycles();
-    if (cycles.isEmpty) return null;
-
-    for (final cycle in cycles) {
-      if (cycle['status']?.toString().toUpperCase() == 'ACTIVE') {
-        return int.tryParse(cycle['id']?.toString() ?? '');
-      }
-    }
-
-    // Fallback to first if no ACTIVE found
-    if (cycles.isNotEmpty) {
-      return int.tryParse(cycles.first['id']?.toString() ?? '');
-    }
-    return null;
+    return LeaveFormRules.currentCycleId(cycles, DateTime.now());
   }
 
   /// Get Leave Balance using dynamic user ID and year cycle ID
@@ -480,15 +477,55 @@ class HRApiService {
 
   /// Apply for Leave
   static Future<Map<String, dynamic>> applyLeave(
-    Map<String, dynamic> data,
-  ) async {
+    Map<String, dynamic> data, {
+    Future<dynamic> Function(String, Map<String, dynamic>, Map<String, String>)?
+    sendRequest,
+  }) async {
     try {
-      final response = await ApiRequest.post(
-        ApiEndpoints.leaveCreate,
-        data,
-        headers: await _hrHeaders(),
+      final from = DateTime.tryParse(data['fromDate']?.toString() ?? '');
+      final to = DateTime.tryParse(data['toDate']?.toString() ?? '');
+      final applicationDate = DateTime.tryParse(
+        data['applicationDate']?.toString() ?? '',
       );
-      return response as Map<String, dynamic>;
+      const durations = {'FULL_DAY', 'FIRST_HALF', 'SECOND_HALF'};
+      if (from == null ||
+          to == null ||
+          applicationDate == null ||
+          !durations.contains(data['fromDateDuration']) ||
+          !durations.contains(data['toDateDuration'])) {
+        throw Exception('Please provide valid leave dates and durations.');
+      }
+      final expectedDays = LeaveFormRules.totalDays(
+        from,
+        to,
+        data['fromDateDuration'] as String,
+        data['toDateDuration'] as String,
+      );
+      if (expectedDays <= 0 ||
+          expectedDays != num.tryParse(data['totalCount'].toString())) {
+        throw Exception('Leave dates, durations and total days do not match.');
+      }
+      if (data['employeeId']?.toString().trim().isNotEmpty != true ||
+          data['reason']?.toString().trim().isNotEmpty != true ||
+          data['yearId'] == null ||
+          data['leaveNameId'] == null ||
+          (num.tryParse(data['totalCount'].toString()) ?? 0) <= 0) {
+        throw Exception(
+          'Leave request is incomplete. Check employee, year, leave type, dates and reason.',
+        );
+      }
+      final headers = await _hrHeaders();
+      if (headers['Authorization']?.isNotEmpty != true) {
+        throw Exception('Your session is missing. Please sign in again.');
+      }
+      final response = sendRequest != null
+          ? await sendRequest(ApiEndpoints.leaveCreate, data, headers)
+          : await ApiRequest.post(
+              ApiEndpoints.leaveCreate,
+              data,
+              headers: headers,
+            );
+      return LeaveFormRules.checkedResponse(response);
     } catch (e) {
       print('Error applying leave: $e');
       rethrow;

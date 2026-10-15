@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/hr_theme.dart';
-import '../data/hr_mock_data.dart';
 import '../data/hr_api_service.dart';
 import '../models/hr_models.dart';
 import '../widgets/hr_widgets.dart';
@@ -13,6 +12,8 @@ class HRPayrollScreen extends StatefulWidget {
 }
 
 class _HRPayrollScreenState extends State<HRPayrollScreen> {
+  String _shortMonth(String value) =>
+      value.length > 3 ? value.substring(0, 3) : value;
   int _tabIndex = 0;
   int _selectedSlipIndex = 0;
   final List<String> _tabs = [
@@ -399,7 +400,7 @@ class _HRPayrollScreenState extends State<HRPayrollScreen> {
         subtitle: 'Salary summary will appear here',
       );
     final values = slips.reversed.map((s) => s.netSalary / 1000).toList();
-    final labels = slips.reversed.map((s) => s.month.substring(0, 3)).toList();
+    final labels = slips.reversed.map((s) => _shortMonth(s.month)).toList();
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -490,7 +491,7 @@ class _HRPayrollScreenState extends State<HRPayrollScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                s.month.substring(0, 3),
+                                _shortMonth(s.month),
                                 style: GoogleFonts.poppins(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
@@ -746,7 +747,7 @@ class _HRPayrollScreenState extends State<HRPayrollScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      s.month.substring(0, 3),
+                      _shortMonth(s.month),
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
