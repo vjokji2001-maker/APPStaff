@@ -3,7 +3,7 @@
 **Decision: HOLD production upload.** Compilation and signing succeed, but
 production services, product completeness and device acceptance are not verified.
 
-## Verified locally
+## Original checks (13 October 2026)
 
 | Check | Result |
 | --- | --- |
@@ -25,13 +25,34 @@ Most remaining diagnostics are unused declarations, redundant null-aware
 expressions, deprecated APIs and style/context-use warnings; they are not proof
 of runtime safety and require ongoing cleanup.
 
-## Final diagnostic bundle
+## Package rename verification (17 October 2026)
+
+- Android application ID, namespace and Kotlin launcher package now use
+  `com.pranam.smartbuddy`; the activity source is in the matching package folder.
+- iOS/macOS app and test bundle identifiers, Linux application ID, Windows company
+  metadata and release documentation were updated consistently.
+- `flutter test --no-pub --reporter expanded`: all 28 tests passed, including
+  the vitals voice session tests.
+- `flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings`: exit 0;
+  0 errors, 170 warnings and 448 lint infos. Existing diagnostics remain.
+- `flutter build appbundle --release --no-pub`: passed with the existing upload key.
+- The AAB manifest contains the requested package and launcher activity;
+  its DEX files contain `com.pranam.smartbuddy.MainActivity`.
+- `jarsigner -verify`: exit 0, `jar verified`. It also reports self-signed,
+  missing timestamp and ZIP manifest/order warnings; these were not suppressed.
+- Native checker rerun: 20/20 64-bit libraries pass ELF LOAD alignment;
+  12/20 still trigger the existing GNU_RELRO gate, so that check fails.
+- `config/release.json` is absent. This is a diagnostic bundle with existing
+  defaults; production HTTPS/privacy configuration and device acceptance remain
+  required. Other platforms were updated in source but not built on this Windows host.
+
+## Final diagnostic bundle (17 October 2026)
 
 - Path: `build/app/outputs/bundle/release/app-release.aab`
-- Size: 114,177,544 bytes (Flutter reports 108.9 MB)
-- Application ID: `com.pranam.smartmate`
+- Size: 114,220,205 bytes (Flutter reports 108.9 MB)
+- Application ID: `com.pranam.smartbuddy`
 - Version configuration: `1.2.1+4`, target SDK 36
-- SHA-256: `89dd34c143f9044aac338c8aca012946b8a1633a3ab9db02c2a03065f8fcc9d7`
+- SHA-256: `f9949c4d452b08226c9bdaca7c015d0b92449aa59713465a72500e025981697b`
 
 **Do not upload this diagnostic bundle.** It was built without the required
 production HTTPS/PRIVACY_POLICY_URL defines. Its default HTTP API endpoints are

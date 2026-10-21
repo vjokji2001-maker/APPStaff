@@ -1,4 +1,4 @@
-package com.example.staff_mate
+package com.pranam.smartbuddy
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine

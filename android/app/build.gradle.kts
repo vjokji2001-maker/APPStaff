@@ -25,7 +25,7 @@ val hasReleaseSigning =
     keystoreProperties["keyPassword"] != null
 
 android {
-    namespace = "com.example.staff_mate"
+    namespace = "com.pranam.smartbuddy"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -39,7 +39,7 @@ android {
     // kotlinOptions replaced below android block
 
     defaultConfig {
-        applicationId = "com.pranam.smartmate"
+        applicationId = "com.pranam.smartbuddy"
         minSdk = flutter.minSdkVersion // Required for google_mlkit_text_recognition and mobile_scanner
         targetSdk = 36
         versionCode = flutter.versionCode

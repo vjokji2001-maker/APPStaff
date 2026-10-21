@@ -7,7 +7,7 @@ authenticated backend tests aur Google Play checks replace nahi kar sakte.
 
 ## App identity and signing
 
-- Application ID: `com.pranam.smartmate`. First upload se pehle confirm karein ki
+- Application ID: `com.pranam.smartbuddy`. First upload se pehle confirm karein ki
   isi permanent package name ko use karna hai. Published app ka package name change
   karke same listing update nahi hoti.
 - Android label: `SmartBuddy APP`; internal Flutter package: `staff_mate`.
